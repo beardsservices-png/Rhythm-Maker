@@ -1,0 +1,12 @@
+{
+  "name": "rhythm-shop",
+  "version": "1.0.0",
+  "description": "Rhythm Shop — Freeplay and Round Robin rhythm games",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

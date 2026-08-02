@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rhythm Shop</title>
+<link rel="stylesheet" href="css/base.css">
+<style>
+  .picker{ display:grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 30px; }
+  .card{
+    border: 1px solid var(--dim); background: rgba(0,0,0,0.15); padding: 26px 22px;
+    text-decoration:none; color: var(--paper); display:flex; flex-direction:column; gap:10px;
+  }
+  .card:hover{ border-color: var(--amber); }
+  .card h2{ font-family: Georgia, serif; margin:0; font-size:22px; }
+  .card p{ color: var(--dim); font-size: 13px; line-height:1.5; margin:0; }
+  .card .tag{ align-self:flex-start; font-size:11px; letter-spacing:1px; text-transform:uppercase; color: var(--amber); border:1px solid var(--amber); padding:3px 8px; }
+  @media (max-width: 600px){ .picker{ grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hdr">
+    <div>
+      <h1>Rhythm Shop</h1>
+      <div class="sub">one, two, three, four Mississippi</div>
+    </div>
+  </div>
+
+  <div class="picker">
+    <a class="card" href="freeplay.html">
+      <span class="tag">Freeplay</span>
+      <h2>Pick an instrument, get a pattern</h2>
+      <p>Choose one of six instruments and generate a randomized 32-step pattern across whole, half, quarter, and eighth notes. Loops on a Mississippi beat counter.</p>
+    </a>
+    <a class="card" href="roundrobin.html">
+      <span class="tag">Round Robin</span>
+      <h2>Build a song, layer by layer</h2>
+      <p>Turn-based layered builder — each new instrument lands on half the step-density of the last. Toggle cells by hand, generate a B section, and arrange A·A·B·A.</p>
+    </a>
+  </div>
+
+  <div class="footer-note">Web Audio synthesis only — no samples, no external libraries. Works best in Chrome, Safari, or Firefox.</div>
+</div>
+</body>
+</html>
