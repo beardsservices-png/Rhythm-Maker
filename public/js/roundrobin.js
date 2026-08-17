@@ -23,6 +23,8 @@
   const songFormBtn = document.getElementById('songFormBtn');
   const songFormEl = document.getElementById('songFormLabel');
   const notice = document.getElementById('notice');
+  const saveBtn = document.getElementById('saveBtn');
+  const savedListEl = document.getElementById('savedList');
   const usedVoiceIds = new Set();
 
   function voiceMeta(id) { return RhythmAudio.voiceById(id); }
@@ -99,8 +101,23 @@
     return out;
   }
 
+  // Play needs at least one layer; Generate Section B needs one too. Both are
+  // shown disabled with a reason rather than silently doing nothing.
+  function updateControls() {
+    const hasLayers = layers.length > 0;
+    genBBtn.disabled = !hasLayers;
+    playBtn.disabled = !hasLayers;
+    playBtn.title = hasLayers ? '' : 'Add at least one layer first';
+    playBtn.setAttribute('aria-disabled', hasLayers ? 'false' : 'true');
+    if (saveBtn) {
+      saveBtn.disabled = !hasLayers;
+      saveBtn.title = hasLayers ? '' : 'Add at least one layer first';
+    }
+  }
+
   function renderLayers() {
     layersEl.innerHTML = '';
+    updateControls();
     if (!layers.length) {
       const empty = document.createElement('div');
       empty.className = 'empty-state';
@@ -154,7 +171,6 @@
       wrap.appendChild(grid);
       layersEl.appendChild(wrap);
     });
-    genBBtn.disabled = layers.length === 0;
   }
 
   function generateSectionB() {
@@ -256,10 +272,78 @@
     renderLayers();
   }
 
+  // ---- Save / load: full layer set + tempo, persisted via the server volume ----
+  function serialize() {
+    return {
+      bpm,
+      songForm,
+      layers: layers.map(l => ({ voiceId: l.voiceId, steps: l.steps, cells: l.cells.slice() })),
+      sectionB: sectionB ? sectionB.map(l => ({ voiceId: l.voiceId, steps: l.steps, cells: l.cells.slice() })) : null
+    };
+  }
+
+  function loadState(data) {
+    if (!data || !Array.isArray(data.layers)) return;
+    if (scheduler && scheduler.isRunning()) { scheduler.stop(); playBtn.textContent = 'Play'; }
+    layers = data.layers
+      .filter(l => RhythmAudio.voiceById(l.voiceId))
+      .slice(0, DENSITY_STEPS.length)
+      .map((l, i) => {
+        const steps = DENSITY_STEPS[i];
+        const cells = Array.isArray(l.cells) ? resampleCells(l.cells, l.cells.length, steps) : new Array(steps).fill(false);
+        return { voiceId: l.voiceId, steps, cells };
+      });
+    usedVoiceIds.clear();
+    layers.forEach(l => usedVoiceIds.add(l.voiceId));
+    sectionB = Array.isArray(data.sectionB)
+      ? data.sectionB.filter(l => RhythmAudio.voiceById(l.voiceId)).map((l, i) => ({
+          voiceId: l.voiceId, steps: DENSITY_STEPS[i] || l.steps,
+          cells: Array.isArray(l.cells) ? l.cells.slice() : []
+        }))
+      : null;
+    bpm = Math.min(200, Math.max(60, parseInt(data.bpm, 10) || 100));
+    bpmInput.value = bpm;
+    bpmVal.textContent = bpm;
+    songForm = false;
+    songFormBtn.classList.remove('primary');
+    currentSection = 'A';
+    formIndex = 0;
+    pendingFamily = null;
+    updateSongFormLabel();
+    renderLayers();
+    renderAddLayerControls();
+  }
+
+  async function renderSavedList() {
+    const names = await RhythmStorage.list(MODE);
+    savedListEl.innerHTML = '';
+    if (!names.length) { savedListEl.textContent = 'No saved patterns yet.'; return; }
+    names.forEach(name => {
+      const b = document.createElement('button');
+      b.textContent = name;
+      b.title = 'Click to load, shift-click to delete';
+      b.addEventListener('click', async (e) => {
+        if (e.shiftKey) { await RhythmStorage.remove(MODE, name); renderSavedList(); return; }
+        const data = await RhythmStorage.load(MODE, name);
+        if (data) loadState(data);
+      });
+      savedListEl.appendChild(b);
+    });
+  }
+
+  async function save() {
+    if (!layers.length) return;
+    const name = prompt('Name this pattern:');
+    if (!name) return;
+    await RhythmStorage.save(MODE, name, serialize());
+    renderSavedList();
+  }
+
   bpmInput.addEventListener('input', () => {
     bpm = parseInt(bpmInput.value, 10);
     bpmVal.textContent = bpm;
   });
+  saveBtn.addEventListener('click', save);
   playBtn.addEventListener('click', togglePlay);
   genBBtn.addEventListener('click', generateSectionB);
   songFormBtn.addEventListener('click', toggleSongForm);
@@ -267,6 +351,7 @@
 
   renderLayers();
   renderAddLayerControls();
+  renderSavedList();
 
   if (window.initAssistPanel) {
     initAssistPanel({

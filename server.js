@@ -189,6 +189,13 @@ async function handlePatterns(req, res, urlObj) {
 const server = http.createServer((req, res) => {
   const urlObj = new URL(req.url, `http://${req.headers.host}`);
 
+  // Health check for Railway — cheap, no disk/network touch, always 200 when up.
+  if (urlObj.pathname === '/health' || urlObj.pathname === '/healthz') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ status: 'ok', dataDir: DATA_DIR }));
+    return;
+  }
+
   if (req.method === 'POST' && urlObj.pathname === '/api/assist') {
     handleAssist(req, res);
     return;

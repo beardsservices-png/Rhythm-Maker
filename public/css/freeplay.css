@@ -15,9 +15,6 @@
 .cell.playing{ box-shadow: 0 0 0 2px var(--paper) inset; }
 .beat-marker{ grid-column: span 8; border-left: 2px solid var(--paper); padding-left:2px; font-size:9px; color:var(--dim); }
 
-.saved-list{ margin-top: 20px; display:flex; flex-wrap:wrap; gap:8px; }
-.saved-list button{ font-size:11px; padding:6px 10px; }
-
 @media (max-width: 640px){
   .grid{ grid-template-columns: repeat(32, 22px); }
 }

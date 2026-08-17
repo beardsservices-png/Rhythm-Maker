@@ -24,6 +24,23 @@ server.js     — zero-dependency Node static server + two JSON APIs
 railway.json, package.json
 ```
 
+## Stack & storage choices
+
+**Backend: Node, no framework, no dependencies.** The job is "serve some static files
+plus a tiny CRUD API," and Node's built-in `http` module does exactly that. Because the
+frontend is already plain HTML/CSS/JS served as static files, keeping the server in the
+same language means the whole thing deploys as a single `node server.js` with an empty
+dependency tree — nothing to `npm install`, nothing to pin, nothing to break on redeploy.
+(Python/Flask would have been just as reasonable and matches the BHS app, but it would add
+a dependency and a WSGI server for no real gain here.)
+
+**Storage: one JSON file per mode on the volume**, at `$DATA_DIR/freeplay.json` and
+`$DATA_DIR/roundrobin.json`. This is a single-user tool saving a handful of named
+patterns, so a full SQLite schema would be overkill — the entire dataset is a small
+name→pattern map that reads and writes atomically as JSON, stays human-readable if Brian
+ever wants to peek at or hand-edit it, and needs zero migration story. The volume is what
+makes it durable; the file format inside it is deliberately the simplest thing that works.
+
 ## Running locally
 
 ```
@@ -39,10 +56,26 @@ Serves on `http://localhost:8080` (or `$PORT`). No `npm install` needed — no d
 4. Set `ANTHROPIC_API_KEY` as an environment variable to turn on the "Ask Claude" assist panel. Without it, the app works fine — Play, Randomize, save/load, both modes — the assist panel just returns a friendly "not configured" message instead of a reply.
 5. Optional: `ANTHROPIC_MODEL` env var to override the default (`claude-sonnet-5`).
 
+`railway.json` already declares the builder (Nixpacks), the start command, and the
+`/health` health check, so Railway wires those up automatically — the only manual step is
+attaching the volume and setting `DATA_DIR` (step 3), which Railway can't declare in-repo.
+
+### Verifying the volume actually persists
+
+After the first deploy: open the app, save a pattern in each mode, then trigger a redeploy
+(push a commit, or Railway → Deployments → Redeploy). Reload the app — the saved patterns
+should still be listed. If they vanish, `DATA_DIR` isn't pointing at the mounted volume:
+check that the volume's mount path and the `DATA_DIR` variable match exactly (e.g. both
+`/data`).
+
 ## API surface
 
-- `GET /api/patterns/:mode` → `{ names: [...] }`
-- `GET /api/patterns/:mode/:name` → `{ name, data }`
+`:mode` is `freeplay` or `roundrobin`. Freeplay patterns store `{ pattern, voiceId, bpm }`;
+Round Robin patterns store the full layer set plus tempo `{ bpm, songForm, layers[], sectionB }`.
+
+- `GET  /health` → `{ status: "ok", dataDir }` — Railway health check (also `/healthz`)
+- `GET  /api/patterns/:mode` → `{ names: [...] }`
+- `GET  /api/patterns/:mode/:name` → `{ name, data }`
 - `POST /api/patterns/:mode/:name` with `{ data }` → save
 - `DELETE /api/patterns/:mode/:name` → delete
 - `POST /api/assist` with `{ instruction, context }` → `{ explanation, actions }`

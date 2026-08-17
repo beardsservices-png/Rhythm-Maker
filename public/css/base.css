@@ -61,6 +61,26 @@ button:disabled{ opacity:0.4; cursor:not-allowed; }
 
 .footer-note{ color: var(--dim); font-size: 11px; margin-top: 28px; letter-spacing: 0.5px; }
 
+/* Saved patterns (shared by both modes) */
+.section-h{ font-family: Georgia, serif; font-weight: normal; margin-top: 26px; margin-bottom: 8px; font-size: 18px; }
+.saved-list{ margin-top: 8px; display:flex; flex-wrap:wrap; gap:8px; }
+.saved-list button{ font-size:11px; padding:6px 10px; text-transform:none; letter-spacing:0.3px; }
+.saved-list:empty::before{ content:''; }
+
+/* Collapsible "How this works" onboarding — collapsed by default so it
+   stays out of the way on repeat visits, expandable on demand. */
+details.how{ margin-top: 28px; color: var(--dim); font-size: 12px; }
+details.how > summary{
+  cursor: pointer; color: var(--paper); font-size: 12px; letter-spacing: 1px;
+  text-transform: uppercase; padding: 6px 0; list-style: none; display:inline-block;
+  border-bottom: 1px dotted var(--dim);
+}
+details.how > summary::-webkit-details-marker{ display:none; }
+details.how > summary::before{ content: '▸ '; color: var(--amber); }
+details.how[open] > summary::before{ content: '▾ '; }
+details.how > summary:focus-visible{ outline: 2px solid var(--amber); outline-offset: 2px; }
+details.how p{ line-height: 1.6; margin: 10px 0 0; max-width: 70ch; }
+
 /* Assist panel — shared across Freeplay and Round Robin */
 #assistPanel{ border: 1px solid var(--line); background: rgba(0,0,0,0.15); padding: 14px 16px; margin: 22px 0; }
 .assist-hdr{ font-family: Georgia, serif; font-size: 15px; margin-bottom: 10px; }
