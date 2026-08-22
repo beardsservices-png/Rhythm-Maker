@@ -48,3 +48,26 @@
   .key.white{ width:36px; height:140px; }
   .key.black{ width:23px; height:86px; margin:0 -12px 0 -11px; }
 }
+
+/* ── bassline sequencer ── */
+.seqbar{ margin-bottom:12px; }
+.seqgrid{
+  display:flex; gap:2px; padding:12px; margin-bottom:12px;
+  border:1px solid var(--line); background:rgba(0,0,0,0.15); overflow-x:auto;
+}
+.col{ display:flex; flex-direction:column; gap:2px; flex:1 0 40px; min-width:40px; }
+.col.beat{ border-left:2px solid var(--dim); padding-left:2px; }
+.col.playing .scell{ box-shadow:0 0 0 1px var(--paper) inset; }
+.scell{
+  height:13px; background:var(--bg2); border:1px solid rgba(233,225,204,0.10);
+  border-radius:2px; cursor:pointer;
+}
+.scell.blk{ background:#101109; }
+.scell:hover{ border-color:var(--dim); }
+.scell.on{ background:var(--amber); border-color:var(--amber); }
+.scell.on.slid{ background:var(--teal); border-color:var(--teal); }
+.slidebtn{
+  margin-top:4px; padding:3px 0; font-size:10px; letter-spacing:0;
+  border-radius:2px; width:100%;
+}
+.slidebtn.on{ background:var(--teal); border-color:var(--teal); color:var(--bg2); font-weight:bold; }

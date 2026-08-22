@@ -47,6 +47,11 @@
       hint: 'Lowpass cutoff' }
   ];
 
+  // The sequencer plays the same voice, so it listens for knob moves.
+  function publishParams() {
+    window.dispatchEvent(new CustomEvent('bhs808params', { detail: Object.assign({}, params) }));
+  }
+
   function noteOn(midi) {
     if (!Synth808.supported()) {
       notice.textContent = 'Your browser does not support the Web Audio API — try Chrome, Safari, or Firefox.';
@@ -170,6 +175,7 @@
       input.addEventListener('input', () => {
         params[c.id] = parseFloat(input.value);
         document.getElementById('v_' + c.id).textContent = c.fmt(params[c.id]);
+        publishParams();
       });
 
       const hint = document.createElement('span');
@@ -235,8 +241,10 @@
   document.getElementById('resetBtn').addEventListener('click', () => {
     params = Object.assign({}, Synth808.DEFAULTS);
     renderControls();
+    publishParams();
   });
 
   renderKeyboard();
   renderControls();
+  publishParams();
 })();

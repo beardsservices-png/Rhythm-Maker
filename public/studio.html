@@ -39,6 +39,24 @@
     Arrow keys shift the range. <b>Hold Shift</b> to slide from the note you're on into the next one instead of restarting it.
   </p>
 
+
+  <h3 class="sect">Bassline</h3>
+  <div class="transport seqbar">
+    <button id="seqPlay">Play</button>
+    <button id="seqClear">Clear</button>
+    <div class="field">
+      <label for="seqBpm">BPM: <span id="seqBpmVal">90</span></label>
+      <input type="range" id="seqBpm" min="50" max="180" value="90">
+    </div>
+    <div class="mississippi" id="seqPos">&mdash;</div>
+  </div>
+  <div class="seqgrid" id="seqGrid"></div>
+  <p class="playhint">
+    Click a cell to place a note, click it again to clear it. One note per column &mdash; a bassline is one note at a time.
+    The <b>S</b> button under a column slides into that note from the one before instead of restarting it.
+    Bars are marked every four columns.
+  </p>
+
   <h3 class="sect">Shape the sound</h3>
   <div class="controls" id="controls"></div>
 
@@ -49,6 +67,8 @@
 </div>
 
 <script src="js/engine/synth-808.js"></script>
+<script src="js/engine/transport.js"></script>
 <script src="js/studio-808.js"></script>
+<script src="js/studio-sequencer.js"></script>
 </body>
 </html>

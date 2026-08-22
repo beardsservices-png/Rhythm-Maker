@@ -100,16 +100,21 @@ const Synth808 = (() => {
   /**
    * Start a note. Returns a handle — the caller decides when it ends.
    *
+   * `when` is what makes this sequencable: the transport schedules a lookahead
+   * ahead of now, so a note has to be able to start at a stated audio-clock
+   * time rather than "right now".
+   *
    * @param {number} midi   MIDI note number (C1 = 24, C2 = 36)
    * @param {object} params overrides for DEFAULTS
+   * @param {number} [when] audio-clock start time; defaults to now
    * @returns {{release:Function, slideTo:Function, midi:number, stopped:boolean}}
    */
-  function noteOn(midi, params = {}) {
+  function noteOn(midi, params = {}, when) {
     const ac = ensureContext();
     if (!ac) return null;
 
     const p = Object.assign({}, DEFAULTS, params);
-    const t = ac.currentTime;
+    const t = Math.max(ac.currentTime, when == null ? ac.currentTime : when);
     const freq = midiToFreq(midi);
 
     const osc = ac.createOscillator();
@@ -149,23 +154,25 @@ const Synth808 = (() => {
       release(when) {
         if (handle.stopped) return;
         handle.stopped = true;
-        const now = Math.max(ac.currentTime, when || ac.currentTime);
+        // Never release before the note has started, or the ramp runs
+        // backwards and the note sticks on.
+        const at = Math.max(t + p.attack, when == null ? ac.currentTime : when);
         const rel = p.release;
-        amp.gain.cancelScheduledValues(now);
-        amp.gain.setValueAtTime(Math.max(0.0001, amp.gain.value), now);
-        amp.gain.exponentialRampToValueAtTime(0.0001, now + rel);
-        osc.stop(now + rel + 0.02);
+        amp.gain.cancelScheduledValues(at);
+        amp.gain.setValueAtTime(Math.max(0.0001, amp.gain.value), at);
+        amp.gain.exponentialRampToValueAtTime(0.0001, at + rel);
+        osc.stop(at + rel + 0.02);
       },
 
       /** The 808 slide — glide to another note without retriggering. */
-      slideTo(nextMidi, glideTime) {
+      slideTo(nextMidi, glideTime, when) {
         if (handle.stopped) return;
-        const now = ac.currentTime;
+        const at = Math.max(t + p.punchTime, when == null ? ac.currentTime : when);
         const target = midiToFreq(nextMidi);
         const g = Math.max(0.01, glideTime == null ? 0.08 : glideTime);
-        osc.frequency.cancelScheduledValues(now);
-        osc.frequency.setValueAtTime(Math.max(1, osc.frequency.value), now);
-        osc.frequency.exponentialRampToValueAtTime(target, now + g);
+        osc.frequency.cancelScheduledValues(at);
+        osc.frequency.setValueAtTime(Math.max(1, midiToFreq(handle.midi)), at);
+        osc.frequency.exponentialRampToValueAtTime(target, at + g);
         handle.midi = nextMidi;
       }
     };
@@ -174,11 +181,13 @@ const Synth808 = (() => {
   }
 
   /** One-shot, for sequencer use: note on, note off after `hold` seconds. */
-  function playFor(midi, hold, params = {}) {
-    const h = noteOn(midi, params);
-    if (!h) return null;
+  function playFor(midi, hold, params = {}, when) {
     const ac = ensureContext();
-    h.release(ac.currentTime + Math.max(0.02, hold));
+    if (!ac) return null;
+    const start = when == null ? ac.currentTime : when;
+    const h = noteOn(midi, params, start);
+    if (!h) return null;
+    h.release(start + Math.max(0.02, hold));
     return h;
   }
 

@@ -28,7 +28,10 @@ const Transport = (() => {
   const LOOKAHEAD = 0.1;      // seconds of audio scheduled in advance
   const TICK_MS = 25;         // how often we top that up
 
-  let getContext = () => (window.Synth808 ? Synth808.ensureContext() : null);
+  // Referenced by name, not off `window`: a top-level `const` creates a script
+  // -scope binding and never becomes a property of the global object, so
+  // `window.Synth808` is undefined even though `Synth808` resolves fine.
+  let getContext = () => (typeof Synth808 !== 'undefined' ? Synth808.ensureContext() : null);
 
   let bpm = 90;
   let beatsPerBar = 4;
