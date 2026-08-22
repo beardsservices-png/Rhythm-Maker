@@ -235,6 +235,28 @@ const Looper = (() => {
     else if (s.buffer) play(i);
   }
 
+  /**
+   * Put a previously saved take back into a slot.
+   *
+   * punchInTime anchors phase, and a loaded loop has no recording history to
+   * anchor to — so it is pinned to the current bar line. That makes the
+   * restored loop line up with the song from the moment it starts, which is
+   * what a listener expects, rather than preserving a phase relationship to a
+   * session that has already ended.
+   */
+  function restoreSlot(i, buffer, bars, volume) {
+    const s = slots[i];
+    if (!s || !buffer) return false;
+    stopSlot(i);
+    s.buffer = buffer;
+    s.bars = bars || 1;
+    s.volume = typeof volume === 'number' ? volume : 0.9;
+    s.punchInTime = ctx ? nearestBar(ctx.currentTime) : 0;
+    s.state = 'stopped';
+    emit();
+    return true;
+  }
+
   function clear(i) {
     stopSlot(i);
     const s = slots[i];
@@ -256,7 +278,7 @@ const Looper = (() => {
   function getSlots() { return slots; }
 
   return {
-    SLOTS, arm, startRecording, stopRecording, play, stopSlot, toggle, clear,
+    SLOTS, arm, startRecording, stopRecording, play, stopSlot, toggle, clear, restoreSlot,
     setVolume, setLatencyOffset, getLatencyOffset, isReady, getError,
     onChange, getSlots, nearestBar
   };

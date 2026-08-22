@@ -14,7 +14,8 @@ if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
 const MIME = {
   '.html': 'text/html', '.css': 'text/css', '.js': 'application/javascript',
-  '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml'
+  '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml',
+  '.wav': 'audio/wav'
 };
 
 const ASSIST_SYSTEM_PROMPT = `You are a rhythm-game assistant embedded in "Rhythm Shop," a beat-making tool.
@@ -33,6 +34,23 @@ Respond with ONLY a JSON object, no prose outside it, no markdown fences, matchi
 }
 Only include actions the person's instruction actually calls for — "actions" can be an empty array
 if they only asked a question. Valid family ids: kick, snare, hihat, clap, tom, bass, lead, pad, bell, perc.`;
+
+// Binary-safe. The text reader below concatenates chunks onto a string, which
+// silently mangles PCM — every byte that isn't valid UTF-8 becomes U+FFFD and
+// the audio comes back as noise. Loop uploads must use this one.
+function readBinaryBody(req, limitBytes) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let size = 0;
+    req.on('data', chunk => {
+      size += chunk.length;
+      if (size > limitBytes) { req.destroy(); reject(new Error('Payload too large')); return; }
+      chunks.push(chunk);
+    });
+    req.on('end', () => resolve(Buffer.concat(chunks)));
+    req.on('error', reject);
+  });
+}
 
 function readBody(req) {
   return new Promise((resolve, reject) => {
@@ -127,6 +145,113 @@ function writeModeStore(mode, store) {
   fs.writeFileSync(modeFile(mode), JSON.stringify(store, null, 2));
 }
 
+const PROJECT_DIR = path.join(DATA_DIR, 'projects');
+const AUDIO_DIR = path.join(DATA_DIR, 'audio');
+const MAX_AUDIO_BYTES = 25 * 1024 * 1024;
+
+function safeName(n) {
+  return String(n || '').replace(/[^a-z0-9 _-]/gi, '').trim().slice(0, 64);
+}
+
+function ensureDirs() {
+  if (!fs.existsSync(PROJECT_DIR)) fs.mkdirSync(PROJECT_DIR, { recursive: true });
+  if (!fs.existsSync(AUDIO_DIR)) fs.mkdirSync(AUDIO_DIR, { recursive: true });
+}
+
+function json(res, code, obj) {
+  res.writeHead(code, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify(obj));
+}
+
+/**
+ * Projects are JSON plus sidecar WAVs, never one document.
+ * Recorded loops are megabytes of PCM; base64 in JSON inflates them ~33% and
+ * would make every save rewrite the whole thing.
+ *
+ *   /api/projects                        GET  -> { names }
+ *   /api/projects/:name                  GET  -> project JSON
+ *                                        POST -> save project JSON
+ *                                        DELETE
+ *   /api/projects/:name/audio/:slot      GET  -> WAV bytes
+ *                                        POST -> store WAV bytes
+ */
+async function handleProjects(req, res, urlObj) {
+  ensureDirs();
+  const parts = urlObj.pathname.split('/').filter(Boolean); // api, projects, name?, 'audio', slot?
+  const name = parts[2] ? safeName(decodeURIComponent(parts[2])) : null;
+  const isAudio = parts[3] === 'audio';
+  const slot = parts[4] != null ? String(parseInt(parts[4], 10)) : null;
+
+  if (req.method === 'GET' && !name) {
+    const names = fs.existsSync(PROJECT_DIR)
+      ? fs.readdirSync(PROJECT_DIR).filter(f => f.endsWith('.json')).map(f => f.slice(0, -5))
+      : [];
+    return json(res, 200, { names });
+  }
+
+  if (!name) return json(res, 400, { error: 'Missing or invalid project name.' });
+
+  if (isAudio) {
+    if (slot == null || !/^\d+$/.test(slot)) return json(res, 400, { error: 'Bad slot.' });
+    const file = path.join(AUDIO_DIR, `${name}__${slot}.wav`);
+
+    if (req.method === 'GET') {
+      if (!fs.existsSync(file)) return json(res, 404, { error: 'No audio for that slot.' });
+      const buf = fs.readFileSync(file);
+      res.writeHead(200, { 'Content-Type': 'audio/wav', 'Content-Length': buf.length });
+      return res.end(buf);
+    }
+    if (req.method === 'POST') {
+      try {
+        const body = await readBinaryBody(req, MAX_AUDIO_BYTES);
+        fs.writeFileSync(file, body);
+        return json(res, 200, { ok: true, bytes: body.length });
+      } catch (e) {
+        return json(res, 413, { error: e.message });
+      }
+    }
+    if (req.method === 'DELETE') {
+      if (fs.existsSync(file)) fs.unlinkSync(file);
+      return json(res, 200, { ok: true });
+    }
+    return json(res, 405, { error: 'Method not allowed.' });
+  }
+
+  const file = path.join(PROJECT_DIR, `${name}.json`);
+
+  if (req.method === 'GET') {
+    if (!fs.existsSync(file)) return json(res, 404, { error: 'Not found.' });
+    try {
+      return json(res, 200, { name, data: JSON.parse(fs.readFileSync(file, 'utf8')) });
+    } catch (e) {
+      return json(res, 500, { error: 'Project file is corrupt.' });
+    }
+  }
+
+  if (req.method === 'POST') {
+    try {
+      const raw = await readBody(req);
+      const body = JSON.parse(raw || '{}');
+      fs.writeFileSync(file, JSON.stringify(body.data ?? body, null, 2));
+      return json(res, 200, { ok: true });
+    } catch (e) {
+      return json(res, 400, { error: 'Invalid request body.' });
+    }
+  }
+
+  if (req.method === 'DELETE') {
+    if (fs.existsSync(file)) fs.unlinkSync(file);
+    if (fs.existsSync(AUDIO_DIR)) {
+      fs.readdirSync(AUDIO_DIR)
+        .filter(f => f.startsWith(name + '__'))
+        .forEach(f => fs.unlinkSync(path.join(AUDIO_DIR, f)));
+    }
+    return json(res, 200, { ok: true });
+  }
+
+  return json(res, 405, { error: 'Method not allowed.' });
+}
+
 async function handlePatterns(req, res, urlObj) {
   const parts = urlObj.pathname.split('/').filter(Boolean); // ['api','patterns', mode?, name?]
   const mode = parts[2];
@@ -208,6 +333,11 @@ const server = http.createServer((req, res) => {
 
   if (req.method === 'POST' && urlObj.pathname === '/api/assist') {
     handleAssist(req, res);
+    return;
+  }
+
+  if (urlObj.pathname.startsWith('/api/projects')) {
+    handleProjects(req, res, urlObj);
     return;
   }
 

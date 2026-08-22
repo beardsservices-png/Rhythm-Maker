@@ -162,6 +162,25 @@
   // The keyboard page shares this voice, so knob moves there apply here too.
   window.addEventListener('bhs808params', (e) => { params = e.detail; });
 
+  // Save/load talks to this module through events rather than reaching into it.
+  window.addEventListener('bhs:collect-sequencer', (e) => {
+    e.detail.pattern = pattern.map(n => n ? { midi: n.midi, slide: !!n.slide } : null);
+  });
+  window.addEventListener('bhs:apply-sequencer', (e) => {
+    const p = e.detail.pattern;
+    if (Array.isArray(p)) {
+      pattern = new Array(STEPS).fill(null);
+      p.slice(0, STEPS).forEach((n, i) => {
+        if (n && typeof n.midi === 'number') pattern[i] = { midi: n.midi, slide: !!n.slide };
+      });
+      render();
+    }
+    if (e.detail.bpm) {
+      bpmInput.value = String(e.detail.bpm);
+      bpmVal.textContent = String(e.detail.bpm);
+    }
+  });
+
   seedPattern();
   render();
 })();

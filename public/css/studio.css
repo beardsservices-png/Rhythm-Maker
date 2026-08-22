@@ -90,3 +90,9 @@
 .slot-row{ display:flex; gap:6px; }
 .slot-row button{ flex:1; padding:7px 0; font-size:11px; }
 .slot input[type=range]{ width:100%; }
+
+.projname{
+  flex:1; min-width:180px; background:var(--bg2); border:1px solid var(--dim);
+  color:var(--paper); font-family:inherit; font-size:13px; padding:10px 12px; border-radius:3px;
+}
+.projname:focus{ outline:none; border-color:var(--amber); }

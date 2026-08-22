@@ -77,6 +77,19 @@
     If your layers drift late, nudge <b>Timing trim</b>.
   </p>
 
+
+  <h3 class="sect">Save your work</h3>
+  <div class="transport seqbar">
+    <input type="text" id="projName" class="projname" placeholder="Name this track" autocomplete="off">
+    <button id="projSave" class="primary">Save</button>
+  </div>
+  <div id="projMsg" class="loopmsg"></div>
+  <div class="saved-list" id="projList"></div>
+  <p class="playhint">
+    Saves the bassline, the tempo, your sound settings and every recorded loop &mdash; to the server, not this browser,
+    so it's still there on your phone. Click a name to load it, shift-click to delete it.
+  </p>
+
   <h3 class="sect">Shape the sound</h3>
   <div class="controls" id="controls"></div>
 
@@ -89,8 +102,10 @@
 <script src="js/engine/synth-808.js"></script>
 <script src="js/engine/transport.js"></script>
 <script src="js/studio-808.js"></script>
+<script src="js/engine/wav.js"></script>
 <script src="js/engine/looper.js"></script>
 <script src="js/studio-sequencer.js"></script>
 <script src="js/studio-looper.js"></script>
+<script src="js/studio-project.js"></script>
 </body>
 </html>

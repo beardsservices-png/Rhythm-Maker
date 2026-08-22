@@ -244,6 +244,17 @@
     publishParams();
   });
 
+  window.addEventListener('bhs:collect-voice', (e) => {
+    e.detail.params = Object.assign({}, params);
+  });
+  window.addEventListener('bhs:apply-voice', (e) => {
+    if (e.detail && e.detail.params) {
+      params = Object.assign({}, Synth808.DEFAULTS, e.detail.params);
+      renderControls();
+      publishParams();
+    }
+  });
+
   renderKeyboard();
   renderControls();
   publishParams();
