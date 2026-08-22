@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BHS Studio — 808</title>
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/studio.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="hdr">
+    <div>
+      <h1>808</h1>
+      <div class="sub">playable bass</div>
+    </div>
+    <a class="back" href="index.html">&larr; Modes</a>
+  </div>
+
+  <div id="notice" class="notice"></div>
+
+  <div class="transport">
+    <button id="slideBtn" aria-pressed="false" title="Hold Shift for the same thing">Slide</button>
+    <button id="octDown" title="Left arrow">Oct &minus;</button>
+    <button id="octUp" title="Right arrow">Oct +</button>
+    <button id="resetBtn">Reset knobs</button>
+    <div class="field">
+      <label>Range</label>
+      <span class="val" id="octLabel">&mdash;</span>
+    </div>
+    <div class="mississippi" id="nowNote">&mdash;</div>
+  </div>
+
+  <div class="keyboard" id="keyboard"></div>
+
+  <p class="playhint">
+    Play with the mouse, or the computer keyboard &mdash;
+    <b>Z S X D C V G B H N J M</b> for the lower octave, <b>Q 2 W 3 E R 5 T 6 Y 7 U</b> for the one above.
+    Arrow keys shift the range. <b>Hold Shift</b> to slide from the note you're on into the next one instead of restarting it.
+  </p>
+
+
+  <h3 class="sect">Bassline</h3>
+  <div class="transport seqbar">
+    <button id="seqPlay">Play</button>
+    <button id="seqClear">Clear</button>
+    <div class="field">
+      <label for="seqBpm">BPM: <span id="seqBpmVal">90</span></label>
+      <input type="range" id="seqBpm" min="50" max="180" value="90">
+    </div>
+    <div class="mississippi" id="seqPos">&mdash;</div>
+  </div>
+  <div class="seqgrid" id="seqGrid"></div>
+  <p class="playhint">
+    Click a cell to place a note, click it again to clear it. One note per column &mdash; a bassline is one note at a time.
+    The <b>S</b> button under a column slides into that note from the one before instead of restarting it.
+    Bars are marked every four columns.
+  </p>
+
+  <h3 class="sect">Shape the sound</h3>
+  <div class="controls" id="controls"></div>
+
+  <div class="footer-note">
+    The punch is a fast pitch drop <i>into</i> the note, set as a ratio above it rather than fixed Hz &mdash; so a low note and a high note keep the same character.
+    Drive is what makes a sub note audible on a phone speaker: the fundamental is below what the speaker can reproduce, so you hear the harmonics instead.
+  </div>
+</div>
+
+<script src="js/engine/synth-808.js"></script>
+<script src="js/engine/transport.js"></script>
+<script src="js/studio-808.js"></script>
+<script src="js/studio-sequencer.js"></script>
+</body>
+</html>
