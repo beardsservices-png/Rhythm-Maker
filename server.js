@@ -187,7 +187,17 @@ async function handlePatterns(req, res, urlObj) {
 }
 
 const server = http.createServer((req, res) => {
-  const urlObj = new URL(req.url, `http://${req.headers.host}`);
+  // A malformed request target (e.g. "//") makes the URL constructor throw,
+  // and an uncaught throw in this handler takes the whole process down — one
+  // stray request would end the app. Answer 400 instead.
+  let urlObj;
+  try {
+    urlObj = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+  } catch (e) {
+    res.writeHead(400, { 'Content-Type': 'text/plain' });
+    res.end('Bad Request');
+    return;
+  }
 
   // Health check for Railway — cheap, no disk/network touch, always 200 when up.
   if (urlObj.pathname === '/health' || urlObj.pathname === '/healthz') {
