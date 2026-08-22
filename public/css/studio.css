@@ -96,3 +96,27 @@
   color:var(--paper); font-family:inherit; font-size:13px; padding:10px 12px; border-radius:3px;
 }
 .projname:focus{ outline:none; border-color:var(--amber); }
+
+/* ── drum lanes ── */
+.dhint{ font-size:11px; color:var(--dim); letter-spacing:.5px; }
+.drumgrid{
+  padding:12px; margin-bottom:14px;
+  border:1px solid var(--line); background:rgba(0,0,0,0.15); overflow-x:auto;
+}
+.drow{ display:flex; align-items:center; gap:10px; margin-bottom:5px; }
+.drow:last-child{ margin-bottom:0; }
+.dname{
+  flex:0 0 88px; font-size:10px; padding:6px 4px; text-align:center;
+  letter-spacing:.5px; border-radius:2px;
+}
+.dname.muted{ opacity:.35; text-decoration:line-through; }
+.dcells{ display:flex; gap:3px; flex:1; min-width:0; }
+.dcell{
+  flex:1 0 22px; height:26px; min-width:22px; cursor:pointer; border-radius:2px;
+  background:var(--bg2); border:1px solid rgba(233,225,204,0.10);
+}
+.dcell.beat{ border-left:2px solid var(--dim); }
+.dcell:hover{ border-color:var(--dim); }
+.dcell.on{ background:var(--teal); border-color:var(--teal); }
+.dcell.playing{ box-shadow:0 0 0 2px var(--paper) inset; }
+.dcell:focus-visible{ outline:2px solid var(--amber); outline-offset:1px; }

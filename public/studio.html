@@ -41,6 +41,14 @@
   </p>
 
 
+
+  <h3 class="sect">Drums</h3>
+  <div class="transport seqbar">
+    <button id="drumClear">Clear drums</button>
+    <span class="dhint">Click a lane name to mute it</span>
+  </div>
+  <div class="drumgrid" id="drumGrid"></div>
+
   <h3 class="sect">Bassline</h3>
   <div class="transport seqbar">
     <button id="seqPlay">Play</button>
@@ -99,12 +107,14 @@
   </div>
 </div>
 
+<script src="js/audio-engine.js"></script>
 <script src="js/engine/synth-808.js"></script>
 <script src="js/engine/transport.js"></script>
 <script src="js/studio-808.js"></script>
 <script src="js/engine/wav.js"></script>
 <script src="js/engine/looper.js"></script>
 <script src="js/studio-sequencer.js"></script>
+<script src="js/studio-drums.js"></script>
 <script src="js/studio-looper.js"></script>
 <script src="js/studio-project.js"></script>
 </body>

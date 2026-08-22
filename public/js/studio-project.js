@@ -29,12 +29,15 @@
     };
     const seq = req('bhs:collect-sequencer');
     const voice = req('bhs:collect-voice');
+    const drums = req('bhs:collect-drums');
     const st = Transport.getState();
     return {
       version: 1,
       savedAt: new Date().toISOString(),
       bpm: st.bpm,
       pattern: seq.pattern || [],
+      drums: drums.lanes || [],
+      drumsMuted: drums.muted || [],
       voice: voice.params || {},
       loops: Looper.getSlots()
         .filter(s => !!s.buffer)
@@ -89,6 +92,9 @@
       if (data.bpm) Transport.setBpm(data.bpm);
       window.dispatchEvent(new CustomEvent('bhs:apply-sequencer', {
         detail: { pattern: data.pattern || [], bpm: data.bpm }
+      }));
+      window.dispatchEvent(new CustomEvent('bhs:apply-drums', {
+        detail: { lanes: data.drums || [], muted: data.drumsMuted || [] }
       }));
       if (data.voice) {
         window.dispatchEvent(new CustomEvent('bhs:apply-voice', { detail: { params: data.voice } }));

@@ -14,34 +14,61 @@ const RhythmAudio = (() => {
     return !!(window.AudioContext || window.webkitAudioContext);
   }
 
+  // Build the buses onto whatever context we've been given. Split out of
+  // ensureContext so an external context can be adopted without duplicating
+  // the graph setup.
+  function buildBuses() {
+    noiseBuffer = buildNoiseBuffer(ctx);
+
+    compressor = ctx.createDynamicsCompressor();
+    compressor.threshold.value = -14;
+    compressor.knee.value = 18;
+    compressor.ratio.value = 3;
+    compressor.attack.value = 0.003;
+    compressor.release.value = 0.15;
+    compressor.connect(ctx.destination);
+
+    dryBus = ctx.createGain();
+    dryBus.gain.value = 0.85;
+    dryBus.connect(compressor);
+
+    convolver = ctx.createConvolver();
+    convolver.buffer = buildImpulse(ctx, 1.4, 2.2);
+    wetSend = ctx.createGain();
+    wetSend.gain.value = 0.16;
+    wetSend.connect(convolver);
+    convolver.connect(compressor);
+  }
+
   function ensureContext() {
     if (!supported()) return null;
     if (!ctx) {
       const AC = window.AudioContext || window.webkitAudioContext;
       ctx = new AC();
-      noiseBuffer = buildNoiseBuffer(ctx);
-
-      compressor = ctx.createDynamicsCompressor();
-      compressor.threshold.value = -14;
-      compressor.knee.value = 18;
-      compressor.ratio.value = 3;
-      compressor.attack.value = 0.003;
-      compressor.release.value = 0.15;
-      compressor.connect(ctx.destination);
-
-      dryBus = ctx.createGain();
-      dryBus.gain.value = 0.85;
-      dryBus.connect(compressor);
-
-      convolver = ctx.createConvolver();
-      convolver.buffer = buildImpulse(ctx, 1.4, 2.2);
-      wetSend = ctx.createGain();
-      wetSend.gain.value = 0.16;
-      wetSend.connect(convolver);
-      convolver.connect(compressor);
+      buildBuses();
     }
     if (ctx.state === 'suspended') ctx.resume();
     return ctx;
+  }
+
+  /**
+   * Share an existing AudioContext instead of creating a private one.
+   *
+   * BHS Studio plays these drum voices alongside the 808, and two contexts
+   * mean two independent clocks — the kit and the bass would drift apart
+   * within seconds even though both schedule "correctly". Must be called
+   * before anything triggers a voice; returns false if we already built our
+   * own, so a caller can tell rather than silently getting two clocks.
+   *
+   * Rhythm Shop's own pages never call this, so their behaviour is unchanged.
+   */
+  function adoptContext(externalCtx) {
+    if (!externalCtx) return false;
+    if (ctx === externalCtx) return true;
+    if (ctx) return false;
+    ctx = externalCtx;
+    buildBuses();
+    return true;
   }
 
   function buildNoiseBuffer(ac) {
@@ -398,6 +425,7 @@ const RhythmAudio = (() => {
   return {
     supported,
     ensureContext,
+    adoptContext,
     playVoice,
     createScheduler,
     CATALOG,
