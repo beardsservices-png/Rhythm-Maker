@@ -6,7 +6,7 @@
 <title>Rhythm Shop</title>
 <link rel="stylesheet" href="css/base.css">
 <style>
-  .picker{ display:grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 30px; }
+  .picker{ display:grid; grid-template-columns: repeat(auto-fit,minmax(260px,1fr)); gap: 20px; margin-top: 30px; }
   .card{
     border: 1px solid var(--dim); background: rgba(0,0,0,0.15); padding: 26px 22px;
     text-decoration:none; color: var(--paper); display:flex; flex-direction:column; gap:10px;
@@ -37,6 +37,11 @@
       <span class="tag">Round Robin</span>
       <h2>Build a song, layer by layer</h2>
       <p>Turn-based layered builder — each new instrument lands on half the step-density of the last. Toggle cells by hand, generate a B section, and arrange A·A·B·A.</p>
+    </a>
+    <a class="card" href="studio.html">
+      <span class="tag">BHS Studio</span>
+      <h2>Play an 808</h2>
+      <p>A real bass instrument, not a drum with a tone knob &mdash; play a bassline across three octaves, slide between notes, and shape the punch, decay and drive by hand.</p>
     </a>
   </div>
 
