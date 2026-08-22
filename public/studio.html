@@ -58,6 +58,25 @@
     Bars are marked every four columns.
   </p>
 
+
+  <h3 class="sect">Live looper</h3>
+  <div class="transport seqbar">
+    <button id="loopArm">Turn mic on</button>
+    <div class="field">
+      <label for="loopLatency">Timing trim: <span id="loopLatencyVal">0ms</span></label>
+      <input type="range" id="loopLatency" min="-200" max="200" step="5" value="0">
+    </div>
+  </div>
+  <div id="loopMsg" class="loopmsg"></div>
+  <div class="slots" id="loopSlots"></div>
+  <p class="playhint">
+    Press <b>Rec</b> and play &mdash; recording starts on the nearest bar line, so being a little early or late doesn't matter.
+    Press <b>Stop</b> and it snaps to a bar and starts looping immediately.
+    Turning a loop off and back on brings it in <i>in time with the song</i>, not from its own beginning.
+    <b>Use headphones:</b> on speakers the microphone records the backing track into your loop.
+    If your layers drift late, nudge <b>Timing trim</b>.
+  </p>
+
   <h3 class="sect">Shape the sound</h3>
   <div class="controls" id="controls"></div>
 
@@ -70,6 +89,8 @@
 <script src="js/engine/synth-808.js"></script>
 <script src="js/engine/transport.js"></script>
 <script src="js/studio-808.js"></script>
+<script src="js/engine/looper.js"></script>
 <script src="js/studio-sequencer.js"></script>
+<script src="js/studio-looper.js"></script>
 </body>
 </html>
