@@ -91,19 +91,27 @@ const RhythmAudio = (() => {
     return buf;
   }
 
+  // While an offline render is running these point at that context's buses,
+  // so the same voice code serves both live playback and rendering.
+  let activeDry = null;
+  let activeWet = null;
+  let activeNoise = null;
+
   function noiseSource(ac) {
     const src = ac.createBufferSource();
-    src.buffer = noiseBuffer;
+    src.buffer = activeNoise || noiseBuffer;
     return src;
   }
 
   function connectOut(ac, node, sendAmount = 1) {
-    node.connect(dryBus);
+    const dry = activeDry || dryBus;
+    const wet = activeWet || wetSend;
+    node.connect(dry);
     if (sendAmount > 0) {
       const send = ac.createGain();
       send.gain.value = sendAmount;
       node.connect(send);
-      send.connect(wetSend);
+      send.connect(wet);
     }
   }
 
@@ -370,6 +378,46 @@ const RhythmAudio = (() => {
     return Array.from(map.values());
   }
 
+  /**
+   * Build an independent dry/wet/compressor chain on any context.
+   * Offline rendering needs its own graph — nodes can't cross contexts — and
+   * the noise buffer has to be regenerated at that context's sample rate.
+   */
+  function createBuses(ac) {
+    const comp = ac.createDynamicsCompressor();
+    comp.threshold.value = -14; comp.knee.value = 18; comp.ratio.value = 3;
+    comp.attack.value = 0.003; comp.release.value = 0.15;
+
+    const dry = ac.createGain();
+    dry.gain.value = 0.85;
+    dry.connect(comp);
+
+    const conv = ac.createConvolver();
+    conv.buffer = buildImpulse(ac, 1.4, 2.2);
+    const wet = ac.createGain();
+    wet.gain.value = 0.16;
+    wet.connect(conv);
+    conv.connect(comp);
+
+    return { dry, wet, output: comp, noise: buildNoiseBuffer(ac) };
+  }
+
+  /**
+   * Trigger a voice into a specific set of buses rather than the live ones.
+   * playVoice is synchronous all the way down, so swapping the module-level
+   * targets around the call is safe and keeps every synth function unchanged.
+   */
+  function renderVoice(ac, buses, voiceId, t) {
+    const v = voiceById(voiceId);
+    if (!v) return;
+    activeDry = buses.dry; activeWet = buses.wet; activeNoise = buses.noise;
+    try {
+      v.play(ac, t, buses.dry);
+    } finally {
+      activeDry = null; activeWet = null; activeNoise = null;
+    }
+  }
+
   function playVoice(voiceId, t) {
     const ac = ensureContext();
     if (!ac) return;
@@ -426,6 +474,8 @@ const RhythmAudio = (() => {
     supported,
     ensureContext,
     adoptContext,
+    createBuses,
+    renderVoice,
     playVoice,
     createScheduler,
     CATALOG,

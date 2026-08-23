@@ -120,3 +120,9 @@
 .dcell.on{ background:var(--teal); border-color:var(--teal); }
 .dcell.playing{ box-shadow:0 0 0 2px var(--paper) inset; }
 .dcell:focus-visible{ outline:2px solid var(--amber); outline-offset:1px; }
+
+.barsel{
+  background:var(--bg2); border:1px solid var(--dim); color:var(--paper);
+  font-family:inherit; font-size:13px; padding:9px 12px; border-radius:3px;
+}
+.barsel:focus{ outline:none; border-color:var(--amber); }

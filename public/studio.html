@@ -86,6 +86,26 @@
   </p>
 
 
+
+  <h3 class="sect">Export</h3>
+  <div class="transport seqbar">
+    <button id="exportBtn" class="primary">Download .wav</button>
+    <div class="field">
+      <label for="exportBars">Length</label>
+      <select id="exportBars" class="barsel">
+        <option value="4">4 bars</option>
+        <option value="8" selected>8 bars</option>
+        <option value="16">16 bars</option>
+        <option value="32">32 bars</option>
+      </select>
+    </div>
+  </div>
+  <div id="exportMsg" class="loopmsg"></div>
+  <p class="playhint">
+    Renders the drums, the bassline and any loop that's switched on into a single audio file you can send to anyone.
+    It's rendered rather than recorded, so it comes out clean no matter what the browser is doing &mdash; and faster than real time.
+  </p>
+
   <h3 class="sect">Save your work</h3>
   <div class="transport seqbar">
     <input type="text" id="projName" class="projname" placeholder="Name this track" autocomplete="off">
@@ -117,5 +137,6 @@
 <script src="js/studio-drums.js"></script>
 <script src="js/studio-looper.js"></script>
 <script src="js/studio-project.js"></script>
+<script src="js/studio-export.js"></script>
 </body>
 </html>

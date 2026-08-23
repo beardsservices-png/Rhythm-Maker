@@ -112,6 +112,18 @@ const Synth808 = (() => {
   function noteOn(midi, params = {}, when) {
     const ac = ensureContext();
     if (!ac) return null;
+    return buildNote(ac, master, midi, params, when);
+  }
+
+  /**
+   * Same voice, but into a stated context and destination — which is what an
+   * offline render needs, since audio nodes cannot cross contexts.
+   */
+  function renderNote(ac, destination, midi, params = {}, when = 0) {
+    return buildNote(ac, destination, midi, params, when);
+  }
+
+  function buildNote(ac, master, midi, params = {}, when) {
 
     const p = Object.assign({}, DEFAULTS, params);
     const t = Math.max(ac.currentTime, when == null ? ac.currentTime : when);
@@ -200,6 +212,7 @@ const Synth808 = (() => {
     ensureContext,
     noteOn,
     playFor,
+    renderNote,
     setMasterGain,
     midiToFreq,
     midiToName,
