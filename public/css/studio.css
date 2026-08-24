@@ -140,3 +140,25 @@
 .scenebtn{ width:38px; padding:8px 0; font-size:13px; }
 .scenebtn.on{ background:var(--amber); border-color:var(--amber); color:var(--bg2); font-weight:bold; }
 .copybtn{ padding:8px 10px; font-size:11px; }
+
+/* ── arrangement strip ── */
+.songstrip{
+  display:flex; gap:6px; padding:12px; margin-bottom:12px;
+  border:1px solid var(--line); background:rgba(0,0,0,0.15); overflow-x:auto;
+}
+.sblock{
+  flex:1 1 0; min-width:96px; display:flex; flex-direction:column; gap:6px;
+  align-items:center; padding:10px 8px; border-radius:3px;
+  border:1px solid var(--dim); background:var(--bg2); position:relative;
+}
+.sblock.playing{ border-color:var(--amber); box-shadow:0 0 0 1px var(--amber) inset; }
+.sletter{
+  width:100%; font-family:Georgia,serif; font-size:20px; padding:6px 0;
+  letter-spacing:0; border-radius:2px;
+}
+.sblock.playing .sletter{ background:var(--amber); border-color:var(--amber); color:var(--bg2); }
+.sbars{ display:flex; align-items:center; gap:4px; font-size:10px; color:var(--dim); }
+.sbars button{ padding:2px 6px; font-size:11px; line-height:1; }
+.sbars span{ min-width:44px; text-align:center; letter-spacing:.3px; }
+.sdel{ position:absolute; top:2px; right:2px; padding:1px 5px; font-size:11px; border:none; background:none; color:var(--dim); }
+.sdel:hover:not(:disabled){ color:var(--red); }

@@ -43,6 +43,20 @@
 
 
 
+
+  <h3 class="sect">Arrangement</h3>
+  <div class="transport seqbar">
+    <button id="songToggle">Song mode: off</button>
+    <button id="songAdd">Add section</button>
+    <div class="mississippi" id="songPos">&mdash;</div>
+  </div>
+  <div class="songstrip" id="songStrip"></div>
+  <p class="playhint">
+    Write the song down once and it plays itself. Each block is a section &mdash; click its letter to change which variation it plays,
+    and <b>&minus;</b>/<b>+</b> to make it longer or shorter. Turn <b>Song mode</b> on and press Play; the sections change on their own,
+    and <b>Download</b> renders the whole arrangement instead of just what's on screen.
+  </p>
+
   <h3 class="sect">Song sections</h3>
   <div class="transport seqbar scenes">
     <span class="dhint">Move everything to</span>
@@ -147,12 +161,14 @@
 <script src="js/engine/synth-808.js"></script>
 <script src="js/engine/transport.js"></script>
 <script src="js/engine/variations.js"></script>
+<script src="js/engine/song.js"></script>
 <script src="js/studio-808.js"></script>
 <script src="js/engine/wav.js"></script>
 <script src="js/engine/looper.js"></script>
 <script src="js/studio-sequencer.js"></script>
 <script src="js/studio-drums.js"></script>
 <script src="js/studio-scenes.js"></script>
+<script src="js/studio-song.js"></script>
 <script src="js/studio-looper.js"></script>
 <script src="js/studio-project.js"></script>
 <script src="js/studio-export.js"></script>
