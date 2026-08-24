@@ -1,14 +1,12 @@
-// studio-drums.js — drum machine lanes, sharing the 808's clock.
+// studio-drums.js — drum lanes, each with its own A/B/C/D variations.
 //
-// The voices themselves come from Rhythm Shop's audio-engine.js rather than
-// being rewritten: 26 hand-tuned synth drums with per-instrument reverb sends
-// already exist there, and they already schedule at an absolute time. What was
-// missing is that the engine built its OWN AudioContext, so drums and bass
-// would each run a private clock and drift apart within seconds. adoptContext
-// hands it the studio's context before anything sounds.
+// Every lane is a separate part in the Variations bank, so the hats can move
+// to B while the kick stays on A. That independence is the difference between
+// two alternating beats and an actual arrangement.
 //
-// Polyphonic, unlike the bassline: a kit plays several pieces at once, and
-// each hit is fire-and-forget with its own decay, so nothing needs holding.
+// The voices come from Rhythm Shop's audio-engine.js, sharing this page's
+// AudioContext via adoptContext — two contexts would mean two clocks and the
+// kit would drift away from the bass.
 
 (function () {
   const STEPS = 16;
@@ -20,32 +18,39 @@
     { id: 'clap_classic', label: 'Clap' },
     { id: 'perc_shaker',  label: 'Shaker' }
   ];
+  const partId = (li) => 'drum:' + li;
 
   const gridEl = document.getElementById('drumGrid');
   if (!gridEl || typeof RhythmAudio === 'undefined') return;
 
-  // lanes[laneIndex][step] = bool
-  let lanes = LANES.map(() => new Array(STEPS).fill(false));
   let muted = LANES.map(() => false);
 
+  LANES.forEach((_, li) => Variations.register(partId(li), () => new Array(STEPS).fill(false)));
+
+  const laneSteps = (li) => Variations.active(partId(li));
+
   function seed() {
-    const kick = [0, 6, 10];
-    const snare = [4, 12];
-    kick.forEach(i => lanes[0][i] = true);
-    snare.forEach(i => lanes[1][i] = true);
-    for (let i = 0; i < STEPS; i += 2) lanes[2][i] = true;
+    // A: the basic beat.
+    [0, 6, 10].forEach(i => Variations.bank(partId(0), 0)[i] = true);
+    [4, 12].forEach(i => Variations.bank(partId(1), 0)[i] = true);
+    for (let i = 0; i < STEPS; i += 2) Variations.bank(partId(2), 0)[i] = true;
+
+    // B: same bones, busier — the "similar but different" second version.
+    [0, 6, 10, 14].forEach(i => Variations.bank(partId(0), 1)[i] = true);
+    [4, 12, 15].forEach(i => Variations.bank(partId(1), 1)[i] = true);
+    for (let i = 0; i < STEPS; i++) Variations.bank(partId(2), 1)[i] = true;
+    [7, 15].forEach(i => Variations.bank(partId(4), 1)[i] = true);
   }
 
-  // ── audio: inside the scheduler, always at a future time ──
   function onStep(ev) {
     const i = ((ev.loopStep % STEPS) + STEPS) % STEPS;
-    lanes.forEach((lane, li) => {
-      if (muted[li] || !lane[i]) return;
-      RhythmAudio.playVoice(LANES[li].id, ev.time);
+    LANES.forEach((lane, li) => {
+      if (muted[li]) return;
+      const steps = laneSteps(li);
+      if (steps && steps[i]) RhythmAudio.playVoice(lane.id, ev.time);
     });
   }
 
-  // ── visual: on rAF, once the audio clock has caught up ──
   function onVisualStep(ev) {
     const i = ((ev.loopStep % STEPS) + STEPS) % STEPS;
     gridEl.querySelectorAll('.dcell.playing').forEach(c => c.classList.remove('playing'));
@@ -65,20 +70,23 @@
       name.addEventListener('click', () => { muted[li] = !muted[li]; render(); });
       row.appendChild(name);
 
+      row.appendChild(Variations.buildPicker(partId(li)));
+
       const cells = document.createElement('div');
       cells.className = 'dcells';
+      const steps = laneSteps(li);
       for (let i = 0; i < STEPS; i++) {
         const c = document.createElement('div');
-        c.className = 'dcell' + (lanes[li][i] ? ' on' : '') + (i % 4 === 0 ? ' beat' : '');
+        c.className = 'dcell' + (steps[i] ? ' on' : '') + (i % 4 === 0 ? ' beat' : '');
         c.dataset.step = String(i);
         c.setAttribute('role', 'button');
         c.tabIndex = 0;
         c.setAttribute('aria-label', `${lane.label} step ${i + 1}`);
         const toggle = () => {
-          lanes[li][i] = !lanes[li][i];
-          c.classList.toggle('on', lanes[li][i]);
-          // Audition the hit so editing while stopped still makes a sound.
-          if (lanes[li][i] && !Transport.isPlaying) {
+          const cur = laneSteps(li);
+          cur[i] = !cur[i];
+          c.classList.toggle('on', cur[i]);
+          if (cur[i] && !Transport.isPlaying) {
             RhythmAudio.playVoice(lane.id, RhythmAudio.ensureContext().currentTime);
           }
         };
@@ -93,13 +101,19 @@
     });
   }
 
+  // Repaint every picker on the page when the bank changes, and redraw the
+  // grid when the live variation actually flips.
+  let lastSig = '';
+  Variations.onChange((snap) => {
+    const sig = LANES.map((_, li) => (snap[partId(li)] || {}).current).join(',');
+    if (sig !== lastSig) { lastSig = sig; render(); }
+  });
+
   document.getElementById('drumClear').addEventListener('click', () => {
-    lanes = LANES.map(() => new Array(STEPS).fill(false));
+    LANES.forEach((_, li) => laneSteps(li).fill(false));
     render();
   });
 
-  // Share the studio's clock. Must happen before any voice sounds, or the
-  // engine builds its own context and the kit drifts from the bass.
   const shared = Synth808.ensureContext();
   if (shared) RhythmAudio.adoptContext(shared);
 
@@ -107,22 +121,28 @@
   Transport.onVisualStep(onVisualStep);
 
   window.addEventListener('bhs:collect-drums', (e) => {
-    e.detail.lanes = lanes.map(l => l.slice());
+    e.detail.parts = LANES.map((_, li) => Variations.serialize(partId(li)));
     e.detail.muted = muted.slice();
   });
   window.addEventListener('bhs:apply-drums', (e) => {
-    const L = e.detail.lanes;
-    if (Array.isArray(L)) {
-      lanes = LANES.map((_, li) => {
-        const row = new Array(STEPS).fill(false);
-        if (Array.isArray(L[li])) L[li].slice(0, STEPS).forEach((v, i) => row[i] = !!v);
-        return row;
-      });
+    const coerce = (arr) => {
+      const row = new Array(STEPS).fill(false);
+      if (Array.isArray(arr)) arr.slice(0, STEPS).forEach((v, i) => row[i] = !!v);
+      return row;
+    };
+    if (Array.isArray(e.detail.parts)) {
+      LANES.forEach((_, li) => Variations.restore(partId(li), e.detail.parts[li], coerce));
+    } else if (Array.isArray(e.detail.lanes)) {
+      // Projects saved before variations existed: their single pattern is A.
+      LANES.forEach((_, li) => Variations.restore(
+        partId(li), { current: 0, banks: [e.detail.lanes[li]] }, coerce));
     }
-    if (Array.isArray(e.detail.muted)) {
-      muted = LANES.map((_, li) => !!e.detail.muted[li]);
-    }
+    if (Array.isArray(e.detail.muted)) muted = LANES.map((_, li) => !!e.detail.muted[li]);
     render();
+  });
+
+  window.addEventListener('bhs:clone-drums', (e) => {
+    LANES.forEach((_, li) => Variations.copyTo(partId(li), e.detail.target, a => a.slice()));
   });
 
   seed();

@@ -42,6 +42,21 @@
 
 
 
+
+  <h3 class="sect">Song sections</h3>
+  <div class="transport seqbar scenes">
+    <span class="dhint">Move everything to</span>
+    <div id="sceneRow" class="scenerow"></div>
+    <span class="dhint">Copy what's playing</span>
+    <div id="copyRow" class="scenerow"></div>
+  </div>
+  <div id="sceneMsg" class="loopmsg"></div>
+  <p class="playhint">
+    Every instrument has its own <b>A B C D</b> next to it &mdash; so the hats can change while the kick stays put.
+    Changes land on the next bar, never mid&#8209;beat. The buttons above move everything at once.
+    To build a chorus: hit <b>Copy what's playing &rarr; B</b>, switch to B, and change it from there.
+  </p>
+
   <h3 class="sect">Drums</h3>
   <div class="transport seqbar">
     <button id="drumClear">Clear drums</button>
@@ -58,6 +73,7 @@
       <input type="range" id="seqBpm" min="50" max="180" value="90">
     </div>
     <div class="mississippi" id="seqPos">&mdash;</div>
+    <span id="bassVar"></span>
   </div>
   <div class="seqgrid" id="seqGrid"></div>
   <p class="playhint">
@@ -130,11 +146,13 @@
 <script src="js/audio-engine.js"></script>
 <script src="js/engine/synth-808.js"></script>
 <script src="js/engine/transport.js"></script>
+<script src="js/engine/variations.js"></script>
 <script src="js/studio-808.js"></script>
 <script src="js/engine/wav.js"></script>
 <script src="js/engine/looper.js"></script>
 <script src="js/studio-sequencer.js"></script>
 <script src="js/studio-drums.js"></script>
+<script src="js/studio-scenes.js"></script>
 <script src="js/studio-looper.js"></script>
 <script src="js/studio-project.js"></script>
 <script src="js/studio-export.js"></script>

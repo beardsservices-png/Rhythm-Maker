@@ -126,3 +126,17 @@
   font-family:inherit; font-size:13px; padding:9px 12px; border-radius:3px;
 }
 .barsel:focus{ outline:none; border-color:var(--amber); }
+
+/* ── variations / song sections ── */
+.vpick{ display:flex; gap:2px; flex:0 0 auto; }
+.vbtn{
+  width:22px; padding:5px 0; font-size:10px; letter-spacing:0;
+  border-radius:2px; opacity:.55;
+}
+.vbtn.on{ opacity:1; background:var(--amber); border-color:var(--amber); color:var(--bg2); font-weight:bold; }
+.vbtn.queued{ opacity:1; border-color:var(--teal); color:var(--teal); }
+.scenes{ gap:10px; flex-wrap:wrap; }
+.scenerow{ display:flex; gap:4px; }
+.scenebtn{ width:38px; padding:8px 0; font-size:13px; }
+.scenebtn.on{ background:var(--amber); border-color:var(--amber); color:var(--bg2); font-weight:bold; }
+.copybtn{ padding:8px 10px; font-size:11px; }

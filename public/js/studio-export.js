@@ -61,8 +61,9 @@
     const seq = collect('bhs:collect-sequencer');
     const drums = collect('bhs:collect-drums');
     const voice = collect('bhs:collect-voice');
-    const pattern = seq.pattern || [];
-    const lanes = drums.lanes || [];
+    // Render whatever each part is currently switched to.
+    const pattern = (Variations.active('bass') || []);
+    const lanes = (drums.parts || []).map((_, li) => Variations.active('drum:' + li) || []);
     const muted = drums.muted || [];
     const params = voice.params || {};
 

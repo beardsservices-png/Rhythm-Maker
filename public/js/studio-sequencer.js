@@ -16,8 +16,12 @@
   const ROWS = 25;                  // two octaves inclusive, high row first
   const GATE = 0.92;                // fraction of the step a note sounds for
 
-  // pattern[i] = null | { midi, slide }
-  let pattern = new Array(STEPS).fill(null);
+  // The bassline is a part in the variation bank like each drum lane, so it
+  // can move to B while the drums stay on A.
+  const PART = 'bass';
+  Variations.register(PART, () => new Array(STEPS).fill(null));
+  const pat = () => Variations.active(PART);
+
   let params = Object.assign({}, Synth808.DEFAULTS);
   let held = null;                  // the sequencer's currently sounding note
 
@@ -32,6 +36,7 @@
   // ── audio: runs inside the scheduler, always against a future time ──
   function onStep(ev) {
     const i = ((ev.loopStep % STEPS) + STEPS) % STEPS;
+    const pattern = pat();
     const note = pattern[i];
     const stepDur = Transport.getState().secondsPerStep;
 
@@ -64,6 +69,7 @@
   }
 
   function setStep(i, midi) {
+    const pattern = pat();
     const cur = pattern[i];
     if (cur && cur.midi === midi) {
       pattern[i] = null;                       // clicking the same cell clears
@@ -74,12 +80,14 @@
   }
 
   function toggleSlide(i) {
+    const pattern = pat();
     if (!pattern[i]) return;
     pattern[i].slide = !pattern[i].slide;
     render();
   }
 
   function render() {
+    const pattern = pat();
     gridEl.innerHTML = '';
     for (let i = 0; i < STEPS; i++) {
       const col = document.createElement('div');
@@ -128,7 +136,14 @@
       [0, 36, false], [3, 36, false], [4, 43, true], [7, 41, false],
       [10, 39, false], [12, 36, false], [13, 31, true]
     ];
-    riff.forEach(([i, midi, slide]) => { pattern[i] = { midi, slide }; });
+    const a = Variations.bank(PART, 0);
+    riff.forEach(([i, midi, slide]) => { a[i] = { midi, slide }; });
+
+    // A second version of the same line — same root, different movement.
+    const b = Variations.bank(PART, 1);
+    [[0,36,false],[2,36,false],[4,36,false],[6,43,true],[8,41,false],
+     [10,41,false],[12,39,false],[14,34,true]]
+      .forEach(([i, midi, slide]) => { b[i] = { midi, slide }; });
   }
 
   playBtn.addEventListener('click', () => {
@@ -145,12 +160,23 @@
   });
 
   document.getElementById('seqClear').addEventListener('click', () => {
-    pattern = new Array(STEPS).fill(null);
+    pat().fill(null);
     render();
   });
 
+  // Queued variation switches land on the bar line, before anything plays.
+  Transport.onStep((ev) => Variations.tick(ev));
   Transport.onStep(onStep);
   Transport.onVisualStep(onVisualStep);
+
+  window.addEventListener('bhs:clone-bass', (e) => {
+    Variations.copyTo(PART, e.detail.target, a => a.map(n => n ? { midi: n.midi, slide: n.slide } : null));
+  });
+
+  let lastVar = 0;
+  Variations.onChange((snap) => {
+    if (snap[PART] && snap[PART].current !== lastVar) { lastVar = snap[PART].current; render(); }
+  });
   Transport.onStateChange(s => {
     playBtn.textContent = s.playing ? 'Stop' : 'Play';
     playBtn.classList.toggle('primary', s.playing);
@@ -164,17 +190,23 @@
 
   // Save/load talks to this module through events rather than reaching into it.
   window.addEventListener('bhs:collect-sequencer', (e) => {
-    e.detail.pattern = pattern.map(n => n ? { midi: n.midi, slide: !!n.slide } : null);
+    e.detail.part = Variations.serialize(PART);
   });
   window.addEventListener('bhs:apply-sequencer', (e) => {
-    const p = e.detail.pattern;
-    if (Array.isArray(p)) {
-      pattern = new Array(STEPS).fill(null);
-      p.slice(0, STEPS).forEach((n, i) => {
-        if (n && typeof n.midi === 'number') pattern[i] = { midi: n.midi, slide: !!n.slide };
+    const coerce = (arr) => {
+      const row = new Array(STEPS).fill(null);
+      if (Array.isArray(arr)) arr.slice(0, STEPS).forEach((n, i) => {
+        if (n && typeof n.midi === 'number') row[i] = { midi: n.midi, slide: !!n.slide };
       });
-      render();
+      return row;
+    };
+    if (e.detail.part) {
+      Variations.restore(PART, e.detail.part, coerce);
+    } else if (Array.isArray(e.detail.pattern)) {
+      // Pre-variations projects: their one pattern becomes A.
+      Variations.restore(PART, { current: 0, banks: [e.detail.pattern] }, coerce);
     }
+    render();
     if (e.detail.bpm) {
       bpmInput.value = String(e.detail.bpm);
       bpmVal.textContent = String(e.detail.bpm);
@@ -182,5 +214,7 @@
   });
 
   seedPattern();
+  const varHost = document.getElementById('bassVar');
+  if (varHost) varHost.appendChild(Variations.buildPicker(PART));
   render();
 })();
