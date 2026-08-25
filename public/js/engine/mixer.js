@@ -26,6 +26,7 @@ const Mixer = (() => {
     const snap = [];
     tracks.forEach((t, id) => snap.push({
       id, label: t.label, volume: t.volume, pan: t.pan,
+      reverb: t.reverb, delay: t.delay,
       muted: t.muted, soloed: t.soloed, audible: isAudible(id)
     }));
     listeners.forEach(fn => { try { fn(snap); } catch (e) { console.error(e); } });
@@ -50,6 +51,10 @@ const Mixer = (() => {
     master = ctx.createGain();
     master.gain.value = 0.9;
     master.connect(limiter);
+
+    // Effects come up with the mixer so every track added afterwards can be
+    // given its sends at creation time.
+    if (typeof Effects !== 'undefined') Effects.init(ctx, master);
     return ctx;
   }
 
@@ -65,11 +70,23 @@ const Mixer = (() => {
     if (pan) { gain.connect(pan); pan.connect(master); }
     else gain.connect(master);
 
+    // Sends tap the track's own gain, so a fader move carries the effect
+    // with it — turning a track down turns down its reverb too, which is
+    // what you expect.
+    let revSend = null, delSend = null;
+    if (typeof Effects !== 'undefined' && Effects.ready()) {
+      revSend = ctx.createGain(); revSend.gain.value = opts.reverb || 0;
+      gain.connect(revSend); revSend.connect(Effects.reverbInput());
+      delSend = ctx.createGain(); delSend.gain.value = opts.delay || 0;
+      gain.connect(delSend); delSend.connect(Effects.delayInput());
+    }
+
     const t = {
       id, label,
       volume: opts.volume == null ? 0.85 : opts.volume,
       pan: 0, muted: false, soloed: false,
-      gain, panner: pan
+      reverb: opts.reverb || 0, delay: opts.delay || 0,
+      gain, panner: pan, revSend, delSend
     };
     gain.gain.value = t.volume;
     tracks.set(id, t);
@@ -129,6 +146,16 @@ const Mixer = (() => {
     emit();
   }
 
+  function setSend(id, which, v) {
+    const t = tracks.get(id);
+    if (!t) return;
+    const amt = Math.min(1, Math.max(0, v));
+    const node = which === 'reverb' ? t.revSend : t.delSend;
+    t[which] = amt;
+    if (node) node.gain.setTargetAtTime(amt, ctx.currentTime, 0.02);
+    emit();
+  }
+
   function setMuted(id, on) {
     const t = tracks.get(id);
     if (!t) return;
@@ -161,7 +188,8 @@ const Mixer = (() => {
   function serialize() {
     const out = { master: getMasterVolume(), tracks: {} };
     tracks.forEach((t, id) => {
-      out.tracks[id] = { volume: t.volume, pan: t.pan, muted: t.muted, soloed: t.soloed };
+      out.tracks[id] = { volume: t.volume, pan: t.pan, muted: t.muted, soloed: t.soloed,
+                         reverb: t.reverb, delay: t.delay };
     });
     return out;
   }
@@ -175,6 +203,8 @@ const Mixer = (() => {
       t.volume = typeof s.volume === 'number' ? s.volume : t.volume;
       t.muted = !!s.muted;
       t.soloed = !!s.soloed;
+      if (typeof s.reverb === 'number') setSend(id, 'reverb', s.reverb);
+      if (typeof s.delay === 'number') setSend(id, 'delay', s.delay);
       if (typeof s.pan === 'number' && t.panner) {
         t.pan = s.pan;
         t.panner.pan.value = s.pan;
@@ -186,7 +216,7 @@ const Mixer = (() => {
 
   return {
     init, addTrack, input, masterNode,
-    setVolume, setPan, setMuted, setSoloed, clearSolo,
+    setVolume, setPan, setSend, setMuted, setSoloed, clearSolo,
     setMasterVolume, getMasterVolume,
     isAudible, onChange, serialize, restore,
     get(id) { return tracks.get(id); },

@@ -39,6 +39,21 @@
       pan.addEventListener('dblclick', () => Mixer.setPan(t.id, 0));
       el.appendChild(pan);
 
+      ['reverb', 'delay'].forEach(kind => {
+        const row = document.createElement('div');
+        row.className = 'sendrow';
+        const lab = document.createElement('span');
+        lab.textContent = kind === 'reverb' ? 'rev' : 'dly';
+        const sl = document.createElement('input');
+        sl.type = 'range'; sl.min = '0'; sl.max = '1'; sl.step = '0.02';
+        sl.value = String(t[kind]);
+        sl.title = kind === 'reverb' ? 'How much of this track goes to the reverb'
+                                     : 'How much goes to the delay';
+        sl.addEventListener('input', () => Mixer.setSend(t.id, kind, parseFloat(sl.value)));
+        row.appendChild(lab); row.appendChild(sl);
+        el.appendChild(row);
+      });
+
       const btns = document.createElement('div');
       btns.className = 'stripbtns';
       const m = document.createElement('button');
@@ -70,6 +85,7 @@
   render(Mixer.ids().map(id => {
     const t = Mixer.get(id);
     return { id, label: t.label, volume: t.volume, pan: t.pan,
+             reverb: t.reverb, delay: t.delay,
              muted: t.muted, soloed: t.soloed, audible: Mixer.isAudible(id) };
   }));
 
