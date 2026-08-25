@@ -130,6 +130,22 @@
 
 
 
+
+  <h3 class="sect">Mixer</h3>
+  <div class="transport seqbar">
+    <button id="clearSolo">Clear solo</button>
+    <div class="field">
+      <label for="masterVol">Master: <span id="masterVolVal">90%</span></label>
+      <input type="range" id="masterVol" min="0" max="1.5" step="0.01" value="0.9">
+    </div>
+  </div>
+  <div class="mixer" id="mixerStrips"></div>
+  <p class="playhint">
+    One strip per instrument. The slider is volume, the thin one under it is left/right
+    (double&#8209;click to re&#8209;centre). <b>M</b> mutes, <b>S</b> plays only that track &mdash;
+    solo several at once to hear just those.
+  </p>
+
   <h3 class="sect">Export</h3>
   <div class="transport seqbar">
     <button id="exportBtn" class="primary">Download .wav</button>
@@ -175,6 +191,7 @@
 <script src="js/engine/transport.js"></script>
 <script src="js/engine/variations.js"></script>
 <script src="js/engine/song.js"></script>
+<script src="js/engine/mixer.js"></script>
 <script src="js/studio-808.js"></script>
 <script src="js/engine/wav.js"></script>
 <script src="js/engine/looper.js"></script>
@@ -184,6 +201,7 @@
 <script src="js/studio-song.js"></script>
 <script src="js/studio-claude.js"></script>
 <script src="js/studio-looper.js"></script>
+<script src="js/studio-mixer.js"></script>
 <script src="js/studio-project.js"></script>
 <script src="js/studio-export.js"></script>
 </body>

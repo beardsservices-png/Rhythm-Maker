@@ -178,3 +178,23 @@
   font-family:inherit; font-size:13px; padding:10px 12px; border-radius:3px;
 }
 .clauderow input:focus{ outline:none; border-color:var(--amber); }
+
+/* ── mixer ── */
+.mixer{
+  display:flex; gap:8px; padding:14px 12px; margin-bottom:12px;
+  border:1px solid var(--line); background:rgba(0,0,0,0.15); overflow-x:auto;
+}
+.strip{
+  flex:1 0 78px; min-width:78px; display:flex; flex-direction:column;
+  align-items:center; gap:7px; padding:10px 6px;
+  border:1px solid var(--line); border-radius:3px; background:var(--bg2);
+}
+.strip.quiet{ opacity:.42; }
+.stripname{ font-size:10px; letter-spacing:.5px; text-transform:uppercase; color:var(--dim); text-align:center; }
+.fader{ width:100%; }
+.striplev{ font-size:10px; color:var(--amber); font-variant-numeric:tabular-nums; }
+.panknob{ width:100%; height:14px; opacity:.7; }
+.stripbtns{ display:flex; gap:4px; width:100%; }
+.stripbtns button{ flex:1; padding:4px 0; font-size:10px; letter-spacing:0; border-radius:2px; }
+.stripbtns .on-mute{ background:var(--red); border-color:var(--red); color:var(--paper); font-weight:bold; }
+.stripbtns .on-solo{ background:var(--teal); border-color:var(--teal); color:var(--bg2); font-weight:bold; }

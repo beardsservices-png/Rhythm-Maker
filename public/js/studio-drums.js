@@ -47,7 +47,7 @@
     LANES.forEach((lane, li) => {
       if (muted[li]) return;
       const steps = laneSteps(li);
-      if (steps && steps[i]) RhythmAudio.playVoice(lane.id, ev.time);
+      if (steps && steps[i]) hit(li, ev.time);
     });
   }
 
@@ -67,7 +67,11 @@
       name.className = 'dname' + (muted[li] ? ' muted' : '');
       name.textContent = lane.label;
       name.title = 'Click to mute this lane';
-      name.addEventListener('click', () => { muted[li] = !muted[li]; render(); });
+      name.addEventListener('click', () => {
+        muted[li] = !muted[li];
+        Mixer.setMuted('drum:' + li, muted[li]);
+        render();
+      });
       row.appendChild(name);
 
       row.appendChild(Variations.buildPicker(partId(li)));
@@ -87,7 +91,7 @@
           cur[i] = !cur[i];
           c.classList.toggle('on', cur[i]);
           if (cur[i] && !Transport.isPlaying) {
-            RhythmAudio.playVoice(lane.id, RhythmAudio.ensureContext().currentTime);
+            hit(li, RhythmAudio.ensureContext().currentTime);
           }
         };
         c.addEventListener('click', toggle);
@@ -117,6 +121,25 @@
   const shared = Synth808.ensureContext();
   if (shared) RhythmAudio.adoptContext(shared);
 
+  // One mixer strip per lane, each with its own dry/wet chain feeding it.
+  // Reuses createBuses/renderVoice — the seam built for offline export —
+  // rather than a second playback path.
+  let laneBuses = null;
+  if (shared) {
+    Mixer.init(shared);
+    laneBuses = LANES.map((lane, li) => {
+      Mixer.addTrack('drum:' + li, lane.label, { volume: 0.85 });
+      const buses = RhythmAudio.createBuses(shared);
+      buses.output.connect(Mixer.input('drum:' + li));
+      return buses;
+    });
+  }
+
+  function hit(li, when) {
+    if (laneBuses) RhythmAudio.renderVoice(shared, laneBuses[li], LANES[li].id, when);
+    else RhythmAudio.playVoice(LANES[li].id, when);
+  }
+
   Transport.onStep(onStep);
   Transport.onVisualStep(onVisualStep);
 
@@ -145,7 +168,11 @@
   // rather than reaching into this module's state.
   window.addEventListener('bhs:set-drum-mute', (e) => {
     const li = e.detail.lane;
-    if (li >= 0 && li < LANES.length) { muted[li] = !!e.detail.muted; render(); }
+    if (li >= 0 && li < LANES.length) {
+      muted[li] = !!e.detail.muted;
+      Mixer.setMuted('drum:' + li, muted[li]);
+      render();
+    }
   });
   window.addEventListener('bhs:refresh-views', () => render());
 

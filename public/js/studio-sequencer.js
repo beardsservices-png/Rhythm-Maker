@@ -19,6 +19,9 @@
   // The bassline is a part in the variation bank like each drum lane, so it
   // can move to B while the drums stay on A.
   const PART = 'bass';
+  const bassCtx = Synth808.ensureContext();
+  if (bassCtx) { Mixer.init(bassCtx); Mixer.addTrack('bass', '808', { volume: 0.9 }); }
+  const bassOut = () => (bassCtx ? Mixer.input('bass') : null);
   Variations.register(PART, () => new Array(STEPS).fill(null));
   const pat = () => Variations.active(PART);
 
@@ -50,7 +53,9 @@
       held.slideTo(note.midi, Math.min(0.12, stepDur * 0.7), ev.time);
     } else {
       if (held && !held.stopped) held.release(ev.time);
-      held = Synth808.noteOn(note.midi, params, ev.time);
+      held = bassOut()
+        ? Synth808.renderNote(bassCtx, bassOut(), note.midi, params, ev.time)
+        : Synth808.noteOn(note.midi, params, ev.time);
     }
 
     // Hold through the next step only if that step slides into this one.

@@ -85,9 +85,15 @@ const Looper = (() => {
 
       await ctx.audioWorklet.addModule('js/engine/recorder-worklet.js');
 
+      // Route through the mixer so loops get the same faders as everything
+      // else; fall back to a plain gain if the mixer isn't up.
+      if (typeof Mixer !== 'undefined') {
+        Mixer.init(ctx);
+        for (let i = 0; i < SLOTS; i++) Mixer.addTrack('loop:' + i, 'Loop ' + (i + 1), { volume: 0.9 });
+      }
       masterOut = ctx.createGain();
       masterOut.gain.value = 1;
-      masterOut.connect(ctx.destination);
+      masterOut.connect(typeof Mixer !== 'undefined' ? Mixer.masterNode() : ctx.destination);
 
       source = ctx.createMediaStreamSource(stream);
       node = new AudioWorkletNode(ctx, 'bhs-recorder', {
@@ -207,7 +213,10 @@ const Looper = (() => {
 
     const g = ctx.createGain();
     g.gain.value = s.volume;
-    g.connect(masterOut || ctx.destination);
+    const dest = (typeof Mixer !== 'undefined' && Mixer.get('loop:' + i))
+      ? Mixer.input('loop:' + i)
+      : (masterOut || ctx.destination);
+    g.connect(dest);
 
     const src = ctx.createBufferSource();
     src.buffer = s.buffer;

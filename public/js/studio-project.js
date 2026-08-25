@@ -31,6 +31,7 @@
     const voice = req('bhs:collect-voice');
     const drums = req('bhs:collect-drums');
     const song = req('bhs:collect-song');
+    const mixer = req('bhs:collect-mixer');
     const st = Transport.getState();
     return {
       savedAt: new Date().toISOString(),
@@ -41,6 +42,7 @@
       drumsMuted: drums.muted || [],
       voice: voice.params || {},
       song: song.song || null,
+      mixer: mixer.mixer || null,
       loops: Looper.getSlots()
         .filter(s => !!s.buffer)
         .map(s => ({ index: s.index, bars: s.bars, volume: s.volume }))
@@ -98,6 +100,9 @@
       window.dispatchEvent(new CustomEvent('bhs:apply-drums', {
         detail: { parts: data.drumParts, lanes: data.drums || [], muted: data.drumsMuted || [] }
       }));
+      if (data.mixer) {
+        window.dispatchEvent(new CustomEvent('bhs:apply-mixer', { detail: { mixer: data.mixer } }));
+      }
       if (data.song) {
         window.dispatchEvent(new CustomEvent('bhs:apply-song', { detail: { song: data.song } }));
       }
