@@ -3,6 +3,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const { handleStudioAssist } = require('./studio-assist');
 
 const PORT = process.env.PORT || 8080;
 const ROOT = path.join(__dirname, 'public');
@@ -91,7 +92,7 @@ async function handleAssist(req, res) {
       },
       body: JSON.stringify({
         model: ANTHROPIC_MODEL,
-        max_tokens: 400,
+        max_tokens: 2000,
         system: ASSIST_SYSTEM_PROMPT,
         messages: [
           { role: 'user', content: `Current pattern state: ${context}\n\nRequest: ${instruction}` }
@@ -328,6 +329,11 @@ const server = http.createServer((req, res) => {
   if (urlObj.pathname === '/health' || urlObj.pathname === '/healthz') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ status: 'ok', dataDir: DATA_DIR }));
+    return;
+  }
+
+  if (req.method === 'POST' && urlObj.pathname === '/api/studio-assist') {
+    handleStudioAssist(req, res, readBody);
     return;
   }
 

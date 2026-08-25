@@ -169,6 +169,8 @@
   Transport.onStep(onStep);
   Transport.onVisualStep(onVisualStep);
 
+  window.addEventListener('bhs:refresh-views', () => render());
+
   window.addEventListener('bhs:clone-bass', (e) => {
     Variations.copyTo(PART, e.detail.target, a => a.map(n => n ? { midi: n.midi, slide: n.slide } : null));
   });

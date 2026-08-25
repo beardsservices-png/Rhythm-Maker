@@ -44,6 +44,19 @@
 
 
 
+
+  <h3 class="sect">Ask Claude</h3>
+  <div class="claudebox">
+    <div id="claudeLog" class="claudelog">
+      <div class="cmsg claude meta">Tell me what to change &mdash; "make the hats busier", "give me a trap beat at 140",
+      "write a chorus in B", "turn the bass drive up". I'll change the song itself, not just describe it.</div>
+    </div>
+    <form id="claudeForm" class="clauderow">
+      <input type="text" id="claudeInput" placeholder="What should I change?" autocomplete="off">
+      <button type="submit" class="primary">Send</button>
+    </form>
+  </div>
+
   <h3 class="sect">Arrangement</h3>
   <div class="transport seqbar">
     <button id="songToggle">Song mode: off</button>
@@ -169,6 +182,7 @@
 <script src="js/studio-drums.js"></script>
 <script src="js/studio-scenes.js"></script>
 <script src="js/studio-song.js"></script>
+<script src="js/studio-claude.js"></script>
 <script src="js/studio-looper.js"></script>
 <script src="js/studio-project.js"></script>
 <script src="js/studio-export.js"></script>

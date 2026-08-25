@@ -162,3 +162,19 @@
 .sbars span{ min-width:44px; text-align:center; letter-spacing:.3px; }
 .sdel{ position:absolute; top:2px; right:2px; padding:1px 5px; font-size:11px; border:none; background:none; color:var(--dim); }
 .sdel:hover:not(:disabled){ color:var(--red); }
+
+/* ── ask claude ── */
+.claudebox{ border:1px solid var(--line); background:rgba(0,0,0,0.15); padding:12px; margin-bottom:14px; }
+.claudelog{ max-height:260px; overflow-y:auto; margin-bottom:10px; display:flex; flex-direction:column; gap:8px; }
+.cmsg{ font-size:13px; line-height:1.5; padding:8px 11px; border-radius:3px; max-width:90%; }
+.cmsg.you{ align-self:flex-end; background:rgba(217,154,58,0.12); border:1px solid var(--amber); }
+.cmsg.claude{ align-self:flex-start; background:var(--bg2); border:1px solid var(--line); }
+.cmsg.meta{ font-size:11px; color:var(--dim); border-style:dashed; }
+.cmsg.pending{ opacity:.6; font-style:italic; }
+.cmsg.bad{ border-color:var(--red); color:var(--paper); background:rgba(184,80,62,0.12); }
+.clauderow{ display:flex; gap:8px; }
+.clauderow input{
+  flex:1; background:var(--bg2); border:1px solid var(--dim); color:var(--paper);
+  font-family:inherit; font-size:13px; padding:10px 12px; border-radius:3px;
+}
+.clauderow input:focus{ outline:none; border-color:var(--amber); }

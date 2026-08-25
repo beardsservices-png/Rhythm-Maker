@@ -141,6 +141,14 @@
     render();
   });
 
+  // Claude drives the same lanes the buttons do, so it goes through events
+  // rather than reaching into this module's state.
+  window.addEventListener('bhs:set-drum-mute', (e) => {
+    const li = e.detail.lane;
+    if (li >= 0 && li < LANES.length) { muted[li] = !!e.detail.muted; render(); }
+  });
+  window.addEventListener('bhs:refresh-views', () => render());
+
   window.addEventListener('bhs:clone-drums', (e) => {
     LANES.forEach((_, li) => Variations.copyTo(partId(li), e.detail.target, a => a.slice()));
   });
