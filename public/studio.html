@@ -167,9 +167,13 @@
         <option value="32">32 bars</option>
       </select>
     </div>
+    <label class="chk"><input type="checkbox" id="masterToggle" checked> Master it</label>
   </div>
   <div id="exportMsg" class="loopmsg"></div>
   <p class="playhint">
+    <b>Master it</b> measures the finished mix &mdash; how loud it is, and whether it's bass&#8209;heavy or harsh &mdash;
+    then corrects the balance and brings it up to a normal listening level. It tells you exactly what it changed,
+    and it won't touch anything that's already sitting right.<br><br>
     Renders the drums, the bassline and any loop that's switched on into a single audio file you can send to anyone.
     It's rendered rather than recorded, so it comes out clean no matter what the browser is doing &mdash; and faster than real time.
   </p>
@@ -201,6 +205,7 @@
 <script src="js/engine/variations.js"></script>
 <script src="js/engine/song.js"></script>
 <script src="js/engine/effects.js"></script>
+<script src="js/engine/master.js"></script>
 <script src="js/engine/mixer.js"></script>
 <script src="js/studio-808.js"></script>
 <script src="js/engine/wav.js"></script>

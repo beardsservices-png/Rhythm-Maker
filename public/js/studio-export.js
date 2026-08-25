@@ -31,7 +31,7 @@
 
   const DRUM_LANES = ['kick_punchy', 'snare_fat', 'hat_closed', 'hat_open', 'clap_classic', 'perc_shaker'];
 
-  async function render(requestedBars) {
+  async function render(requestedBars, opts = {}) {
     // In song mode the arrangement decides both the length and which
     // variation each bar plays, so the file is the whole song rather than
     // whatever happens to be selected on screen.
@@ -133,18 +133,31 @@
       src.stop(totalSteps * stepSec);
     });
 
-    const rendered = await oac.startRendering();
+    let rendered = await oac.startRendering();
+
+    // Mastering already ends in an exact peak scale, so normalising on top
+    // would be a second, redundant gain change.
+    let masterReport = null;
+    if (opts.master && typeof Mastering !== 'undefined') {
+      const res = await Mastering.master(rendered);
+      rendered = res.buffer;
+      masterReport = res.report;
+      return { rendered, norm: { applied: 1 }, seconds, totalBars, songMode, masterReport };
+    }
+
     const norm = WavCodec.normalize(rendered, 0.98);
-    return { rendered, norm, seconds, totalBars, songMode };
+    return { rendered, norm, seconds, totalBars, songMode, masterReport };
   }
 
   btn.addEventListener('click', async () => {
     btn.disabled = true;
     const bars = parseInt(barsSel.value, 10) || 8;
     const songMode = typeof Song !== 'undefined' && Song.isEnabled();
-    msg(songMode ? 'Rendering the whole arrangement…' : `Rendering ${bars} bars…`);
+    msg((songMode ? 'Rendering the whole arrangement' : `Rendering ${bars} bars`) +
+        (document.getElementById('masterToggle').checked ? ', then mastering…' : '…'));
     try {
-      const { rendered, norm, totalBars } = await render(bars);
+      const wantMaster = document.getElementById('masterToggle').checked;
+      const { rendered, norm, totalBars, masterReport } = await render(bars, { master: wantMaster });
       const blob = new Blob([WavCodec.encode(rendered)], { type: 'audio/wav' });
 
       const name = (document.getElementById('projName').value || 'bhs-track')
@@ -157,8 +170,10 @@
       setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
 
       const mb = (blob.size / 1048576).toFixed(1);
-      msg(`Downloaded ${name}.wav — ${totalBars} bars, ${rendered.duration.toFixed(1)}s, ${mb}MB` +
-          (norm.applied < 1 ? ' (turned down slightly to stop it clipping).' : '.'));
+      let line = `Downloaded ${name}.wav — ${totalBars} bars, ${rendered.duration.toFixed(1)}s, ${mb}MB.`;
+      if (masterReport) line += ' Mastered: ' + masterReport.summary + '.';
+      else if (norm.applied < 1) line += ' Turned down slightly to stop it clipping.';
+      msg(line);
     } catch (e) {
       msg('Export failed: ' + (e && e.message ? e.message : e), true);
     } finally {
