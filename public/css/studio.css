@@ -205,3 +205,42 @@
 
 .chk{ display:flex; align-items:center; gap:7px; font-size:12px; color:var(--paper); cursor:pointer; }
 .chk input{ accent-color:var(--amber); width:15px; height:15px; }
+
+/* ── sample timeline ── */
+.libitem{ font-size:11px; padding:6px 10px; }
+.libitem.armed{ background:var(--amber); border-color:var(--amber); color:var(--bg2); font-weight:bold; }
+.tlwrap{
+  border:1px solid var(--line); background:rgba(0,0,0,0.15);
+  overflow-x:auto; margin-bottom:12px;
+}
+.truler{ position:relative; height:20px; border-bottom:1px solid var(--line); }
+.ruletick{
+  position:absolute; top:2px; font-size:9px; color:var(--dim);
+  border-left:1px solid var(--dim); padding-left:3px;
+}
+.ttracks{ display:flex; flex-direction:column; }
+.tlane{
+  position:relative; height:44px; border-bottom:1px solid var(--line);
+  background-image: repeating-linear-gradient(90deg, rgba(233,225,204,0.04) 0, rgba(233,225,204,0.04) 1px, transparent 1px, transparent 28px);
+  cursor:pointer;
+}
+.tlane:last-child{ border-bottom:none; }
+.clip{
+  position:absolute; top:4px; height:36px;
+  background:rgba(217,154,58,0.22); border:1px solid var(--amber); border-radius:3px;
+  cursor:grab; overflow:hidden; touch-action:none;
+}
+.clip:active{ cursor:grabbing; }
+.cliplabel{
+  position:absolute; left:5px; top:3px; font-size:10px; color:var(--paper);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:80%;
+  pointer-events:none;
+}
+.clipdel{
+  position:absolute; top:1px; right:1px; width:14px; height:14px; line-height:12px;
+  padding:0; font-size:11px; border:none; background:rgba(0,0,0,0.3); color:var(--paper);
+}
+.cliphandle{
+  position:absolute; top:0; right:0; width:8px; height:100%;
+  cursor:ew-resize; background:rgba(217,154,58,0.5); touch-action:none;
+}

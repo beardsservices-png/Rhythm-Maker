@@ -119,6 +119,27 @@
       }
     }
 
+    // Sample timeline clips.
+    if (typeof SampleTimeline !== 'undefined') {
+      const tlClips = SampleTimeline.getClips();
+      const tlLib = SampleTimeline.getLibrary();
+      const tlBus = [];
+      for (let t = 0; t < SampleTimeline.TRACKS; t++) {
+        const g = oac.createGain(); g.gain.value = 1; g.connect(bus); tlBus.push(g);
+      }
+      tlClips.forEach(c => {
+        const sample = tlLib.find(s => s.id === c.sampleId);
+        if (!sample) return;
+        const startTime = c.startBar * stepSec * stepsPerBar;
+        if (startTime >= totalSteps * stepSec) return;   // outside the requested render length
+        const src = oac.createBufferSource();
+        src.buffer = sample.buffer;
+        src.connect(tlBus[c.track]);
+        const duration = Math.min(c.lengthBars * stepSec * stepsPerBar, sample.duration - c.offsetSec);
+        if (duration > 0) src.start(startTime, c.offsetSec, duration);
+      });
+    }
+
     // Loops, repeated to fill the render.
     Looper.getSlots().forEach(slot => {
       if (!slot.buffer || slot.state !== 'playing') return;

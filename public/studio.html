@@ -84,6 +84,23 @@
     To build a chorus: hit <b>Copy what's playing &rarr; B</b>, switch to B, and change it from there.
   </p>
 
+
+  <h3 class="sect">Sample timeline</h3>
+  <div class="transport seqbar">
+    <input type="file" id="sampleUpload" accept="audio/*" multiple>
+    <label class="chk"><input type="checkbox" id="timelineLoop" checked> Loop timeline</label>
+  </div>
+  <div class="saved-list" id="sampleLib"></div>
+  <div id="timelineMsg" class="loopmsg"></div>
+  <div class="tlwrap">
+    <div class="truler" id="timelineRuler"></div>
+    <div class="ttracks" id="timelineTracks"></div>
+  </div>
+  <p class="playhint">
+    Upload a clip, click it in the list, then click a bar below to drop it in. Drag a clip to move it,
+    drag its right edge to trim how much plays. Bars are marked every four.
+  </p>
+
   <h3 class="sect">Drums</h3>
   <div class="transport seqbar">
     <button id="drumClear">Clear drums</button>
@@ -207,10 +224,12 @@
 <script src="js/engine/effects.js"></script>
 <script src="js/engine/master.js"></script>
 <script src="js/engine/mixer.js"></script>
+<script src="js/engine/sample-timeline.js"></script>
 <script src="js/studio-808.js"></script>
 <script src="js/engine/wav.js"></script>
 <script src="js/engine/looper.js"></script>
 <script src="js/studio-sequencer.js"></script>
+<script src="js/studio-timeline.js"></script>
 <script src="js/studio-drums.js"></script>
 <script src="js/studio-scenes.js"></script>
 <script src="js/studio-song.js"></script>

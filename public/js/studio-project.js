@@ -33,6 +33,7 @@
     const song = req('bhs:collect-song');
     const mixer = req('bhs:collect-mixer');
     const fx = req('bhs:collect-fx');
+    const timeline = req('bhs:collect-timeline');
     const st = Transport.getState();
     return {
       savedAt: new Date().toISOString(),
@@ -45,6 +46,7 @@
       song: song.song || null,
       mixer: mixer.mixer || null,
       fx: fx.fx || null,
+      timeline: timeline.timeline || null,
       loops: Looper.getSlots()
         .filter(s => !!s.buffer)
         .map(s => ({ index: s.index, bars: s.bars, volume: s.volume }))
@@ -102,6 +104,9 @@
       window.dispatchEvent(new CustomEvent('bhs:apply-drums', {
         detail: { parts: data.drumParts, lanes: data.drums || [], muted: data.drumsMuted || [] }
       }));
+      if (data.timeline) {
+        window.dispatchEvent(new CustomEvent('bhs:apply-timeline', { detail: { timeline: data.timeline } }));
+      }
       if (data.fx) {
         window.dispatchEvent(new CustomEvent('bhs:apply-fx', { detail: { fx: data.fx } }));
       }
