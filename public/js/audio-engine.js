@@ -418,6 +418,61 @@ const RhythmAudio = (() => {
     }
   }
 
+  /**
+   * Play a catalog voice at a stated MIDI note.
+   *
+   * The CATALOG bakes each voice's frequency into its closure — bell_glass can
+   * only ever ring at 660Hz — which is exactly right for a drum machine and
+   * useless for a keyboard. Rather than rewrite all 26 entries (this file is
+   * shared with Rhythm Shop's Freeplay and Round Robin pages, which must keep
+   * behaving identically), this maps just the melodic families back to the
+   * synth function underneath and passes the played note's frequency in.
+   * Everything else about the voice — its decay, wave, filter movement, the
+   * character that makes a Bell a Bell — is preserved exactly.
+   *
+   * Honest limit: these voices are fire-and-forget on a fixed decay with no
+   * note-off, so they are one-shots. Great for a pluck or a bell, and a pad
+   * will fade on its own rather than sustain while you hold the key.
+   */
+  const A4 = 440, A4_MIDI = 69;
+  function midiToFreq(midi) { return A4 * Math.pow(2, (midi - A4_MIDI) / 12); }
+
+  // voiceId -> which synth to call, which parameter carries pitch, and the
+  // rest of that voice's character.
+  const PITCHED = {
+    bass_sub:    { fn: synthBass, key: 'freq', opts: { decay: 0.42, style: 'sub' } },
+    bass_pluck:  { fn: synthBass, key: 'freq', opts: { decay: 0.22, style: 'pluck' } },
+    bass_reso:   { fn: synthBass, key: 'freq', opts: { decay: 0.5,  style: 'reso' } },
+    lead_saw:    { fn: synthLead, key: 'freq', opts: { wave: 'sawtooth', decay: 0.3 } },
+    lead_square: { fn: synthLead, key: 'freq', opts: { wave: 'square',   decay: 0.26 } },
+    lead_pluck:  { fn: synthLead, key: 'freq', opts: { wave: 'triangle', decay: 0.16 } },
+    pad_warm:    { fn: synthPad,  key: 'freq', opts: { decay: 0.7, airy: false } },
+    pad_airy:    { fn: synthPad,  key: 'freq', opts: { decay: 0.9, airy: true } },
+    bell_glass:  { fn: synthBell, key: 'base', opts: { spread: 1,   decay: 0.5 } },
+    bell_chime:  { fn: synthBell, key: 'base', opts: { spread: 1.3, decay: 0.65 } }
+  };
+
+  function pitchedVoices() {
+    return Object.keys(PITCHED).map(id => {
+      const v = voiceById(id);
+      return { id, label: v ? (v.familyLabel + ' — ' + v.variant) : id };
+    });
+  }
+
+  function renderVoicePitched(ac, buses, voiceId, t, midi) {
+    const spec = PITCHED[voiceId];
+    if (!spec) return false;
+    const opts = Object.assign({}, spec.opts);
+    opts[spec.key] = midiToFreq(midi);
+    activeDry = buses.dry; activeWet = buses.wet; activeNoise = buses.noise;
+    try {
+      spec.fn(ac, t, buses.dry, opts);
+    } finally {
+      activeDry = null; activeWet = null; activeNoise = null;
+    }
+    return true;
+  }
+
   function playVoice(voiceId, t) {
     const ac = ensureContext();
     if (!ac) return;
@@ -476,6 +531,8 @@ const RhythmAudio = (() => {
     adoptContext,
     createBuses,
     renderVoice,
+    renderVoicePitched,
+    pitchedVoices,
     playVoice,
     createScheduler,
     CATALOG,

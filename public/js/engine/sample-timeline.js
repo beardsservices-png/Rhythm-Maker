@@ -138,6 +138,27 @@ const SampleTimeline = (() => {
     src.start(when, clip.offsetSec, duration);
   }
 
+  /**
+   * Fire one sample immediately, unattached to any clip — what a MIDI pad
+   * needs. Reuses the same buffer-source-into-a-mixer-track path playClip
+   * uses, so a played sample sits on the same strip as a placed one.
+   */
+  function triggerSample(sampleId, track = 0, when) {
+    init();
+    if (!ctx) return false;
+    const sample = library.find(s => s.id === sampleId);
+    if (!sample) return false;
+    const t = Math.max(0, Math.min(TRACKS - 1, track | 0));
+    const src = ctx.createBufferSource();
+    src.buffer = sample.buffer;
+    const dest = (typeof Mixer !== 'undefined' && Mixer.get('timeline:' + t))
+      ? Mixer.input('timeline:' + t)
+      : ctx.destination;
+    src.connect(dest);
+    src.start(when == null ? ctx.currentTime : when);
+    return true;
+  }
+
   function onVisualStep(ev) {
     // stepCounter has already advanced past this ev by the time it fires
     // visually (it's incremented in onStep, which runs ahead in the audio
@@ -167,7 +188,7 @@ const SampleTimeline = (() => {
   return {
     TRACKS, TIMELINE_BARS, init, isReady: () => ready,
     addSample, addClip, moveClip, trimClip, removeClip, setLoopTimeline,
-    onStep, onVisualStep, onChange, serialize, restore, relinkSample,
+    onStep, onVisualStep, onChange, serialize, restore, relinkSample, triggerSample,
     getLibrary: () => library.slice(), getClips: () => clips.slice(),
     barsFor
   };

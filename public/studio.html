@@ -40,6 +40,40 @@
     Arrow keys shift the range. <b>Hold Shift</b> to slide from the note you're on into the next one instead of restarting it.
   </p>
 
+  <h3 class="sect">MIDI keyboard</h3>
+  <div class="transport seqbar" id="midiPanel">
+    <button id="midiConnect" class="primary">Connect keyboard</button>
+    <div class="field">
+      <label for="midiTarget">Play</label>
+      <select id="midiTarget" class="barsel"></select>
+    </div>
+    <div class="field">
+      <label for="midiChannel">Channel</label>
+      <select id="midiChannel" class="barsel">
+        <option value="0" selected>All</option>
+        <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+        <option value="4">4</option><option value="5">5</option><option value="6">6</option>
+        <option value="7">7</option><option value="8">8</option><option value="9">9</option>
+        <option value="10">10</option><option value="11">11</option><option value="12">12</option>
+        <option value="13">13</option><option value="14">14</option><option value="15">15</option>
+        <option value="16">16</option>
+      </select>
+    </div>
+    <label class="chk"><input type="checkbox" id="midiVelocity" checked> Respond to how hard I play</label>
+    <div class="mississippi" id="midiActivity">&mdash;</div>
+  </div>
+  <div id="midiStatus" class="loopmsg"></div>
+  <div class="saved-list" id="midiDevices"></div>
+  <p class="playhint">
+    Plug a MIDI keyboard in, press <b>Connect keyboard</b>, and say yes to the permission box.
+    <b>Play</b> chooses what it drives &mdash; the 808, the drum lanes, your uploaded samples, or one of the synth voices.
+    The readout blinks with every note it receives, so you can tell it's working before you hear anything.<br><br>
+    <b>Chrome or Edge, on a computer.</b> Safari has no MIDI at all, so <b>iPhone and iPad can't do this</b> &mdash;
+    including Chrome on an iPhone, which is Safari underneath.
+    And it only works on the <b>https:// web address</b>: opening the app on a home-network address
+    like 192.168.1.50 will make the Connect button fail no matter what you do.
+  </p>
+
 
 
 
@@ -225,12 +259,14 @@
 <script src="js/engine/master.js"></script>
 <script src="js/engine/mixer.js"></script>
 <script src="js/engine/sample-timeline.js"></script>
+<script src="js/engine/midi.js"></script>
 <script src="js/studio-808.js"></script>
 <script src="js/engine/wav.js"></script>
 <script src="js/engine/looper.js"></script>
 <script src="js/studio-sequencer.js"></script>
 <script src="js/studio-timeline.js"></script>
 <script src="js/studio-drums.js"></script>
+<script src="js/studio-midi.js"></script>
 <script src="js/studio-scenes.js"></script>
 <script src="js/studio-song.js"></script>
 <script src="js/studio-claude.js"></script>

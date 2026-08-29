@@ -244,3 +244,10 @@
   position:absolute; top:0; right:0; width:8px; height:100%;
   cursor:ew-resize; background:rgba(217,154,58,0.5); touch-action:none;
 }
+
+/* MIDI: the activity readout flashes on every note received, which is how you
+   tell the keyboard is talking to the app before you've heard a sound. */
+#midiActivity { transition: color .12s ease, transform .12s ease; }
+#midiActivity.lit { color: var(--paper); transform: scale(1.14); }
+/* And the drum row you just hit flashes, so a played lane is visible too. */
+.drow.struck .dname { background: var(--amber); color: #191a17; }

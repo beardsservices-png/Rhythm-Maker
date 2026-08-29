@@ -143,6 +143,10 @@
   Transport.onStep(onStep);
   Transport.onVisualStep(onVisualStep);
 
+  window.addEventListener('bhs:collect-drum-lanes', (e) => {
+    e.detail.lanes = LANES.map(l => ({ id: l.id, label: l.label }));
+  });
+
   window.addEventListener('bhs:collect-drums', (e) => {
     e.detail.parts = LANES.map((_, li) => Variations.serialize(partId(li)));
     e.detail.muted = muted.slice();
@@ -174,6 +178,23 @@
       render();
     }
   });
+  // A MIDI keyboard plays the lanes live, through the same hit() the grid
+  // uses — so a played drum lands on its own mixer strip with its sends,
+  // exactly like a sequenced one.
+  window.addEventListener('bhs:trigger-drum', (e) => {
+    const li = e.detail && e.detail.lane;
+    if (!(li >= 0 && li < LANES.length)) return;
+    if (muted[li]) return;
+    const ac = shared || RhythmAudio.ensureContext();
+    hit(li, e.detail.when == null ? (ac ? ac.currentTime : 0) : e.detail.when);
+    // Flash the lane so you can see what you hit.
+    const row = gridEl.children[li];
+    if (row) {
+      row.classList.add('struck');
+      setTimeout(() => row.classList.remove('struck'), 110);
+    }
+  });
+
   window.addEventListener('bhs:refresh-views', () => render());
 
   window.addEventListener('bhs:clone-drums', (e) => {

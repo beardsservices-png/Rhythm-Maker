@@ -23,6 +23,7 @@
 
   const live = new Map();   // midi -> handle
   let lastHandle = null;    // for slide mode
+  let bendSemis = 0;        // pitch-bend wheel, in semitones
 
   const kbEl = document.getElementById('keyboard');
   const notice = document.getElementById('notice');
@@ -52,7 +53,7 @@
     window.dispatchEvent(new CustomEvent('bhs808params', { detail: Object.assign({}, params) }));
   }
 
-  function noteOn(midi) {
+  function noteOn(midi, opts = {}) {
     if (!Synth808.supported()) {
       notice.textContent = 'Your browser does not support the Web Audio API — try Chrome, Safari, or Firefox.';
       notice.classList.add('show');
@@ -80,8 +81,19 @@
       paint(oldest, false);
     }
 
-    const handle = Synth808.noteOn(midi, params);
+    // Velocity, when the caller supplies it (a MIDI keyboard does; the mouse
+    // and the letter keys don't). Scaling gain by velocity alone makes soft
+    // playing vanish, so the curve keeps a floor and squares the input — which
+    // is roughly how loudness is heard, and how hardware synths do it.
+    let voiceParams = params;
+    if (typeof opts.velocity === 'number') {
+      const v = Math.max(0, Math.min(1, opts.velocity));
+      voiceParams = Object.assign({}, params, { gain: params.gain * (0.25 + 0.75 * v * v) });
+    }
+
+    const handle = Synth808.noteOn(midi, voiceParams);
     if (!handle) return;
+    if (bendSemis) handle.setBend(bendSemis);
     live.set(midi, handle);
     lastHandle = handle;
     paint(midi, true);
@@ -242,6 +254,29 @@
     params = Object.assign({}, Synth808.DEFAULTS);
     renderControls();
     publishParams();
+  });
+
+  // ── played from elsewhere ───────────────────────────────────────────
+  //
+  // A MIDI keyboard (studio-midi.js) plays through these rather than reaching
+  // into this module, which is the same shape as bhs:set-drum-mute. Coming in
+  // here rather than calling Synth808 directly means MIDI gets the voice
+  // stealing, the slide, and the on-screen key lighting up for free.
+
+  window.addEventListener('bhs:note-on', (e) => {
+    if (!e.detail || typeof e.detail.midi !== 'number') return;
+    noteOn(e.detail.midi, { velocity: e.detail.velocity });
+  });
+  window.addEventListener('bhs:note-off', (e) => {
+    if (!e.detail || typeof e.detail.midi !== 'number') return;
+    noteOff(e.detail.midi);
+  });
+  window.addEventListener('bhs:bend', (e) => {
+    bendSemis = (e.detail && e.detail.semitones) || 0;
+    live.forEach(h => { if (h && !h.stopped) h.setBend(bendSemis); });
+  });
+  window.addEventListener('bhs:all-notes-off', () => {
+    Array.from(live.keys()).forEach(noteOff);
   });
 
   window.addEventListener('bhs:collect-voice', (e) => {

@@ -176,6 +176,21 @@ const Synth808 = (() => {
         osc.stop(at + rel + 0.02);
       },
 
+      /**
+       * Pitch-bend wheel. Unlike slideTo this does NOT change handle.midi —
+       * the note is still the note you're holding, it's just being bent away
+       * from it, so letting the wheel go has to land back on the same pitch.
+       * setTargetAtTime rather than a ramp because the wheel sends a stream of
+       * small moves and each one should chase the last smoothly.
+       */
+      setBend(semitones, when) {
+        if (handle.stopped) return;
+        const at = Math.max(t + p.punchTime, when == null ? ac.currentTime : when);
+        const target = midiToFreq(handle.midi + (semitones || 0));
+        osc.frequency.cancelScheduledValues(at);
+        osc.frequency.setTargetAtTime(Math.max(1, target), at, 0.012);
+      },
+
       /** The 808 slide — glide to another note without retriggering. */
       slideTo(nextMidi, glideTime, when) {
         if (handle.stopped) return;
