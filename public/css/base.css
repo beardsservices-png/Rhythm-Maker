@@ -81,27 +81,6 @@ details.how[open] > summary::before{ content: '▾ '; }
 details.how > summary:focus-visible{ outline: 2px solid var(--amber); outline-offset: 2px; }
 details.how p{ line-height: 1.6; margin: 10px 0 0; max-width: 70ch; }
 
-/* Assist panel — shared across Freeplay and Round Robin */
-#assistPanel{ border: 1px solid var(--line); background: rgba(0,0,0,0.15); padding: 14px 16px; margin: 22px 0; }
-.assist-hdr{ font-family: Georgia, serif; font-size: 15px; margin-bottom: 10px; }
-.assist-sub{ color: var(--dim); font-size: 11px; font-family: 'Courier New', monospace; letter-spacing: 0.5px; }
-.assist-row{ display:flex; gap:8px; }
-.assist-row input{
-  flex:1; background: var(--bg2); border: 1px solid var(--dim); color: var(--paper);
-  font-family: inherit; font-size: 13px; padding: 9px 12px; border-radius: 3px;
-}
-.assist-row input:focus{ outline: none; border-color: var(--amber); }
-.assist-reply{ display:none; margin-top: 10px; font-size: 13px; color: var(--paper); line-height: 1.5; }
-.assist-reply.show{ display:block; }
-
-/* Family / variant instrument picker */
-.family-picker{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom: 10px; }
-.family-btn{ border-width:2px; }
-.family-btn.active{ border-color: var(--amber); color: var(--amber); }
-.variant-picker{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom: 20px; }
-.variant-btn{ font-size: 11px; padding: 6px 12px; }
-.variant-btn.active{ border-color: var(--amber); color: var(--amber); background: rgba(217,154,58,0.12); }
-
 @media (max-width: 640px){
   .hdr h1{ font-size: 22px; }
   .transport{ gap:10px; padding:12px; }

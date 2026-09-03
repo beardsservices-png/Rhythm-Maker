@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rhythm Shop — Practice Mode</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23191a17'/%3E%3Ccircle cx='11' cy='23' r='5' fill='%23d99a3a'/%3E%3Crect x='15' y='7' width='3' height='16' fill='%23d99a3a'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/practice.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="hdr">
+    <div>
+      <h1>Practice Mode</h1>
+      <div class="sub">play the note, watch it turn green</div>
+    </div>
+    <a class="back" href="index.html">&larr; Modes</a>
+  </div>
+
+  <div id="notice" class="notice"></div>
+
+  <div id="instPicker" class="inst-picker"></div>
+  <p id="instHelp" class="inst-help"></p>
+
+  <section class="panel">
+    <div class="setup-row">
+      <select id="presetSel"></select>
+      <button id="loadPresetBtn" class="primary">Load song</button>
+      <select id="modeSel" title="How to practice this song">
+        <option value="straight">Straight through</option>
+        <option value="progressive">In growing chunks</option>
+        <option value="random">Random note drill</option>
+      </select>
+      <button class="secondary" id="toggleBuilderBtn">Build your own</button>
+    </div>
+
+    <div class="builder" id="builder">
+      <div class="mini-label">Tap notes to add them</div>
+      <div class="note-palette" id="notePalette"></div>
+      <div class="builder-seq" id="builderSeq">(tap notes above)</div>
+      <div class="setup-row">
+        <button id="builderUndo" class="secondary">Undo last</button>
+        <button id="builderClear" class="secondary">Clear</button>
+        <button id="builderUse">Use this song</button>
+      </div>
+      <div class="mini-label" style="margin-top:12px;">…or type note names</div>
+      <div class="setup-row">
+        <input type="text" id="typeInput" placeholder="E D C D E E E" autocomplete="off">
+        <button id="typeUseBtn">Use this</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="lane-scroll" id="laneWrap"><div class="lane" id="lane"></div></div>
+  </section>
+
+  <section class="panel play-area">
+    <div class="target-block">
+      <div class="mini-label">Play this</div>
+      <div id="targetName" class="target-name">—</div>
+      <div class="diagram" id="mainDiagram"></div>
+    </div>
+
+    <div class="next-block">
+      <div class="mini-label">Up next <span id="beatDot" class="beat-dot"></span></div>
+      <div id="nextName" class="next-name">—</div>
+      <div class="diagram" id="nextDiagram"></div>
+    </div>
+
+    <div class="status-col">
+      <div class="hearing" aria-live="polite">
+        <div id="hearingText" class="hearing-text">Press “Start listening” and play.</div>
+        <div class="meter"><div id="levelFill" class="meter-fill"></div></div>
+        <div class="tuner"><div class="tuner-mid"></div><div id="needle" class="tuner-needle"></div></div>
+        <div class="hold"><div id="progressFill" class="hold-fill"></div></div>
+      </div>
+      <div id="streak" class="streak"></div>
+      <div class="controls-row">
+        <button id="micBtn" class="primary">Start listening</button>
+        <button id="skipBtn" class="secondary">Skip note</button>
+        <button id="restartBtn" class="secondary">Restart</button>
+        <button id="settingsBtn" class="secondary" aria-expanded="false">Settings</button>
+      </div>
+      <div id="settingsPanel" class="settings-panel"></div>
+      <div id="doneBanner" class="done-banner">You played the whole song! ★ &nbsp; Press Restart to go again.</div>
+    </div>
+  </section>
+
+  <h3 class="section-h">Saved songs</h3>
+  <div class="setup-row">
+    <button id="saveSongBtn" class="secondary">Save the current song</button>
+  </div>
+  <div class="saved-list" id="savedList"></div>
+
+  <details class="how">
+    <summary>How this works</summary>
+    <p>Pick an instrument and a song. Each note lights up on the strip with its fingering (flute) or key
+    (piano). Press <b>Start listening</b> and play — the app listens through your microphone, and when it
+    hears the right note held steady it flashes green, chimes, and moves on. Flute counts the note in any
+    octave; piano wants the octave shown, unless you change that in Settings. Build your own song by tapping
+    or typing note names, and save it to come back to. Nothing to install — it just needs microphone
+    permission, and works best in Chrome or Firefox.</p>
+  </details>
+
+  <div class="footer-note">
+    A practice aid, not the last word. Flute fingerings follow a standard chart — if your band method book
+    shows a note differently, follow your book and your director first.
+  </div>
+</div>
+
+<script src="js/storage-client.js"></script>
+<script src="js/practice/note-utils.js"></script>
+<script src="js/practice/pitch-detector.js"></script>
+<script src="js/practice/songs.js"></script>
+<script src="js/practice/instruments/mic-instrument.js"></script>
+<script src="js/practice/instruments/flute.js"></script>
+<script src="js/practice/instruments/piano.js"></script>
+<script src="js/practice/instruments/registry.js"></script>
+<script src="js/practice/shell.js"></script>
+</body>
+</html>

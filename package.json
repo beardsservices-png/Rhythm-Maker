@@ -1,7 +1,7 @@
 {
   "name": "rhythm-shop",
   "version": "1.0.0",
-  "description": "Rhythm Shop — Freeplay and Round Robin rhythm games",
+  "description": "Rhythm Shop — Practice Mode (learn flute/piano by ear) and BHS Studio",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

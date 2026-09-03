@@ -1,81 +1,100 @@
 # Rhythm Shop
 
-Two rhythm-building modes, playable solo or as a turn-based pass-and-play:
+Two things, from one static Node server:
 
-- **Freeplay** — pick an instrument (family + tone variant, e.g. Kick → Punchy), toggle any of 32 steps by hand or hit Randomize, loop it.
-- **Round Robin** — turn-based: each layer you add halves in step-density (32nd → 16th → 8th → quarter → half → whole), so friends can stack instruments on top of each other. Includes a "Generate Section B" variation and an A·A·B·A song-form auto-arrangement.
+- **Practice Mode** (`practice.html`) — learn a real instrument. Pick flute or
+  piano and a beginner song; each note lights up with its fingering (flute) or
+  key (piano); play it into the microphone and it turns green when you hold it
+  steady. Build and save your own songs. Flute matches on pitch class (any
+  octave); piano matches octave-exact unless you relax it in Settings.
+- **BHS Studio** (`studio.html`) — a small studio: a playable 808 bass across
+  three octaves, drum lanes on a shared clock, mic loop recording, section
+  arrangement, a mixer with shared reverb/delay sends, auto-mastering, and
+  offline `.wav` export. "Ask Claude" edits the song directly via tool use.
 
-Both modes share an **"Ask Claude" assist panel** — it explains things and nudges density/swing/tempo on request, it never generates a full beat for you.
+(Freeplay and Round Robin, the original 32-step pattern games, were retired when
+Practice Mode landed. Their one reusable idea — practising something in growing
+chunks — lives on as Practice Mode's "in growing chunks" option.)
 
 ## Structure
 
 ```
 public/
-  index.html, freeplay.html, roundrobin.html
-  css/   base.css (shared design tokens) + per-mode styles
+  index.html            mode picker
+  practice.html          Practice Mode
+  studio.html            BHS Studio
+  css/   base.css (shared tokens) + practice.css + studio.css
   js/
-    audio-engine.js   — instrument catalog (10 families × 2–3 tone variants),
-                         layered synthesis + shared reverb bus, lookahead scheduler
-    storage-client.js — save/load patterns via server API (falls back to localStorage)
-    assist-client.js  — talks to /api/assist
-    assist-panel.js   — shared "Ask Claude" UI, mounted on both mode pages
-    freeplay.js, roundrobin.js
-server.js     — zero-dependency Node static server + two JSON APIs
-railway.json, package.json
+    audio-engine.js      Studio's instrument catalog + scheduler (shared history
+                         with the retired pattern games; Studio still uses it)
+    storage-client.js    save/load via /api/patterns, localStorage fallback
+    practice/
+      note-utils.js       note name / MIDI / frequency math (no DOM)
+      pitch-detector.js   McLeod Pitch Method + mic source + hold gate (no DOM)
+      songs.js            beginner presets + custom-song helpers
+      instruments/
+        mic-instrument.js base for any "listen for the note" instrument
+        flute.js          octave-agnostic + fingering diagram
+        piano.js          octave-exact + on-screen keyboard
+        registry.js       the list Practice Mode picks from
+      shell.js            song setup, note lane, match loop, settings
+    engine/  studio-*.js  the Studio (see its own history)
+server.js               static files + JSON APIs, no framework
+studio-assist.js        Studio's Claude tool-use endpoint
 ```
 
-## Stack & storage choices
+**Adding an instrument to Practice Mode:** build a module like `flute.js`
+(a frequency band + a `renderDiagram`), add its `<script>` to `practice.html`,
+add one line to `registry.js`. `note-utils.js` and `pitch-detector.js` are
+written standalone so the DAW can reuse them.
 
-**Backend: Node, no framework, no dependencies.** The job is "serve some static files
-plus a tiny CRUD API," and Node's built-in `http` module does exactly that. Because the
-frontend is already plain HTML/CSS/JS served as static files, keeping the server in the
-same language means the whole thing deploys as a single `node server.js` with an empty
-dependency tree — nothing to `npm install`, nothing to pin, nothing to break on redeploy.
-(Python/Flask would have been just as reasonable and matches the BHS app, but it would add
-a dependency and a WSGI server for no real gain here.)
+## Stack & storage
 
-**Storage: one JSON file per mode on the volume**, at `$DATA_DIR/freeplay.json` and
-`$DATA_DIR/roundrobin.json`. This is a single-user tool saving a handful of named
-patterns, so a full SQLite schema would be overkill — the entire dataset is a small
-name→pattern map that reads and writes atomically as JSON, stays human-readable if Brian
-ever wants to peek at or hand-edit it, and needs zero migration story. The volume is what
-makes it durable; the file format inside it is deliberately the simplest thing that works.
+**Node, no framework.** Built-in `http` serves the static files and a small CRUD
+API, so deploy is a single `node server.js`. The one dependency is
+`@anthropic-ai/sdk` for the Studio's assist endpoint.
+
+**Storage: one JSON file per mode on the volume**, `$DATA_DIR/<mode>.json` — a
+small name→data map that reads and writes atomically. `practice` patterns store
+`{ notes: ["E","D","C", …] }`. Studio projects are JSON + sidecar WAVs under
+`$DATA_DIR/projects` and `$DATA_DIR/audio`.
 
 ## Running locally
 
 ```
-node server.js
+npm install
+node server.js          # http://localhost:8080 (or $PORT)
 ```
-Serves on `http://localhost:8080` (or `$PORT`). No `npm install` needed — no dependencies.
+
+Practice Mode needs microphone permission and an `https://` origin (or
+`localhost`). Chrome or Firefox recommended.
 
 ## Deploying on Railway
 
-1. Push this to the `Rhythm-Maker` repo.
-2. In Railway: New Project → Deploy from GitHub repo.
-3. Attach a volume and set `DATA_DIR` to its mount path (e.g. `/data`) so saved patterns persist across deploys — without it, patterns still save to a local `./data` folder that resets on redeploy.
-4. Set `ANTHROPIC_API_KEY` as an environment variable to turn on the "Ask Claude" assist panel. Without it, the app works fine — Play, Randomize, save/load, both modes — the assist panel just returns a friendly "not configured" message instead of a reply.
-5. Optional: `ANTHROPIC_MODEL` env var to override the default (`claude-sonnet-5`).
+1. Push to the `Rhythm-Maker` repo.
+2. Railway → New Project → Deploy from GitHub repo.
+3. Attach a volume and set `DATA_DIR` to its mount path (e.g. `/data`) so saved
+   songs and projects survive redeploys.
+4. Set `ANTHROPIC_API_KEY` to enable the Studio's "Ask Claude". Optional
+   `ANTHROPIC_MODEL` overrides the default.
 
-`railway.json` already declares the builder (Nixpacks), the start command, and the
-`/health` health check, so Railway wires those up automatically — the only manual step is
-attaching the volume and setting `DATA_DIR` (step 3), which Railway can't declare in-repo.
+`railway.json` declares the builder, start command and `/health` check.
 
-### Verifying the volume actually persists
+## Tests
 
-After the first deploy: open the app, save a pattern in each mode, then trigger a redeploy
-(push a commit, or Railway → Deployments → Redeploy). Reload the app — the saved patterns
-should still be listed. If they vanish, `DATA_DIR` isn't pointing at the mounted volume:
-check that the volume's mount path and the `DATA_DIR` variable match exactly (e.g. both
-`/data`).
+`tests/midi.test.js` drives Studio's MIDI + a Practice Mode smoke check in a
+real browser (`npm install playwright`, then run the file — see its header).
+The pure Practice Mode logic (pitch detection, note math, song parsing) has
+no-browser checks that run under plain `node`.
 
 ## API surface
 
-`:mode` is `freeplay` or `roundrobin`. Freeplay patterns store `{ pattern, voiceId, bpm }`;
-Round Robin patterns store the full layer set plus tempo `{ bpm, songForm, layers[], sectionB }`.
+`:mode` is any `[a-z0-9_-]+` (`practice`, plus Studio's own).
 
-- `GET  /health` → `{ status: "ok", dataDir }` — Railway health check (also `/healthz`)
-- `GET  /api/patterns/:mode` → `{ names: [...] }`
+- `GET  /health` → `{ status, dataDir }`
+- `GET  /api/patterns/:mode` → `{ names }`
 - `GET  /api/patterns/:mode/:name` → `{ name, data }`
 - `POST /api/patterns/:mode/:name` with `{ data }` → save
-- `DELETE /api/patterns/:mode/:name` → delete
-- `POST /api/assist` with `{ instruction, context }` → `{ explanation, actions }`
+- `DELETE /api/patterns/:mode/:name`
+- `GET/POST/DELETE /api/projects…` — Studio projects + sidecar audio
+- `POST /api/studio-assist` — Studio's Claude tool-use endpoint
