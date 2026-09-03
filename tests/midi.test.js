@@ -291,21 +291,28 @@ const FAKE_MIDI = () => {
      && restored.live.targetId === 'synth' && restored.live.synthVoice === 'bell_chime',
      JSON.stringify(restored));
 
-  console.log('\n11. Regression: the old pages still work');
-  for (const p of ['freeplay.html', 'roundrobin.html']) {
+  console.log('\n11. Practice Mode loads clean');
+  {
     const p2 = await browser.newPage();
     const errs = [];
     p2.on('pageerror', e => errs.push(e.message));
-    const resp = await p2.goto('http://127.0.0.1:5199/' + p, { waitUntil: 'load' });
+    const resp = await p2.goto('http://127.0.0.1:5199/practice.html', { waitUntil: 'load' });
     await p2.waitForTimeout(400);
-    const voiceWorks = await p2.evaluate(() => {
-      if (typeof RhythmAudio === 'undefined') return 'no engine';
-      try { RhythmAudio.playVoice('kick_punchy', RhythmAudio.ensureContext().currentTime); return true; }
-      catch (e) { return e.message; }
+    const wiring = await p2.evaluate(() => {
+      try {
+        if (typeof PitchDetector === 'undefined' || typeof NoteUtils === 'undefined') return 'no modules';
+        if (!PracticeInstruments || PracticeInstruments.list.length < 2) return 'no instruments';
+        // pure detector sanity: a synthetic 440 Hz sine reads as A
+        const sr = 44100, n = 2048, buf = new Float32Array(n);
+        for (let i = 0; i < n; i++) buf[i] = Math.sin(2 * Math.PI * 440 * i / sr);
+        const { freq } = PitchDetector.detectPitch(buf, sr, sr / 2000, sr / 200);
+        const cents = Math.abs(NoteUtils.centsFrom(freq, 69, 440));
+        return cents < 10 ? true : 'A440 read as ' + freq.toFixed(1) + 'Hz';
+      } catch (e) { return e.message; }
     });
-    ok(p + ' loads clean and still triggers voices',
-       resp.status() === 200 && errs.length === 0 && voiceWorks === true,
-       errs.join('; ') || String(voiceWorks));
+    ok('practice.html loads clean and the pitch detector resolves A440',
+       resp.status() === 200 && errs.length === 0 && wiring === true,
+       errs.join('; ') || String(wiring));
     await p2.close();
   }
 
