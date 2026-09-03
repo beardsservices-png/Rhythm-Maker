@@ -20,6 +20,9 @@
     bpm: 80,
     showNames: true,
     countIn: true,
+    fluteChart: 'standard',
+    fluteHelp: 'chart',
+    pianoAnyOctave: false,
   };
   const HOLD_MS = { quick: 280, normal: 460, patient: 850 };
   const TOLERANCE = { strict: 28, normal: 45, easy: 60 };
@@ -98,6 +101,7 @@
     saveSong: $('saveSongBtn'),
     savedList: $('savedList'),
     modeSel: $('modeSel'),
+    newDrill: $('newDrillBtn'),
     lane: $('lane'),
     laneWrap: $('laneWrap'),
     targetName: $('targetName'),
@@ -149,6 +153,7 @@
     prefs.instrumentId = inst.id;
     persist();
     applyOptionsToInstrument();
+    if (inst.applyPrefs) inst.applyPrefs(prefs);
     inst.onFrame(onFrame);
     inst.onMatch(onMatch);
     renderInstPicker();
@@ -460,7 +465,11 @@
       const hr = document.createElement('div'); hr.className = 'set-sep';
       hr.textContent = inst.label + ' settings';
       p.appendChild(hr);
-      inst.renderSettings(p);
+      inst.renderSettings(p, {
+        prefs,
+        save: (patch) => { Object.assign(prefs, patch); persist(); },
+        redraw: () => gotoNote(index),
+      });
     }
   }
 
@@ -473,7 +482,8 @@
   els.typeUse.addEventListener('click', () => loadSong(PracticeSongs.parseTokens(els.typeInput.value)));
   els.typeInput.addEventListener('keydown', e => { if (e.key === 'Enter') loadSong(PracticeSongs.parseTokens(els.typeInput.value)); });
   els.saveSong.addEventListener('click', saveCurrentSong);
-  els.modeSel.addEventListener('change', () => { prefs.mode = els.modeSel.value; persist(); rebuildSlices(); });
+  els.modeSel.addEventListener('change', () => { prefs.mode = els.modeSel.value; persist(); syncModeUI(); rebuildSlices(); });
+  els.newDrill.addEventListener('click', () => { els.banner.classList.remove('show'); streak = 0; updateStreak(); rebuildSlices(); });
   els.micBtn.addEventListener('click', () => (listening ? stopListening() : startListening()));
   els.skipBtn.addEventListener('click', () => advance({ success: false }));
   els.restartBtn.addEventListener('click', () => { els.banner.classList.remove('show'); sliceIx = 0; loadSlice(); streak = 0; updateStreak(); });
@@ -485,6 +495,10 @@
     if (e.key === 'ArrowRight') advance({ success: false });
   });
 
+  function syncModeUI() {
+    els.newDrill.hidden = els.modeSel.value !== 'random';
+  }
+
   // ---- init -----------------------------------------------------
   function init() {
     PracticeSongs.PRESETS.forEach(s => {
@@ -494,6 +508,7 @@
     });
     els.presetSel.value = 'mary';
     els.modeSel.value = prefs.mode;
+    syncModeUI();
     selectInstrument(prefs.instrumentId, { reload: false });
     loadSong(PracticeSongs.presetById('mary'));
     renderBuilderSeq();

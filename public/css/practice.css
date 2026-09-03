@@ -123,6 +123,15 @@
 }
 .done-banner.show { display: block; }
 
+/* ask-a-question panel */
+.assist-log { display: flex; flex-direction: column; gap: 8px; margin: 8px 0; max-height: 260px; overflow-y: auto; }
+.assist-log:empty { display: none; }
+.assist-msg { padding: 8px 12px; border-radius: 10px; font-size: 13px; line-height: 1.5; max-width: 90%; }
+.assist-msg.me { align-self: flex-end; background: var(--amber); color: var(--bg2); }
+.assist-msg.ai { align-self: flex-start; background: var(--bg2); border: 1px solid var(--line); color: var(--paper); }
+.assist-msg.sys { align-self: center; color: var(--dim); font-size: 12px; font-style: italic; }
+#assistForm input { flex: 1; min-width: 160px; background: var(--bg2); color: var(--paper); border: 1px solid var(--dim); border-radius: 3px; padding: 10px 12px; font-family: inherit; font-size: 13px; }
+
 .section-h { font-family: Georgia, serif; font-weight: normal; margin-top: 24px; margin-bottom: 8px; font-size: 18px; }
 .saved-list { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px; }
 .saved-list button { font-size: 11px; padding: 7px 11px; text-transform: none; letter-spacing: .3px; }

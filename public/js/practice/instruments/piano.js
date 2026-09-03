@@ -32,7 +32,8 @@ const PianoInstrument = (() => {
     }
 
     const wW = 22, wH = small ? 54 : 92, bW = 13, bH = small ? 34 : 58;
-    const W = whites.length * wW, H = wH;
+    const DROP = small ? 3 : 6;                    // target key sticks down like a pressed key
+    const W = whites.length * wW, H = wH + DROP + 2;
     const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, class: 'piano-svg' + (small ? ' small' : ''), role: 'img' });
 
     const targetMidi = note ? NoteUtils.midiOf(note, 4) : null;
@@ -41,13 +42,13 @@ const PianoInstrument = (() => {
     whites.forEach((k, i) => {
       const hit = k.midi === targetMidi;
       svg.appendChild(el('rect', {
-        x: i * wW, y: 0, width: wW - 1.5, height: wH, rx: 3,
+        x: i * wW, y: 0, width: wW - 1.5, height: hit ? wH + DROP : wH, rx: 3,
         fill: hit ? 'var(--amber)' : 'var(--paper)',
         stroke: 'var(--bg)', 'stroke-width': 1.5,
       }));
       if (hit && !small) {
-        const t = el('text', { x: i * wW + wW / 2, y: wH - 8, 'text-anchor': 'middle',
-          fill: 'var(--bg2)', 'font-size': 11, 'font-weight': 'bold' });
+        const t = el('text', { x: i * wW + wW / 2, y: wH + DROP - 9, 'text-anchor': 'middle',
+          fill: 'var(--bg2)', 'font-size': 12, 'font-weight': 'bold' });
         t.textContent = NoteUtils.SHARP_NAMES[k.pc];
         svg.appendChild(t);
       }
@@ -60,7 +61,7 @@ const PianoInstrument = (() => {
       const midi = (k.oct + 1) * 12 + blackPc;
       const hit = midi === targetMidi;
       svg.appendChild(el('rect', {
-        x: (i + 1) * wW - bW / 2 - 0.75, y: 0, width: bW, height: bH, rx: 2,
+        x: (i + 1) * wW - bW / 2 - 0.75, y: 0, width: bW, height: hit ? bH + DROP : bH, rx: 2,
         fill: hit ? 'var(--amber)' : 'var(--bg)',
         stroke: hit ? 'var(--amber)' : '#000', 'stroke-width': 1,
       }));
@@ -82,14 +83,21 @@ const PianoInstrument = (() => {
               'you keep landing an octave off, turn on “any octave is fine” in Settings.',
   });
 
-  inst.renderSettings = function (box) {
+  inst.applyPrefs = function (p) {
+    if (p) inst.setOptions({ octaveLock: !p.pianoAnyOctave });
+  };
+
+  inst.renderSettings = function (box, ctx) {
+    if (ctx && ctx.prefs) inst.applyPrefs(ctx.prefs);
     const wrap = document.createElement('label');
     wrap.className = 'set-row';
     const cb = document.createElement('input');
     cb.type = 'checkbox';
+    cb.checked = !!(ctx && ctx.prefs && ctx.prefs.pianoAnyOctave);
     cb.addEventListener('change', () => {
       inst.setOptions({ octaveLock: !cb.checked });
-      window.dispatchEvent(new CustomEvent('practice:redraw'));
+      if (ctx && ctx.save) ctx.save({ pianoAnyOctave: cb.checked });
+      if (ctx && ctx.redraw) ctx.redraw();
     });
     wrap.appendChild(cb);
     wrap.appendChild(Object.assign(document.createElement('span'), { textContent: 'Any octave is fine (ignore which octave I play)' }));
