@@ -38,7 +38,14 @@ const FluteInstrument = (() => {
   };
 
   let chartId = 'standard';
+  let helpMode = 'chart';        // 'chart' = draw the fingering; 'names' = just the note name
   const SVG_NS = 'http://www.w3.org/2000/svg';
+
+  // Persisted through the shell's settings context so the choice survives a reload.
+  function applyPrefs(p) {
+    if (p && FINGERING_CHARTS[p.fluteChart]) chartId = p.fluteChart;
+    if (p && (p.fluteHelp === 'names' || p.fluteHelp === 'chart')) helpMode = p.fluteHelp;
+  }
 
   function pcName(note) {
     // FINGERING keys are sharp-spelled; NoteUtils sharp names line up.
@@ -54,6 +61,7 @@ const FluteInstrument = (() => {
   // Draw the flute head-to-foot with its keys; filled = finger down.
   function renderDiagram(container, note, ctx) {
     container.innerHTML = '';
+    if (helpMode === 'names') return;   // the big note name is shown by the shell
     const chart = FINGERING_CHARTS[chartId].notes;
     const name = note ? pcName(note) : null;
     const keys = name && chart[name];
@@ -108,28 +116,50 @@ const FluteInstrument = (() => {
     container.appendChild(svg);
   }
 
-  function renderSettings(box) {
-    const wrap = document.createElement('label');
-    wrap.className = 'set-row';
-    wrap.innerHTML = '<span>Fingering chart</span>';
-    const sel = document.createElement('select');
-    Object.keys(FINGERING_CHARTS).forEach(id => {
-      const o = document.createElement('option');
-      o.value = id; o.textContent = FINGERING_CHARTS[id].label;
-      sel.appendChild(o);
+  // ctx = { prefs, save, redraw } from the shell — see shell.js renderSettings.
+  function renderSettings(box, ctx) {
+    if (ctx && ctx.prefs) applyPrefs(ctx.prefs);
+    const set = (patch) => {
+      if (ctx && ctx.save) ctx.save(patch);
+      applyPrefs(Object.assign({ fluteChart: chartId, fluteHelp: helpMode }, patch));
+      if (ctx && ctx.redraw) ctx.redraw();
+    };
+
+    const helpRow = document.createElement('label');
+    helpRow.className = 'set-row';
+    helpRow.appendChild(Object.assign(document.createElement('span'), { textContent: 'Fingering help' }));
+    const helpSel = document.createElement('select');
+    [['chart', 'Show the fingering'], ['names', 'Just the note name']].forEach(([v, t]) => {
+      const o = document.createElement('option'); o.value = v; o.textContent = t; helpSel.appendChild(o);
     });
-    sel.value = chartId;
-    sel.addEventListener('change', () => { chartId = sel.value; window.dispatchEvent(new CustomEvent('practice:redraw')); });
-    wrap.appendChild(sel);
-    box.appendChild(wrap);
+    helpSel.value = helpMode;
+    helpSel.addEventListener('change', () => set({ fluteHelp: helpSel.value }));
+    helpRow.appendChild(helpSel);
+    box.appendChild(helpRow);
+
+    if (Object.keys(FINGERING_CHARTS).length > 1) {
+      const chartRow = document.createElement('label');
+      chartRow.className = 'set-row';
+      chartRow.appendChild(Object.assign(document.createElement('span'), { textContent: 'Which chart' }));
+      const chartSel = document.createElement('select');
+      Object.keys(FINGERING_CHARTS).forEach(id => {
+        const o = document.createElement('option'); o.value = id; o.textContent = FINGERING_CHARTS[id].label;
+        chartSel.appendChild(o);
+      });
+      chartSel.value = chartId;
+      chartSel.addEventListener('change', () => set({ fluteChart: chartSel.value }));
+      chartRow.appendChild(chartSel);
+      box.appendChild(chartRow);
+    }
 
     const note = document.createElement('p');
     note.className = 'set-note';
-    note.textContent = 'More charts can be added to match a specific band method book.';
+    note.textContent = 'The chart is a standard one, not checked against a specific method book — ' +
+                       'if a note looks different in class, follow the book.';
     box.appendChild(note);
   }
 
-  return createMicInstrument({
+  const inst = createMicInstrument({
     id: 'flute',
     label: 'Flute',
     sensors: ['mic'],
@@ -142,4 +172,6 @@ const FluteInstrument = (() => {
     helpText: 'Hold the flute up and level, take a full breath, and play the highlighted note. ' +
               'It counts in any octave — high or low is fine.',
   });
+  inst.applyPrefs = applyPrefs;   // shell calls this on load so a saved choice takes effect
+  return inst;
 })();

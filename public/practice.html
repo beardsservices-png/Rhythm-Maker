@@ -81,11 +81,22 @@
         <button id="micBtn" class="primary">Start listening</button>
         <button id="skipBtn" class="secondary">Skip note</button>
         <button id="restartBtn" class="secondary">Restart</button>
+        <button id="newDrillBtn" class="secondary" hidden>New drill</button>
         <button id="settingsBtn" class="secondary" aria-expanded="false">Settings</button>
       </div>
       <div id="settingsPanel" class="settings-panel"></div>
       <div id="doneBanner" class="done-banner">You played the whole song! ★ &nbsp; Press Restart to go again.</div>
     </div>
+  </section>
+
+  <section class="panel assist" id="assistPanel" hidden>
+    <div class="mini-label">Ask a music question</div>
+    <div class="assist-log" id="assistLog"></div>
+    <form class="setup-row" id="assistForm">
+      <input type="text" id="assistInput" maxlength="200" autocomplete="off"
+             placeholder="what's a sharp?  how do I hold the flute?">
+      <button type="submit" id="assistSend">Ask</button>
+    </form>
   </section>
 
   <h3 class="section-h">Saved songs</h3>
@@ -117,7 +128,9 @@
 <script src="js/practice/instruments/mic-instrument.js"></script>
 <script src="js/practice/instruments/flute.js"></script>
 <script src="js/practice/instruments/piano.js"></script>
+<script src="js/practice/instruments/hand-piano.js"></script>
 <script src="js/practice/instruments/registry.js"></script>
 <script src="js/practice/shell.js"></script>
+<script src="js/practice/assist.js"></script>
 </body>
 </html>

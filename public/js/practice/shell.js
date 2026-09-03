@@ -20,6 +20,9 @@
     bpm: 80,
     showNames: true,
     countIn: true,
+    fluteChart: 'standard',
+    fluteHelp: 'chart',
+    pianoAnyOctave: false,
   };
   const HOLD_MS = { quick: 280, normal: 460, patient: 850 };
   const TOLERANCE = { strict: 28, normal: 45, easy: 60 };
@@ -98,6 +101,7 @@
     saveSong: $('saveSongBtn'),
     savedList: $('savedList'),
     modeSel: $('modeSel'),
+    newDrill: $('newDrillBtn'),
     lane: $('lane'),
     laneWrap: $('laneWrap'),
     targetName: $('targetName'),
@@ -149,10 +153,15 @@
     prefs.instrumentId = inst.id;
     persist();
     applyOptionsToInstrument();
+    if (inst.applyPrefs) inst.applyPrefs(prefs);
     inst.onFrame(onFrame);
     inst.onMatch(onMatch);
     renderInstPicker();
     els.instHelp.textContent = inst.helpText || '';
+    els.micBtn.textContent = startLabel();
+    els.hearing.textContent = inst.uiMode === 'watch'
+      ? 'Press “Start camera” and hold a finger on the lit key.'
+      : 'Press “Start listening” and play.';
     buildPalette();
     renderSettings();
     if (reload) { rebuildSlices(); gotoNote(0); }
@@ -270,17 +279,24 @@
 
   // ---- the match loop (frames pushed from the instrument) ------------
   function onFrame(info) {
-    // level meter
-    els.level.style.width = Math.round(info.level01 * 100) + '%';
+    if (info.requestStop) { stopListening(); return; }   // camera panel's ✕ button
 
-    // tuner needle: clamp ±50 cents to the bar
-    const c = Math.max(-50, Math.min(50, info.cents || 0));
-    els.needle.style.left = (50 + c) + '%';
+    els.level.style.width = Math.round((info.level01 || 0) * 100) + '%';
+
     const near = info.matching;
-    els.needle.classList.toggle('correct', near);
+    const watch = inst.uiMode === 'watch';
+    els.needle.parentElement.style.display = watch ? 'none' : '';
 
-    // hearing readout
-    if (!info.hasTarget) {
+    if (!watch) {
+      const c = Math.max(-50, Math.min(50, info.cents || 0));
+      els.needle.style.left = (50 + c) + '%';
+      els.needle.classList.toggle('correct', near);
+    }
+
+    // status readout
+    if (info.message !== undefined) {
+      els.hearing.textContent = info.message;
+    } else if (!info.hasTarget) {
       els.hearing.textContent = 'Pick a song to start.';
     } else if (info.heardFreq > 0) {
       let msg = 'I hear: ' + info.heardDisplay;
@@ -311,6 +327,9 @@
   }
 
   // ---- listening control -------------------------------------------
+  const startLabel = () => (inst.uiMode === 'watch' ? 'Start camera' : 'Start listening');
+  const stopLabel = () => (inst.uiMode === 'watch' ? 'Stop camera' : 'Stop listening');
+
   async function startListening() {
     els.micBtn.disabled = true;
     els.micBtn.textContent = 'Turning on…';
@@ -318,24 +337,23 @@
     const res = await inst.start();
     els.micBtn.disabled = false;
     if (!res.ok) {
-      els.micBtn.textContent = 'Start listening';
+      els.micBtn.textContent = startLabel();
       flash(els.notice, res.error, 'bad', 8000);
       return;
     }
     listening = true;
-    els.micBtn.textContent = 'Stop listening';
+    els.micBtn.textContent = stopLabel();
     els.micBtn.classList.add('live');
-    els.hearing.textContent = 'Listening… play the highlighted note.';
     if (prefs.metronome) Metro.start();
   }
 
   function stopListening() {
     listening = false;
-    inst.stop();
+    if (inst) inst.stop();
     Metro.stop();
-    els.micBtn.textContent = 'Start listening';
+    els.micBtn.textContent = startLabel();
     els.micBtn.classList.remove('live');
-    els.hearing.textContent = 'Paused. Press “Start listening” to keep going.';
+    els.hearing.textContent = 'Paused. Press the button to keep going.';
     els.level.style.width = '0%';
     els.progress.style.width = '0%';
   }
@@ -460,7 +478,11 @@
       const hr = document.createElement('div'); hr.className = 'set-sep';
       hr.textContent = inst.label + ' settings';
       p.appendChild(hr);
-      inst.renderSettings(p);
+      inst.renderSettings(p, {
+        prefs,
+        save: (patch) => { Object.assign(prefs, patch); persist(); },
+        redraw: () => gotoNote(index),
+      });
     }
   }
 
@@ -473,7 +495,8 @@
   els.typeUse.addEventListener('click', () => loadSong(PracticeSongs.parseTokens(els.typeInput.value)));
   els.typeInput.addEventListener('keydown', e => { if (e.key === 'Enter') loadSong(PracticeSongs.parseTokens(els.typeInput.value)); });
   els.saveSong.addEventListener('click', saveCurrentSong);
-  els.modeSel.addEventListener('change', () => { prefs.mode = els.modeSel.value; persist(); rebuildSlices(); });
+  els.modeSel.addEventListener('change', () => { prefs.mode = els.modeSel.value; persist(); syncModeUI(); rebuildSlices(); });
+  els.newDrill.addEventListener('click', () => { els.banner.classList.remove('show'); streak = 0; updateStreak(); rebuildSlices(); });
   els.micBtn.addEventListener('click', () => (listening ? stopListening() : startListening()));
   els.skipBtn.addEventListener('click', () => advance({ success: false }));
   els.restartBtn.addEventListener('click', () => { els.banner.classList.remove('show'); sliceIx = 0; loadSlice(); streak = 0; updateStreak(); });
@@ -485,6 +508,10 @@
     if (e.key === 'ArrowRight') advance({ success: false });
   });
 
+  function syncModeUI() {
+    els.newDrill.hidden = els.modeSel.value !== 'random';
+  }
+
   // ---- init -----------------------------------------------------
   function init() {
     PracticeSongs.PRESETS.forEach(s => {
@@ -494,6 +521,7 @@
     });
     els.presetSel.value = 'mary';
     els.modeSel.value = prefs.mode;
+    syncModeUI();
     selectInstrument(prefs.instrumentId, { reload: false });
     loadSong(PracticeSongs.presetById('mary'));
     renderBuilderSeq();

@@ -46,6 +46,68 @@ function readBody(req) {
   });
 }
 
+// "Ask a music question" — a plain-language helper for a beginner. It explains,
+// it never plays the part for them. Kept deliberately small: short answers,
+// no tools, and the client throttles + daily-caps calls.
+const PRACTICE_TUTOR_PROMPT = `You are a friendly, patient music teacher helping a beginner (around 11-13)
+who is learning the flute or piano with a practice app. Answer their question in plain, encouraging
+language a kid understands. Keep it to 2-4 short sentences. Use everyday words, not jargon (or explain the
+jargon). If they ask something off-topic or not about music/practice, gently say you can only help with
+music questions. Never tell them to give up. Do not use markdown formatting — just plain sentences.`;
+
+async function handlePracticeAssist(req, res) {
+  const key = process.env.ANTHROPIC_API_KEY;
+
+  if (req.method === 'GET') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ available: !!key }));
+    return;
+  }
+  if (!key) {
+    res.writeHead(503, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'The question helper is not switched on.' }));
+    return;
+  }
+  try {
+    const body = JSON.parse((await readBody(req)) || '{}');
+    const question = String(body.question || '').slice(0, 300).trim();
+    const ctx = body.context && typeof body.context === 'object' ? body.context : {};
+    if (!question) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Ask me something first.' }));
+      return;
+    }
+    const model = process.env.ANTHROPIC_MODEL || 'claude-sonnet-5';
+    const apiRes = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model,
+        max_tokens: 400,
+        system: PRACTICE_TUTOR_PROMPT,
+        messages: [{
+          role: 'user',
+          content: `(They are practising the ${ctx.instrument || 'flute'}` +
+            (ctx.currentNote ? `, currently on the note ${ctx.currentNote}` : '') +
+            `.)\n\nQuestion: ${question}`,
+        }],
+      }),
+    });
+    if (!apiRes.ok) {
+      res.writeHead(502, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'The helper had trouble answering. Try again in a minute.' }));
+      return;
+    }
+    const data = await apiRes.json();
+    const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join(' ').trim();
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ answer: text || 'Hmm, I lost my train of thought — ask me again?' }));
+  } catch (e) {
+    res.writeHead(500, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Something went wrong. Try again in a minute.' }));
+  }
+}
+
 function modeFile(mode) {
   const safe = mode.replace(/[^a-z0-9_-]/gi, '');
   return path.join(DATA_DIR, `${safe}.json`);
@@ -252,6 +314,11 @@ const server = http.createServer((req, res) => {
 
   if (req.method === 'POST' && urlObj.pathname === '/api/studio-assist') {
     handleStudioAssist(req, res, readBody);
+    return;
+  }
+
+  if (urlObj.pathname === '/api/practice-assist' && (req.method === 'GET' || req.method === 'POST')) {
+    handlePracticeAssist(req, res);
     return;
   }
 

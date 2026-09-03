@@ -36,8 +36,10 @@ public/
         mic-instrument.js base for any "listen for the note" instrument
         flute.js          octave-agnostic + fingering diagram
         piano.js          octave-exact + on-screen keyboard
+        hand-piano.js     silent practice — webcam + MediaPipe, point at the lit key (beta)
         registry.js       the list Practice Mode picks from
       shell.js            song setup, note lane, match loop, settings
+      assist.js           "ask a music question" panel (hidden unless the server has a key)
     engine/  studio-*.js  the Studio (see its own history)
 server.js               static files + JSON APIs, no framework
 studio-assist.js        Studio's Claude tool-use endpoint
@@ -51,8 +53,10 @@ written standalone so the DAW can reuse them.
 ## Stack & storage
 
 **Node, no framework.** Built-in `http` serves the static files and a small CRUD
-API, so deploy is a single `node server.js`. The one dependency is
-`@anthropic-ai/sdk` for the Studio's assist endpoint.
+API, so deploy is a single `node server.js`. The one npm dependency is
+`@anthropic-ai/sdk` for the Studio's assist endpoint. Practice Mode's "watch my
+hands" instrument lazily imports MediaPipe Tasks Vision from a CDN — only when
+that instrument is picked; every other mode is dependency-free.
 
 **Storage: one JSON file per mode on the volume**, `$DATA_DIR/<mode>.json` — a
 small name→data map that reads and writes atomically. `practice` patterns store
@@ -97,4 +101,5 @@ no-browser checks that run under plain `node`.
 - `POST /api/patterns/:mode/:name` with `{ data }` → save
 - `DELETE /api/patterns/:mode/:name`
 - `GET/POST/DELETE /api/projects…` — Studio projects + sidecar audio
+- `GET  /api/practice-assist` → `{ available }` ; `POST` `{ question, context }` → `{ answer }`
 - `POST /api/studio-assist` — Studio's Claude tool-use endpoint
