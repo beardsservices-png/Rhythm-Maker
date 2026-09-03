@@ -6,6 +6,7 @@ const PracticeInstruments = {
   list: [
     FluteInstrument,
     PianoInstrument,
+    HandPianoInstrument,
   ],
   byId(id) { return this.list.find(i => i.id === id) || null; },
   default() { return this.list[0]; },

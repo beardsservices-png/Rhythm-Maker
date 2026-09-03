@@ -16,7 +16,9 @@ volume at `$DATA_DIR`. Two surfaces: **Practice Mode** (`public/practice.html`)
 and **BHS Studio** (`public/studio.html`). See `README.md` for the file map.
 
 - **No build step.** Plain HTML/CSS/JS in `public/`, `<script>` tags in source
-  order, IIFE modules that hang one global each. Match that style.
+  order, IIFE modules that hang one global each. Match that style. The one
+  exception: `hand-piano.js` does a dynamic `import()` of MediaPipe from a CDN,
+  lazily, only when that instrument is picked.
 - **Practice Mode** is built to grow: `public/js/practice/note-utils.js` and
   `pitch-detector.js` are DOM-free and meant to be reused by the Studio/DAW
   later. Add an instrument = new module in `instruments/` + one line in
