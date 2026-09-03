@@ -480,7 +480,7 @@
   els.settingsBtn.addEventListener('click', () => els.settings.classList.toggle('open'));
   window.addEventListener('practice:redraw', () => gotoNote(index));
   window.addEventListener('keydown', e => {
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+    if (['INPUT', 'SELECT', 'BUTTON', 'TEXTAREA'].includes(e.target.tagName)) return;
     if (e.key === ' ') { e.preventDefault(); listening ? stopListening() : startListening(); }
     if (e.key === 'ArrowRight') advance({ success: false });
   });
