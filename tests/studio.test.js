@@ -627,6 +627,15 @@ function sineWav(file) {
      errs5.length === 0 && await p5.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), errs5.join('; '));
   await p5.close();
 
+  console.log('\n14b. Installable app');
+  const pwa = await page.evaluate(async () => {
+    const m = await (await fetch('/manifest.webmanifest')).json();
+    const reg = await navigator.serviceWorker.getRegistration();
+    return { name: m.name, display: m.display, icons: m.icons.length, sw: !!reg };
+  });
+  ok('manifest + service worker in place (installs to the home screen, opens offline)',
+     pwa.name === 'Rhythm Shop' && pwa.display === 'standalone' && pwa.icons >= 3 && pwa.sw, JSON.stringify(pwa));
+
   console.log('\n15. No page errors throughout');
   ok('clean console', errors.length === 0, errors.slice(0, 3).join(' | '));
 
