@@ -7,10 +7,16 @@ Two things, from one static Node server:
   key (piano); play it into the microphone and it turns green when you hold it
   steady. Build and save your own songs. Flute matches on pitch class (any
   octave); piano matches octave-exact unless you relax it in Settings.
-- **BHS Studio** (`studio.html`) — a small studio: a playable 808 bass across
-  three octaves, drum lanes on a shared clock, mic loop recording, section
-  arrangement, a mixer with shared reverb/delay sends, auto-mastering, and
-  offline `.wav` export. "Ask Claude" edits the song directly via tool use.
+- **BHS Studio** (`studio.html`) — a one-screen groovebox/DAW. Every instrument is
+  a track with four patterns (A–D); a **song grid** of sections says which pattern
+  each track plays per section, which bars it sits out, and what's soloed there.
+  Instruments: the 808 plus piano, electric piano, organ, strings, brass, flute,
+  pads, leads, plucks, bells and synth bass; six drum kits. A keyboard/pad **dock**
+  with the current sound's knobs stays pinned under everything. Record a take
+  (what you play, the whole mix, or the mic) or upload audio — each becomes an
+  audio track with a waveform. Mixer with shared reverb/delay, auto-master,
+  offline `.wav` export, MIDI keyboards, and "Ask Claude" edits the song via tool
+  use. Design and research notes: `docs/studio-redesign.md`.
 
 (Freeplay and Round Robin, the original 32-step pattern games, were retired when
 Practice Mode landed. Their one reusable idea — practising something in growing
@@ -25,8 +31,6 @@ public/
   studio.html            BHS Studio
   css/   base.css (shared tokens) + practice.css + studio.css
   js/
-    audio-engine.js      Studio's instrument catalog + scheduler (shared history
-                         with the retired pattern games; Studio still uses it)
     storage-client.js    save/load via /api/patterns, localStorage fallback
     practice/
       note-utils.js       note name / MIDI / frequency math (no DOM)
@@ -40,7 +44,16 @@ public/
         registry.js       the list Practice Mode picks from
       shell.js            song setup, note lane, match loop, settings
       assist.js           "ask a music question" panel (hidden unless the server has a key)
-    engine/  studio-*.js  the Studio (see its own history)
+    engine/              the Studio's engine (no DOM except recorder-worklet's host)
+      project-model.js    the song: tracks, A–D patterns, sections (cells per bar)
+      sequencer.js        plays the project — live and for export (same code)
+      instruments.js      melodic instruments (808 + synth recipes)
+      drumkits.js         drum sounds, grouped into kits
+      recorder.js         bar-quantised takes: keys / whole mix / mic
+      transport, mixer, effects, master, midi, wav, synth-808, recorder-worklet
+    studio-*.js          the Studio's UI: app (top bar), arrange (song grid),
+                         editor (drums / piano roll / waveform), keys (the dock),
+                         record, mixer, effects, midi, project, export, claude
 server.js               static files + JSON APIs, no framework
 studio-assist.js        Studio's Claude tool-use endpoint
 ```
@@ -86,8 +99,11 @@ Practice Mode needs microphone permission and an `https://` origin (or
 
 ## Tests
 
-`tests/midi.test.js` drives Studio's MIDI + a Practice Mode smoke check in a
-real browser (`npm install playwright`, then run the file — see its header).
+`tests/studio.test.js` drives the Studio in a real browser — song sections, bar
+mutes and solos, kits, instruments, the dock, recording, uploads, export,
+save/load (including old-format projects), Ask Claude's actions, MIDI — plus a
+Practice Mode smoke check (`npm install --no-save playwright`, then run the
+file — see its header).
 The pure Practice Mode logic (pitch detection, note math, song parsing) has
 no-browser checks that run under plain `node`.
 

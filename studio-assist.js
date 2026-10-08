@@ -1,241 +1,228 @@
 // studio-assist.js — Claude edits the song, using real tools.
 //
-// The mechanism matters here. The old /api/assist asked for JSON in prose and
-// regex'd it out of the reply, which is why musicinspiration's ideas could
-// come back malformed. This uses TOOL USE instead: Claude is handed a typed
-// set of operations and calls them, so the API itself guarantees the shape.
-// `strict: true` means the arguments validate exactly — a bad edit can't reach
-// the studio as half-parsed text.
+// Claude is handed a typed set of operations and calls them; `strict: true`
+// means the arguments validate exactly, so a bad edit can't reach the studio
+// as half-parsed text. The tools are never executed here: every one changes
+// something that lives in the browser (a pattern, a section, a knob), so the
+// endpoint collects the tool calls and hands them back as an action list for
+// the page to apply through the same code the buttons use.
 //
-// These tools are never executed on the server. Every one of them changes
-// something that lives in the browser — a knob, a pattern, the arrangement —
-// so the endpoint collects Claude's tool calls and hands them back as an
-// action list for the page to apply. Same shape as Rhythm Shop's assist
-// panel, just far wider and type-checked.
+// Schemas stay plain on purpose — no numeric ranges or array-length limits,
+// which strict mode doesn't accept everywhere. The ranges live in the
+// descriptions, and the browser clamps every value it applies.
+//
+// Tracks are referred to by NAME (whatever the user called them: "Kick",
+// "808", "Keys"). The song is described to Claude fresh on every request.
 
 const Anthropic = require('@anthropic-ai/sdk');
 
-const MODEL = process.env.ANTHROPIC_MODEL || 'claude-opus-5';
+const MODEL = process.env.ANTHROPIC_MODEL || 'claude-opus-5-5';
 
-const LANES = ['kick', 'snare', 'hat', 'openhat', 'clap', 'shaker'];
 const VARIATIONS = ['A', 'B', 'C', 'D'];
-const VOICE_PARAMS = ['punchRatio', 'punchTime', 'decay', 'sustain', 'release', 'drive', 'tone'];
+const INSTRUMENTS = ['808', 'piano', 'epiano', 'organ', 'strings', 'pad', 'lead', 'pluck', 'bell', 'synthbass', 'brass', 'flute'];
+const ROLES = ['kick', 'snare', 'clap', 'hat', 'openhat', 'perc', 'tom', 'rim'];
+const KITS = ['trap', 'boombap', 'house', 'lofi', 'live', 'classic'];
+
+const obj = (properties, required) => ({
+  type: 'object', properties, required: required || Object.keys(properties), additionalProperties: false
+});
+const trackField = { type: 'string', description: 'Track name exactly as listed in the song description.' };
+const variationField = { type: 'string', enum: VARIATIONS };
 
 const TOOLS = [
   {
     name: 'set_tempo',
-    description: 'Set the song tempo in beats per minute.',
+    description: 'Set the song tempo in beats per minute (40–220).',
     strict: true,
-    input_schema: {
-      type: 'object',
-      properties: { bpm: { type: 'integer', minimum: 40, maximum: 220 } },
-      required: ['bpm'],
-      additionalProperties: false
-    }
+    input_schema: obj({ bpm: { type: 'integer' } })
   },
   {
     name: 'set_drum_pattern',
     description:
-      'Write a drum pattern for one lane into one variation. `steps` is 16 booleans, ' +
-      'one per sixteenth note of a bar — step 0 is the downbeat, 4 is beat 2, 8 is beat 3, 12 is beat 4.',
+      'Write one drum track\'s pattern into one variation. `steps` is one boolean per sixteenth note: 16 per bar, ' +
+      'so 16 for a 1-bar pattern, 32 for 2 bars, 64 for 4. Step 0 is the downbeat; 4, 8, 12 are beats 2, 3, 4.',
     strict: true,
-    input_schema: {
-      type: 'object',
-      properties: {
-        lane: { type: 'string', enum: LANES },
-        variation: { type: 'string', enum: VARIATIONS },
-        steps: { type: 'array', items: { type: 'boolean' }, minItems: 16, maxItems: 16 }
-      },
-      required: ['lane', 'variation', 'steps'],
-      additionalProperties: false
-    }
+    input_schema: obj({ track: trackField, variation: variationField, steps: { type: 'array', items: { type: 'boolean' } } })
   },
   {
-    name: 'set_bass_pattern',
+    name: 'set_notes',
     description:
-      'Write the 808 bassline for one variation. `notes` has 16 entries, one per sixteenth. ' +
-      'Each is either null for a rest, or {midi, slide}. MIDI 36 is C2, a typical 808 root. ' +
-      'slide:true glides from the previous note instead of retriggering — it only works when the ' +
-      'step before it also has a note.',
+      'Write the notes of a melodic track (the 808 or any instrument) for one variation, replacing what was there. ' +
+      'Each note: step (0-based sixteenth within the pattern; a 2-bar pattern has steps 0–31), midi (60 = middle C, ' +
+      '36 = C2, a typical 808 root), length in sixteenths, and slide (808 only: glide from the note sounding just before; ' +
+      'that note must end exactly where this one starts). Chords are several notes on the same step. The 808 plays one note at a time.',
     strict: true,
-    input_schema: {
-      type: 'object',
-      properties: {
-        variation: { type: 'string', enum: VARIATIONS },
-        notes: {
-          type: 'array',
-          minItems: 16,
-          maxItems: 16,
-          items: {
-            type: ['object', 'null'],
-            properties: {
-              midi: { type: 'integer', minimum: 20, maximum: 60 },
-              slide: { type: 'boolean' }
-            },
-            required: ['midi', 'slide'],
-            additionalProperties: false
-          }
-        }
-      },
-      required: ['variation', 'notes'],
-      additionalProperties: false
-    }
+    input_schema: obj({
+      track: trackField, variation: variationField,
+      notes: { type: 'array', items: obj({ step: { type: 'integer' }, midi: { type: 'integer' }, length: { type: 'integer' }, slide: { type: 'boolean' } }) }
+    })
+  },
+  {
+    name: 'add_instrument',
+    description:
+      'Add a new melodic track. Instruments: 808 (bass), piano, epiano (electric piano), organ, strings, pad, lead, ' +
+      'pluck, bell, synthbass, brass, flute. bars is its pattern length: 1, 2 or 4. It starts empty — follow with set_notes, ' +
+      'and include it in set_arrangement if the song structure should use it.',
+    strict: true,
+    input_schema: obj({ instrument: { type: 'string', enum: INSTRUMENTS }, name: { type: 'string' }, bars: { type: 'integer', enum: [1, 2, 4] } })
+  },
+  {
+    name: 'add_drum_lane',
+    description: 'Add a drum track playing one drum sound (kick, snare, clap, hat, openhat, perc, tom, rim) from the current kit.',
+    strict: true,
+    input_schema: obj({ role: { type: 'string', enum: ROLES }, name: { type: 'string' } })
+  },
+  {
+    name: 'set_instrument',
+    description: 'Change which instrument a melodic track plays (its notes stay).',
+    strict: true,
+    input_schema: obj({ track: trackField, instrument: { type: 'string', enum: INSTRUMENTS } })
+  },
+  {
+    name: 'set_drum_kit',
+    description: 'Switch every drum track to a kit: trap (Trap 808), boombap, house (909), lofi, live (acoustic-ish), classic.',
+    strict: true,
+    input_schema: obj({ kit: { type: 'string', enum: KITS } })
+  },
+  {
+    name: 'set_pattern_length',
+    description: 'Set how many bars a track\'s patterns last before repeating (1, 2 or 4). Growing repeats the existing pattern.',
+    strict: true,
+    input_schema: obj({ track: trackField, bars: { type: 'integer', enum: [1, 2, 4] } })
   },
   {
     name: 'switch_variation',
-    description:
-      'Switch which variation a part is playing. part is a lane name, "bass", or "all". ' +
-      'Takes effect on the next bar.',
+    description: 'In loop mode, switch which variation a track plays (track name, or "all"). Lands on the next bar.',
     strict: true,
-    input_schema: {
-      type: 'object',
-      properties: {
-        part: { type: 'string', enum: [...LANES, 'bass', 'all'] },
-        variation: { type: 'string', enum: VARIATIONS }
-      },
-      required: ['part', 'variation'],
-      additionalProperties: false
-    }
+    input_schema: obj({ track: { type: 'string' }, variation: variationField })
   },
   {
     name: 'set_arrangement',
     description:
-      'Write the song structure — the ordered list of sections. Each section names a variation ' +
-      'and how many bars it lasts. Example: verse A for 8, chorus B for 8, verse A for 8, bridge C for 4.',
+      'Write the whole song structure: the ordered list of sections. In each section list EVERY track that should play ' +
+      'and which variation it plays; any track not listed is silent in that section. muted_bars (1-based bar numbers ' +
+      'within the section) silences a track for just those bars — e.g. the snare drops out for bars 7 and 8. solo:true ' +
+      'means only soloed tracks are heard in that section. play_song switches the studio to song mode.',
     strict: true,
-    input_schema: {
-      type: 'object',
-      properties: {
-        sections: {
-          type: 'array',
-          minItems: 1,
-          maxItems: 16,
-          items: {
-            type: 'object',
-            properties: {
-              variation: { type: 'string', enum: VARIATIONS },
-              bars: { type: 'integer', minimum: 1, maximum: 64 }
-            },
-            required: ['variation', 'bars'],
-            additionalProperties: false
+    input_schema: obj({
+      sections: {
+        type: 'array',
+        items: obj({
+          name: { type: 'string' },
+          bars: { type: 'integer' },
+          tracks: {
+            type: 'array',
+            items: obj({ track: trackField, variation: variationField, muted_bars: { type: 'array', items: { type: 'integer' } }, solo: { type: 'boolean' } })
           }
-        },
-        enable: { type: 'boolean' }
+        })
       },
-      required: ['sections', 'enable'],
-      additionalProperties: false
-    }
+      play_song: { type: 'boolean' }
+    })
   },
   {
-    name: 'set_voice_param',
+    name: 'set_sound_param',
     description:
-      'Adjust the 808 sound. punchRatio 1-10 is how far above the note the pitch drop starts ' +
-      '(higher = more click). punchTime 0.005-0.15s is how fast it drops. decay/release in seconds. ' +
-      'sustain 0-1. drive 1-20 is saturation — higher makes it audible on small speakers. ' +
-      'tone 200-6000Hz is a lowpass cutoff.',
+      'Turn a knob on a melodic track. The available knobs and their current values are listed per track in the song ' +
+      'description. 808 knobs: punchRatio 1–10, punchTime 0.005–0.15s, decay/release seconds, sustain 0–1, drive 1–20 ' +
+      '(higher is louder on phone speakers), tone 200–6000Hz. Other instruments: tone/vibrato/width 0–1, attack/release seconds.',
     strict: true,
-    input_schema: {
-      type: 'object',
-      properties: {
-        param: { type: 'string', enum: VOICE_PARAMS },
-        value: { type: 'number' }
-      },
-      required: ['param', 'value'],
-      additionalProperties: false
-    }
+    input_schema: obj({ track: trackField, param: { type: 'string' }, value: { type: 'number' } })
   },
   {
-    name: 'mute_lane',
-    description: 'Mute or unmute one drum lane.',
+    name: 'mute_track',
+    description: 'Mute or unmute a track everywhere (its mixer mute).',
     strict: true,
-    input_schema: {
-      type: 'object',
-      properties: {
-        lane: { type: 'string', enum: LANES },
-        muted: { type: 'boolean' }
-      },
-      required: ['lane', 'muted'],
-      additionalProperties: false
-    }
+    input_schema: obj({ track: trackField, muted: { type: 'boolean' } })
   },
   {
-    name: 'set_loop_volume',
-    description: 'Set the volume of one recorded loop slot (1-4). 0 is silent, 1 is normal.',
+    name: 'set_track_volume',
+    description: 'Set a track\'s mixer volume: 0 silent, 0.85 normal, 1.5 maximum.',
     strict: true,
-    input_schema: {
-      type: 'object',
-      properties: {
-        slot: { type: 'integer', minimum: 1, maximum: 4 },
-        volume: { type: 'number', minimum: 0, maximum: 1.5 }
-      },
-      required: ['slot', 'volume'],
-      additionalProperties: false
-    }
+    input_schema: obj({ track: trackField, volume: { type: 'number' } })
   }
 ];
 
 const SYSTEM = `You are the producer sitting next to someone making a track in BHS Studio.
 
-You have real control: your tool calls change their song directly. Use them rather than
-describing what they should click.
+You have real control: your tool calls change their song directly. Use them rather than describing what to click.
 
-The studio has six drum lanes, an 808 bassline, four loop slots for live recordings, and four
-variations (A/B/C/D) of every part that can be switched independently or arranged into sections.
-Patterns are one bar of sixteenth notes.
+How the studio works:
+- Tracks: each drum sound is its own track (Kick, Snare, Hi-hat …); melodic tracks play an instrument (808, piano,
+  strings …); audio tracks are recorded or uploaded clips you can't edit, only arrange.
+- Every drum/melodic track has four patterns, A–D, each 1, 2 or 4 bars long.
+- Sections: the song is a list of sections. For each track, a section says which pattern it plays (or silent),
+  can silence it for particular bars, and can solo tracks. So a hook can be Kick B + Clap C + Hat B while the 808
+  drops out for its last bar.
+- Two modes: loop mode loops each track's current pattern; song mode plays the sections in order.
 
 How to work:
 - Make the change. Don't ask permission for ordinary edits.
-- Change only what was asked for. If they say "busier hats", don't also rewrite the kick.
-- When writing a new section, build it from what's already there rather than something unrelated —
-  a chorus is usually the verse with more going on.
-- Musical defaults: kick on 0 and around 6/10, snare on 4 and 12, hats on eighths or sixteenths.
-  Trap sits near 130-150 BPM with sparse kicks and rolling hats; boom bap near 85-95.
-- If asked for something you can't do with these tools (add a piano, apply reverb), say so plainly
-  in one sentence and offer the closest thing you can do.
+- Change only what was asked. "Busier hats in the hook" means the hat pattern used in the hook — not the kick.
+- To make a part different in one section, write a new variation (B, C or D) and point that section at it, rather than
+  editing a variation other sections still use.
+- set_arrangement replaces the whole structure, so carry over every section and track you aren't changing.
+- Build new parts from what's there — a chorus is usually the verse with more going on.
+- Musical defaults: kick on 0 and around 6/10, snare on 4 and 12, hats on eighths or sixteenths. Trap sits near
+  130–150 BPM with sparse kicks and rolling hats; boom bap near 85–95.
+- If something can't be done with these tools, say so in one sentence and do the closest thing you can.
 
-Then tell them what you changed in one or two plain sentences. No jargon, no lists of tool names.`;
+Then tell them what you changed in one or two plain sentences. No jargon, no tool names.`;
+
+const L = (v) => (v >= 0 ? VARIATIONS[v] : 'off');
 
 /** Describe the current song so Claude edits what's actually there. */
 function describeState(state) {
-  if (!state) return 'The project state was not provided.';
+  if (!state || !Array.isArray(state.tracks)) return 'The project state was not provided.';
   const lines = [];
-  lines.push(`Tempo: ${state.bpm} BPM.`);
-  if (state.playing) lines.push('Currently playing.');
+  lines.push(`Tempo: ${state.bpm} BPM. Mode: ${state.mode === 'song' ? 'song' : 'loop'}. Drum kit: ${state.kit}.`);
+  const byId = {};
+  state.tracks.forEach(t => { byId[t.id] = t; });
 
-  if (Array.isArray(state.drums)) {
-    state.drums.forEach((d, i) => {
-      const name = LANES[i] || ('lane' + i);
-      const cur = VARIATIONS[d.current] || 'A';
-      const banks = (d.banks || [])
-        .map((b, v) => `${VARIATIONS[v]}=[${(b || []).map(x => (x ? 1 : 0)).join('')}]`)
-        .join(' ');
-      lines.push(`${name}: playing ${cur}${d.muted ? ' (muted)' : ''}; ${banks}`);
+  lines.push('\nTracks:');
+  state.tracks.forEach(t => {
+    const mix = (state.mixer && state.mixer.tracks && state.mixer.tracks[t.id]) || {};
+    const mixNote = `vol ${(mix.volume == null ? 0.85 : mix.volume).toFixed(2)}${mix.muted ? ', MUTED' : ''}${mix.soloed ? ', SOLO' : ''}`;
+    if (t.kind === 'drum') {
+      lines.push(`- "${t.name}": drum (${t.sound.role}, ${t.sound.kit} kit), ${t.bars}-bar patterns, ${mixNote}, loop plays ${L(t.live)}`);
+      (t.patterns || []).forEach((p, v) => {
+        if ((p || []).some(Boolean)) lines.push(`    ${VARIATIONS[v]}: ${p.map(x => (x ? 1 : 0)).join('')}`);
+        else lines.push(`    ${VARIATIONS[v]}: empty`);
+      });
+    } else if (t.kind === 'synth') {
+      const knobs = Object.entries(t.params || {}).filter(([k]) => k !== 'gain')
+        .map(([k, v]) => `${k}=${typeof v === 'number' ? +v.toFixed(3) : v}`).join(', ');
+      lines.push(`- "${t.name}": ${t.instrument}, ${t.bars}-bar patterns, ${mixNote}, loop plays ${L(t.live)}; knobs: ${knobs}`);
+      (t.patterns || []).forEach((p, v) => {
+        const notes = (p || []).slice().sort((a, b) => a.s - b.s || a.m - b.m)
+          .map(n => `${n.s}:${n.m}x${n.l}${n.sl ? 's' : ''}`).join(' ');
+        lines.push(`    ${VARIATIONS[v]}: ${notes || 'empty'}`);
+      });
+    } else {
+      lines.push(`- "${t.name}": audio clip, loops every ${t.bars} bars, ${mixNote}`);
+    }
+  });
+  lines.push('  (drum steps are 1/0 per sixteenth; notes are step:midi x length, s = slides in)');
+
+  lines.push('\nSections, in order:');
+  (state.sections || []).forEach(s => {
+    const parts = [];
+    state.tracks.forEach(t => {
+      const cells = (s.cells || {})[t.id] || [];
+      const on = cells.filter(v => v >= 0);
+      if (!on.length) return;
+      const counts = {};
+      on.forEach(v => { counts[v] = (counts[v] || 0) + 1; });
+      const main = +Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0];
+      const muted = cells.map((v, i) => (v < 0 ? i + 1 : null)).filter(Boolean);
+      const other = cells.map((v, i) => (v >= 0 && v !== main ? `${i + 1}=${L(v)}` : null)).filter(Boolean);
+      let txt = `${t.name} ${L(main)}`;
+      if (muted.length) txt += ` (silent bars ${muted.join(',')})`;
+      if (other.length) txt += ` (bars ${other.join(',')})`;
+      parts.push(txt);
     });
-  }
-  if (state.bass) {
-    const cur = VARIATIONS[state.bass.current] || 'A';
-    const banks = (state.bass.banks || [])
-      .map((b, v) => {
-        const notes = (b || [])
-          .map((n, i) => (n ? `${i}:${n.midi}${n.slide ? 's' : ''}` : null))
-          .filter(Boolean).join(' ');
-        return `${VARIATIONS[v]}=[${notes || 'empty'}]`;
-      }).join(' ');
-    lines.push(`bass: playing ${cur}; ${banks}`);
-  }
-  if (state.voice) {
-    lines.push('808 settings: ' + Object.entries(state.voice)
-      .map(([k, v]) => `${k}=${v}`).join(', '));
-  }
-  if (state.song) {
-    const secs = (state.song.blocks || [])
-      .map(b => `${VARIATIONS[b.v]}×${b.bars}`).join(' → ');
-    lines.push(`Arrangement (${state.song.enabled ? 'on' : 'off'}): ${secs}`);
-  }
-  if (Array.isArray(state.loops) && state.loops.length) {
-    lines.push('Recorded loops: ' + state.loops
-      .map(l => `slot ${l.index + 1} (${l.bars} bars, vol ${l.volume})`).join(', '));
-  }
+    const solo = (s.solo || []).map(id => byId[id] && byId[id].name).filter(Boolean);
+    lines.push(`- ${s.name}, ${s.bars} bars: ${parts.join('; ') || 'nothing plays'}${solo.length ? ` — SOLO: ${solo.join(', ')}` : ''}`);
+  });
   return lines.join('\n');
 }
 
@@ -258,12 +245,16 @@ async function handleStudioAssist(req, res, readBody) {
 
     const client = new Anthropic({ apiKey: key });
 
-    const response = await client.messages.create({
+    // Server-side fallback: if a safety classifier declines (false positives
+    // happen on music words like "killer drop"), the API re-runs the request
+    // on Anthropic's recommended fallback model instead of returning nothing.
+    const response = await client.beta.messages.create({
       model: MODEL,
-      // Generous on purpose: thinking is on by default for Opus 5 and counts
-      // against this ceiling, so a small cap truncates mid-answer.
       max_tokens: 16000,
       thinking: { type: 'adaptive' },
+      output_config: { effort: 'medium' },
+      betas: ['server-side-fallback-2026-07-01'],
+      fallbacks: 'default',
       system: SYSTEM,
       tools: TOOLS,
       messages: [{
@@ -272,19 +263,22 @@ async function handleStudioAssist(req, res, readBody) {
       }]
     });
 
+    if (response.stop_reason === 'refusal') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ reply: 'I couldn\'t do that one — try wording it differently.', actions: [], stopReason: 'refusal' }));
+    }
+
     const actions = [];
     let reply = '';
     for (const block of response.content) {
       if (block.type === 'text') reply += block.text;
       else if (block.type === 'tool_use') actions.push({ name: block.name, input: block.input });
     }
+    // A tool call cut off by the token limit may be incomplete — don't apply it.
+    if (response.stop_reason === 'max_tokens') actions.length = 0;
 
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({
-      reply: reply.trim(),
-      actions,
-      stopReason: response.stop_reason
-    }));
+    res.end(JSON.stringify({ reply: reply.trim(), actions, stopReason: response.stop_reason }));
   } catch (e) {
     const status = e && e.status ? e.status : 500;
     res.writeHead(status === 401 ? 401 : 502, { 'Content-Type': 'application/json' });
@@ -296,4 +290,4 @@ async function handleStudioAssist(req, res, readBody) {
   }
 }
 
-module.exports = { handleStudioAssist, TOOLS, LANES, VARIATIONS };
+module.exports = { handleStudioAssist, describeState, TOOLS, VARIATIONS, INSTRUMENTS };

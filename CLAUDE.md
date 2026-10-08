@@ -29,14 +29,24 @@ and **BHS Studio** (`public/studio.html`). See `README.md` for the file map.
   and is NOT verified against a specific method book. It's a teaching aid only —
   the mic scores the sound, not the picture. Treat corrections as a data edit to
   `FINGERING_CHARTS`.
-- **Retired:** Freeplay and Round Robin. Don't resurrect them; `audio-engine.js`
-  stays only because the Studio uses it.
+- **Studio model** (`public/js/engine/project-model.js`): tracks → four patterns
+  (A–D) → sections whose `cells[trackId][bar]` hold a pattern index or OFF (-1),
+  plus per-section `solo`. Every drum sound is its own track. One sequencer
+  (`engine/sequencer.js`) plays it live AND renders the export — keep it that way
+  so the download always matches what you hear. Add an instrument = a recipe in
+  `engine/instruments.js`; a kit = an entry in `engine/drumkits.js`.
+- **Layout rule:** the dock (keyboard + current sound's knobs) stays pinned and the
+  page itself doesn't scroll on a laptop — the song grid and editor scroll inside
+  their panels. That was the main complaint about the old page; don't regress it.
+- **Retired:** Freeplay, Round Robin, and the old Studio page (scenes, per-slot
+  looper, sample timeline). `audio-engine.js` is gone. Old saved projects still
+  load — `Project.restore()` converts them.
 
 ## Verify changes
 
 ```
 npm install && node server.js          # then open the three pages
-node tests/midi.test.js                 # needs: npm install playwright
+node tests/studio.test.js               # needs: npm install --no-save playwright
 ```
 
 Practice Mode's live mic path can't be automated (Chrome fake-audio doesn't flow
