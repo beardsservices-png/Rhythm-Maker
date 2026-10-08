@@ -65,7 +65,9 @@ as directional.
 
 ## What changed
 
-**One-screen layout** (on a laptop the page itself never scrolls):
+**Layout.** (Round 4 changed this: the page scrolls, panels never scroll
+up/down inside themselves, and the song grid became a sideways timeline — see
+"Round 4" below.)
 
 - **Top bar:** Play/Stop (Space), ● Rec plus what to record, BPM, position, the
   *Loop parts* / *Play song* switch, Open, Save (also Ctrl+S), Export, MIDI and
@@ -149,6 +151,35 @@ sound, mixer levels and loops.
 - **Pump** slider on every mixer strip: the sidechain "breathing" effect, ducking
   that track on every kick. It's also in the export.
 - Ask Claude can now set swing, key and pump, and write accents and rolls.
+
+## Round 4 — "what is making the sound?"
+
+Brian's feedback after using it: with a template playing he couldn't tell which
+part was making the kick, didn't know how the piano roll opened, hated scrolling
+inside the drum machine to reach the clap, wanted a right-scrolling timeline he
+could copy/paste/move on like a video editor, a real manual, and auto-mastering
+for depth. What changed:
+
+- **Song timeline** replaces the song grid. Bars run left→right (scrolls
+  sideways); each instrument is a row of blocks; a block's letter = the pattern
+  it plays. Drag to move (Alt = copy), drag an edge to stretch, drag on empty
+  space to draw, double-click to fill to the section end, Ctrl+C/V/D, Delete,
+  a toolbar for the selected block (A–D, Edit, Copy, Paste, Duplicate, Solo in
+  section, Delete). Bar numbers and section names play from there. Playhead.
+- **What's sounding** is shown: each row has an LED that flashes when it plays,
+  drum-lane names and pads flash too, blocks show a tiny preview of their notes.
+- **"1 · WHEN" / "2 · WHAT"** labels on the two halves. The editor says
+  "Editing [instrument ▾] — pattern X" with a picker, plus a plain-words box on
+  how to use it. Clicking a block opens exactly the pattern that block plays.
+- **No scrolling inside boxes.** Every drum lane, every timeline row and the full
+  piano roll are visible; the page scrolls, the dock stays pinned.
+- **Mastering styles:** Deep & warm (default: low-end weight, a little
+  saturation, wider sides above 150 Hz, gentle glue), Loud, Clean, or off — then
+  a lookahead limiter to −1 dBFS. "Hear it first" previews the mastered mix.
+- **User manual** (`manual.html`, "? Manual" in the top bar, linked on the start
+  screen): 18 sections, real screenshots with numbered red boxes and a key for
+  each, how-to tables, shortcuts and troubleshooting. `tools/make-manual.js`
+  re-shoots it so it never goes stale.
 
 ## Still not built
 

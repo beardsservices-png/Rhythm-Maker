@@ -75,7 +75,7 @@
 
     let rendered = await oac.startRendering();
     if (opts.master && typeof Mastering !== 'undefined') {
-      const res = await Mastering.master(rendered);
+      const res = await Mastering.master(rendered, { style: opts.style });
       return { rendered: res.buffer, norm: { applied: 1 }, seconds, totalBars, songMode, masterReport: res.report };
     }
     const norm = WavCodec.normalize(rendered, 0.98);
@@ -95,11 +95,12 @@
     const go = $('exportGo');
     go.disabled = true;
     const bars = parseInt($('exportBars').value, 10) || 8;
-    const wantMaster = $('masterToggle').checked;
+    const style = $('masterStyle').value;
+    const wantMaster = style !== 'off';
     const song = Project.mode() === 'song';
     msg((song ? 'Rendering the whole song' : `Rendering ${bars} bars`) + (wantMaster ? ', then mastering…' : '…'));
     try {
-      const { rendered, norm, totalBars, masterReport } = await render(bars, { master: wantMaster });
+      const { rendered, norm, totalBars, masterReport } = await render(bars, { master: wantMaster, style });
       const blob = new Blob([WavCodec.encode(rendered)], { type: 'audio/wav' });
       const name = ($('projName').value || 'bhs-track').trim().replace(/[^a-z0-9 _-]/gi, '') || 'bhs-track';
       const a = document.createElement('a');
@@ -116,6 +117,33 @@
       msg('Export failed: ' + (e && e.message ? e.message : e), true);
     } finally {
       go.disabled = false;
+    }
+  });
+
+  // ── hear it mastered, right here ──
+  let hearSrc = null;
+  $('exportHear').addEventListener('click', async () => {
+    const b = $('exportHear');
+    if (hearSrc) { try { hearSrc.stop(); } catch (_) {} hearSrc = null; b.innerHTML = '&#9654; Hear it mastered'; return; }
+    const ac = App.ensureAudio(); if (!ac) return;
+    if (Transport.isPlaying) Transport.stop();
+    const style = $('masterStyle').value;
+    b.disabled = true;
+    msg('Rendering and mastering…');
+    try {
+      const bars = parseInt($('exportBars').value, 10) || 8;
+      const { rendered, masterReport } = await render(bars, { master: style !== 'off', style });
+      hearSrc = ac.createBufferSource();
+      hearSrc.buffer = rendered;
+      hearSrc.connect(ac.destination);
+      hearSrc.onended = () => { hearSrc = null; b.innerHTML = '&#9654; Hear it mastered'; };
+      hearSrc.start();
+      b.innerHTML = '&#9632; Stop';
+      msg(masterReport ? 'Playing the mastered version — ' + masterReport.summary + '.' : 'Playing it exactly as mixed.');
+    } catch (e) {
+      msg('Could not render: ' + (e && e.message ? e.message : e), true);
+    } finally {
+      b.disabled = false;
     }
   });
 

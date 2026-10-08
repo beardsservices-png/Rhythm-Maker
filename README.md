@@ -8,18 +8,23 @@ Two things, from one static Node server:
   steady. Build and save your own songs. Flute matches on pitch class (any
   octave); piano matches octave-exact unless you relax it in Settings.
 - **BHS Studio** (`studio.html`) — a one-screen groovebox/DAW. Every instrument is
-  a track with four patterns (A–D); a **song grid** of sections says which pattern
-  each track plays per section, which bars it sits out, and what's soloed there.
+  a track with four patterns (A–D); a **song timeline** (scrolls right, like a
+  video editor) holds a block per instrument per stretch of bars — move, stretch,
+  copy/paste, duplicate, delete; a block's letter says which pattern plays, and it
+  can be soloed for its section. Clicking a block opens exactly that pattern.
   Instruments: the 808 plus piano, electric piano, organ, strings, brass, flute,
   pads, leads, plucks, bells and synth bass; six drum kits. A keyboard/pad **dock**
   with the current sound's knobs stays pinned under everything. Record a take
   (what you play, the whole mix, or the mic) or upload audio — each becomes an
-  audio track with a waveform. Mixer with shared reverb/delay, auto-master,
+  audio track with a waveform. Mixer with shared reverb/delay, auto-mastering
+  (Deep & warm / Loud / Clean, with a Hear-it-first preview),
   offline `.wav` export, MIDI keyboards, and "Ask Claude" edits the song via tool
   use. Also: a start screen with templates, undo/redo, browser autosave (audio
   included), drum accents/ghost notes/rolls, swing, metronome with count-in, a
   key + chord helper in the piano roll, and sidechain "pump" per track. Design
-  and research notes: `docs/studio-redesign.md`.
+  and research notes: `docs/studio-redesign.md`. **User manual** with real
+  screenshots and numbered callouts: `manual.html` (pictures regenerate with
+  `tools/make-manual.js`).
 
 (Freeplay and Round Robin, the original 32-step pattern games, were retired when
 Practice Mode landed. Their one reusable idea — practising something in growing
@@ -55,10 +60,12 @@ public/
       recorder.js         bar-quantised takes: keys / whole mix / mic
       templates.js        start-screen templates, written in a compact notation
       transport, mixer, effects, master, midi, wav, synth-808, recorder-worklet
-    studio-*.js          the Studio's UI: app (top bar), arrange (song grid),
+    studio-*.js          the Studio's UI: app (top bar), arrange (song timeline),
                          editor (drums / piano roll / waveform), keys (the dock),
                          record, mixer, effects, midi, project, export, claude,
                          history (undo + autosave), start (start screen)
+  manual.html + manual/ the user manual and its screenshots/callouts
+tools/make-manual.js    re-takes the manual's screenshots from the running app
 server.js               static files + JSON APIs, no framework
 studio-assist.js        Studio's Claude tool-use endpoint
 ```

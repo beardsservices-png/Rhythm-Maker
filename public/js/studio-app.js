@@ -9,7 +9,6 @@ const App = (() => {
   const $ = (id) => document.getElementById(id);
   const listeners = new Set();
   let selected = null;
-  let brush = 'mute';
   let msgTimer = null;
 
   function on(fn) { listeners.add(fn); return () => listeners.delete(fn); }
@@ -159,14 +158,6 @@ const App = (() => {
     document.querySelectorAll('.tabpane').forEach(p => { p.hidden = p.id !== 'tab-' + name; });
   }
 
-  // ── brushes ──
-  document.querySelectorAll('[data-brush]').forEach(b => {
-    b.addEventListener('click', () => {
-      brush = b.dataset.brush;
-      document.querySelectorAll('[data-brush]').forEach(x => x.classList.toggle('on', x === b));
-    });
-  });
-
   // ── Claude drawer ──
   $('claudeBtn').addEventListener('click', () => {
     const d = $('claudeDrawer');
@@ -200,7 +191,6 @@ const App = (() => {
 
   return {
     on, msg, select, menu, openPop, closePops, togglePop, showTab, ensureAudio, togglePlay,
-    selected: () => selected,
-    brush: () => brush
+    selected: () => selected
   };
 })();

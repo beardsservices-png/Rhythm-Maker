@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BHS Studio — User Manual</title>
+<link rel="icon" href="icons/icon-192.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#191a17">
+<link rel="stylesheet" href="css/base.css">
+<style>
+  html, body{ overflow-x: clip; }
+  .wrap{ max-width: 1040px; }
+  .shotbox{ cursor: zoom-in; }
+  .zoomhint{ display: none; font-size: 11px; color: var(--dim); margin-top: 4px; }
+  @media (max-width: 700px){ .zoomhint{ display: block; } }
+  h2{ font-family: Georgia, serif; font-weight: normal; font-size: 26px; margin: 46px 0 10px; border-bottom: 1px solid var(--line); padding-bottom: 6px; scroll-margin-top: 16px; }
+  h3{ font-family: Georgia, serif; font-weight: normal; font-size: 18px; margin: 26px 0 8px; color: var(--amber); }
+  p, li{ font-size: 14px; line-height: 1.75; }
+  b{ color: var(--amber); font-weight: normal; }
+  kbd{ border: 1px solid var(--dim); border-bottom-width: 2px; border-radius: 3px; padding: 0 5px; font-family: inherit; font-size: 12px; color: var(--paper); background: var(--bg2); }
+  .toc{ columns: 2; column-gap: 30px; font-size: 14px; line-height: 1.9; padding-left: 18px; }
+  .toc a, a{ color: var(--paper); }
+  .toc a:hover, a:hover{ color: var(--amber); }
+  .big{ font-size: 16px; line-height: 1.7; }
+  .callout-key{ list-style: none; padding: 0; margin: 10px 0 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 6px 22px; }
+  .callout-key li{ display: flex; gap: 10px; align-items: flex-start; font-size: 13.5px; line-height: 1.55; }
+  .num{ flex: none; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%;
+        background: #ff5a36; color: #fff; font-weight: bold; font-size: 13px; font-family: Arial, sans-serif; box-shadow: 0 0 0 2px #191a17; }
+  figure.shot{ margin: 14px 0 6px; }
+  .shotbox{ position: relative; display: inline-block; max-width: 100%; border: 1px solid var(--dim); box-shadow: 0 8px 30px rgba(0,0,0,.5); }
+  .shotbox img{ display: block; max-width: 100%; height: auto; }
+  .mark{ position: absolute; border: 2px solid #ff5a36; border-radius: 4px; box-shadow: 0 0 0 1px rgba(0,0,0,.6), 0 0 14px rgba(255,90,54,.45); pointer-events: none; }
+  .mark .num{ position: absolute; left: -13px; top: -13px; }
+  .steps{ counter-reset: s; list-style: none; padding: 0; }
+  .steps > li{ counter-increment: s; position: relative; padding: 8px 0 8px 46px; border-bottom: 1px solid var(--line); }
+  .steps > li::before{ content: counter(s); position: absolute; left: 0; top: 8px; width: 30px; height: 30px; border-radius: 50%; background: var(--amber); color: var(--bg2); display:flex; align-items:center; justify-content:center; font-weight: bold; }
+  .tip{ border-left: 3px solid var(--teal); background: rgba(74,155,142,.08); padding: 10px 14px; margin: 14px 0; font-size: 13.5px; line-height: 1.65; }
+  .tip b{ color: var(--teal); }
+  table{ border-collapse: collapse; width: 100%; font-size: 13.5px; margin: 10px 0; }
+  td, th{ border-bottom: 1px solid var(--line); padding: 7px 8px; text-align: left; vertical-align: top; }
+  th{ color: var(--dim); font-weight: normal; text-transform: uppercase; font-size: 11px; letter-spacing: 1px; }
+  .back{ position: sticky; top: 8px; float: right; z-index: 5; }
+  @media (max-width: 700px){ .toc{ columns: 1; } h2{ font-size: 22px; } .mark .num{ width: 18px; height: 18px; font-size: 10px; left: -9px; top: -9px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back hdr" href="studio.html" style="text-decoration:none;border:1px solid var(--dim);padding:6px 12px;font-size:12px;letter-spacing:1px;text-transform:uppercase;background:var(--bg)">&larr; Back to the Studio</a>
+  <div class="hdr">
+    <div>
+      <h1>BHS Studio — the manual</h1>
+      <div class="sub">how to actually use it, with pictures</div>
+    </div>
+  </div>
+
+  <p class="big">Every picture has <span class="num">1</span> numbered red boxes. The list under each picture says what each number does
+    and how to use it. Skim the pictures; read the words when you need them.</p>
+
+  <ol class="toc">
+    <li><a href="#quick">Make your first beat in 5 minutes</a></li>
+    <li><a href="#screen">The screen, piece by piece</a></li>
+    <li><a href="#sound">What's making that sound?</a></li>
+    <li><a href="#abcd">Patterns A, B, C, D — the one idea to get</a></li>
+    <li><a href="#timeline">The song timeline (move, stretch, copy, paste)</a></li>
+    <li><a href="#editor">The drum machine</a></li>
+    <li><a href="#roll">The piano roll (808, keys, strings…)</a></li>
+    <li><a href="#dock">The keyboard at the bottom</a></li>
+    <li><a href="#record">Recording</a></li>
+    <li><a href="#audio">Audio clips and uploads</a></li>
+    <li><a href="#mixer">The mixer</a></li>
+    <li><a href="#mastering">Auto-mastering and exporting</a></li>
+    <li><a href="#save">Saving, opening, undo, autosave</a></li>
+    <li><a href="#claude">Ask Claude</a></li>
+    <li><a href="#midi">A MIDI keyboard</a></li>
+    <li><a href="#phone">On your phone</a></li>
+    <li><a href="#keys">Keyboard shortcuts</a></li>
+    <li><a href="#trouble">When something's wrong</a></li>
+  </ol>
+
+  <!-- ─────────────────────────────────────────────── -->
+  <h2 id="quick">1 · Make your first beat in 5 minutes</h2>
+  <figure class="shot" data-shot="start"></figure>
+  <ul class="callout-key">
+    <li><span class="num">1</span><span><b>A template</b> — a finished little song in a style (Trap, Boom Bap, Lo-Fi, House, R&amp;B). Best way to start: pick one and change it.</span></li>
+    <li><span class="num">2</span><span><b>Blank</b> — kick, snare, clap, hats and an 808, all empty, for starting from scratch.</span></li>
+    <li><span class="num">3</span><span><b>Your saved tracks</b> — anything you saved, click to open it.</span></li>
+    <li><span class="num">4</span><span><b>×</b> closes this and carries on with whatever you were last working on.</span></li>
+  </ul>
+  <ol class="steps">
+    <li>Open the Studio. Pick <b>Trap</b> on the start screen.</li>
+    <li>Press <kbd>Space</kbd> (or <b>▶ Play</b>). The song plays left to right across the timeline — watch the white line move and the lights blink next to each instrument as it sounds.</li>
+    <li>Click the <b>Kick</b> name on the left. The drum machine below shows its pattern. Click some squares — you'll hear the change on the next loop.</li>
+    <li>Click the <b>808</b> name. Now the piano roll shows its notes. Click in an empty spot to add a note; click a note to remove it.</li>
+    <li>On the timeline, drag a block left or right to move it. Drag its end to make it longer. That's how you arrange the song.</li>
+    <li>When you like it: <b>Save</b> (top right) to keep it, <b>Export</b> to download a .wav — mastered.</li>
+  </ol>
+
+  <!-- ─────────────────────────────────────────────── -->
+  <h2 id="screen">2 · The screen, piece by piece</h2>
+  <figure class="shot" data-shot="overview"></figure>
+  <ul class="callout-key">
+    <li><span class="num">1</span><span><b>Play / Stop</b>. <kbd>Space</kbd> does the same from anywhere.</span></li>
+    <li><span class="num">2</span><span><b>Loop parts / Play song</b>. <i>Play song</i> plays the timeline start to finish. <i>Loop parts</i> just loops each instrument's current pattern — for building a beat before you arrange it. <b>If the timeline looks greyed out, you're in Loop parts.</b></span></li>
+    <li><span class="num">3</span><span><b>● Rec</b> — record a take. See <a href="#record">Recording</a>.</span></li>
+    <li><span class="num">4</span><span><b>① Song timeline</b> — <b>WHEN</b> each instrument plays. Time runs left to right in bars.</span></li>
+    <li><span class="num">5</span><span><b>② Editor</b> — <b>WHAT</b> the selected instrument plays. Pick any instrument from the <i>Editing</i> box, or click its name in the timeline.</span></li>
+    <li><span class="num">6</span><span><b>The keyboard</b> — always at the bottom of the screen. Play it with the mouse, your computer keys, or a MIDI keyboard.</span></li>
+    <li><span class="num">7</span><span><b>The knobs</b> for whatever the keyboard is playing (808 punch, decay, drive… or tone/attack/release for other sounds).</span></li>
+    <li><span class="num">8</span><span><b>? Manual</b> — this page. The round <b>?</b> buttons jump to the right part.</span></li>
+  </ul>
+  <div class="tip"><b>The page scrolls.</b> The timeline is on top, the editor under it. Scroll down for the editor and mixer; the keyboard stays pinned to the bottom. The ▾ button on the keyboard hides it if you need the room.</div>
+
+  <!-- ─────────────────────────────────────────────── -->
+  <h2 id="sound">3 · What's making that sound?</h2>
+  <figure class="shot" data-shot="sound"></figure>
+  <ul class="callout-key">
+    <li><span class="num">1</span><span><b>The light</b> next to an instrument blinks every time it makes a sound. The whole row brightens too. If something sounds wrong, watch which light blinks with it.</span></li>
+    <li><span class="num">2</span><span><b>The playhead</b> — the white line is "now". Everything it's crossing is playing.</span></li>
+    <li><span class="num">3</span><span><b>A block</b> — the little marks inside it are the actual hits/notes, so you can see what it plays without opening it.</span></li>
+    <li><span class="num">4</span><span><b>The name</b> — click it and the editor below opens that instrument.</span></li>
+    <li><span class="num">5</span><span><b>✎</b> does the same as clicking the name.</span></li>
+  </ul>
+  <div class="tip"><b>Upper vs lower.</b> The timeline (upper) never makes sound by itself — it only says <i>when</i>. The sound itself is the pattern you see in the editor (lower). A kick hit is: the timeline says "Kick plays pattern A here" → pattern A in the drum machine has a square lit on that step → you hear it. In the drum machine, a row's name flashes when that drum hits.</div>
+
+  <!-- ─────────────────────────────────────────────── -->
+  <h2 id="abcd">4 · Patterns A, B, C, D — the one idea to get</h2>
+  <p>Every instrument holds <b>four patterns</b>, named A, B, C and D. A pattern is a short loop (1, 2 or 4 bars): which drum steps hit, or which notes play.</p>
+  <p>A <b>block</b> on the timeline says "play pattern <b>A</b> for these bars". So you can have the kick on A in the verse and B in the hook, while the hats switch to C for a bridge — each instrument chooses on its own.</p>
+  <ul>
+    <li>Make pattern B: in the editor, click <b>B</b> next to the instrument, then place hits/notes. Or use <b>Copy to…</b> to start B as a copy of A and change it.</li>
+    <li>Use pattern B somewhere: click a block on the timeline, then click <b>B</b> in the toolbar above the timeline.</li>
+    <li>In <b>Loop parts</b> mode, clicking a letter in the editor also makes that pattern play (it switches on the next bar).</li>
+  </ul>
+
+  <!-- ─────────────────────────────────────────────── -->
+  <h2 id="timeline">5 · The song timeline</h2>
+  <figure class="shot" data-shot="timeline"></figure>
+  <ul class="callout-key">
+    <li><span class="num">1</span><span><b>A section</b> — a named stretch of the song (Intro, Hook, Verse…). Click the name to play from there. Drag its right edge to make it longer/shorter. <b>⋯</b> renames, duplicates, moves or deletes it.</span></li>
+    <li><span class="num">2</span><span><b>Bar numbers</b> — click any number to play the song from that bar.</span></li>
+    <li><span class="num">3</span><span><b>A selected block</b> (white outline). Drag it left/right to move it. Hold <kbd>Alt</kbd> while dragging to copy it instead.</span></li>
+    <li><span class="num">4</span><span><b>Its edge</b> — drag either end to stretch or shorten it.</span></li>
+    <li><span class="num">5</span><span><b>The toolbar</b> for the selected block: change which pattern it plays (A–D), <b>Edit</b> it, <b>Copy</b>, <b>Paste</b>, <b>Duplicate</b>, <b>Solo in this section</b>, <b>Delete</b>.</span></li>
+    <li><span class="num">6</span><span><b>M / S</b> — mute or solo an instrument everywhere (same as the mixer).</span></li>
+    <li><span class="num">7</span><span><b>+ Section</b> adds a section at the end (a copy of the last one).</span></li>
+    <li><span class="num">8</span><span><b>+ Add instrument</b> — piano, strings, organ, brass, flute, pads, leads, more drums, or an audio file.</span></li>
+  </ul>
+  <h3>How to…</h3>
+  <table>
+    <tr><th>To</th><th>Do this</th></tr>
+    <tr><td>Add a block</td><td>Drag along an empty row (from where it starts to where it ends). Or double-click an empty spot — it fills to the end of that section.</td></tr>
+    <tr><td>Move a block</td><td>Drag it. It snaps to bars. Dropping it on top of another block replaces those bars.</td></tr>
+    <tr><td>Make it longer / shorter</td><td>Drag its left or right end.</td></tr>
+    <tr><td>Copy and paste</td><td>Click the block, <kbd>Ctrl</kbd>+<kbd>C</kbd>. Click an empty spot where it should go (a white marker appears). <kbd>Ctrl</kbd>+<kbd>V</kbd>.</td></tr>
+    <tr><td>Repeat it straight after itself</td><td>Click it, <kbd>Ctrl</kbd>+<kbd>D</kbd>.</td></tr>
+    <tr><td>Silence an instrument for a few bars</td><td>Shorten its block, or split it: delete the block and draw two shorter ones with a gap. (Or select it and use Delete, then redraw.)</td></tr>
+    <tr><td>Remove a block</td><td>Click it, <kbd>Delete</kbd>.</td></tr>
+    <tr><td>Change which pattern it plays</td><td>Click it, then A / B / C / D in the toolbar.</td></tr>
+    <tr><td>Only hear certain instruments in one section</td><td>Click a block of each one in that section → <b>Solo in …</b>. Blocks show a small <b>S</b>.</td></tr>
+    <tr><td>Make the song longer</td><td>Drag a section's right edge, use + Section, or just draw/paste past the end — the song grows to fit.</td></tr>
+  </table>
+  <div class="tip"><b>Undo anything</b> with <kbd>Ctrl</kbd>+<kbd>Z</kbd> (redo: <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd>), or the ↶ ↷ buttons at the top.</div>
+
+  <!-- ─────────────────────────────────────────────── -->
+  <h2 id="editor">6 · The drum machine</h2>
+  <p>Click any drum's name on the timeline (Kick, Snare, Hi-hat…) and the drum machine opens with <b>every drum shown at once</b>.</p>
+  <figure class="shot" data-shot="drums"></figure>
+  <ul class="callout-key">
+    <li><span class="num">1</span><span><b>Editing</b> — pick any instrument to edit, right here.</span></li>
+    <li><span class="num">2</span><span><b>Kit</b> — changes every drum to a different kit (Trap 808, Boom Bap, House 909, Lo-Fi, Live, Classic).</span></li>
+    <li><span class="num">3</span><span><b>What a click places</b>: a normal <b>Hit</b>, a louder <b>Accent</b>, a quiet <b>Soft</b> ghost note, or a <b>Roll ×2/×3/×4</b> (quick repeated hits inside one step — the trap hi-hat roll). Click a square that already has that kind of hit to clear it.</span></li>
+    <li><span class="num">4</span><span><b>Swing</b> — pushes every other sixteenth a little late. 0% is stiff and straight; 15–30% bounces.</span></li>
+    <li><span class="num">5</span><span><b>This drum's sound</b> — borrow a sound from any kit (a Boom Bap snare with a Trap kick).</span></li>
+    <li><span class="num">6</span><span><b>A B C D</b> — which of this drum's four patterns you're looking at (and, in Loop parts mode, playing).</span></li>
+    <li><span class="num">7</span><span><b>The steps</b> — 16 per bar. Lit = it hits. The thick lines are the beats (1, 2, 3, 4). Drag across squares to paint many at once. ×3 means a roll.</span></li>
+    <li><span class="num">8</span><span><b>The drum's name</b> — flashes yellow when it plays. Click it to select it.</span></li>
+  </ul>
+  <div class="tip"><b>Copy beat to…</b> copies every drum's current pattern to another letter in one go — the quick way to make a "B" version of the whole beat. <b>Clear lane</b> empties just the selected drum's pattern.</div>
+
+  <!-- ─────────────────────────────────────────────── -->
+  <h2 id="roll">7 · The piano roll (808, keys, strings, everything with notes)</h2>
+  <figure class="shot" data-shot="roll"></figure>
+  <ul class="callout-key">
+    <li><span class="num">1</span><span><b>Sound</b> — change this instrument (Piano, Electric Piano, Organ, Strings, Brass, Flute, Pad, Lead, Pluck, Bell, Synth Bass, 808). The notes stay.</span></li>
+    <li><span class="num">2</span><span><b>A B C D</b> — which pattern you're editing.</span></li>
+    <li><span class="num">3</span><span><b>Length</b> — how long the pattern is before it repeats: 1, 2 or 4 bars.</span></li>
+    <li><span class="num">4</span><span><b>New note</b> — how long a note is when you click to add it (1/16 = one step, 1 bar = a whole bar).</span></li>
+    <li><span class="num">5</span><span><b>Chords</b> — when on, one click places a 3-note chord that fits the key.</span></li>
+    <li><span class="num">6</span><span><b>A note</b>. Drag it to move it (up/down = pitch, left/right = time). Drag its right end to lengthen it. Click it to delete it.</span></li>
+    <li><span class="num">7</span><span><b>The keyboard down the side</b> — the note names (C4 = middle C). Click a key to hear that note. With a <b>Key</b> picked, the key's notes are lit and the root is marked in amber — stay on lit rows and it'll sound right.</span></li>
+    <li><span class="num">8</span><span><b>The grid</b> — click an empty spot to add a note; keep holding and drag right to make it longer. Thin lines are steps, thicker ones beats, thickest bars.</span></li>
+  </ul>
+  <h3>The 808's slides</h3>
+  <figure class="shot" data-shot="roll808"></figure>
+  <ul class="callout-key">
+    <li><span class="num">1</span><span><b>S</b> above a note makes it <b>slide</b> (glide) up or down from the note before it, instead of hitting fresh — the classic trap 808 move. It only works when the note before ends right where this one starts.</span></li>
+    <li><span class="num">2</span><span>A sliding note is drawn in teal.</span></li>
+  </ul>
+
+  <!-- ─────────────────────────────────────────────── -->
+  <h2 id="dock">8 · The keyboard at the bottom</h2>
+  <figure class="shot" data-shot="dock"></figure>
+  <ul class="callout-key">
+    <li><span class="num">1</span><span><b>Play</b> — which instrument the keyboard plays. Pick <b>Drum pads</b> to get a pad for each drum instead.</span></li>
+    <li><span class="num">2</span><span><b>Sound</b> — change that instrument's sound.</span></li>
+    <li><span class="num">3</span><span><b>Oct − / Oct +</b> — move the keyboard lower/higher (or the ← → arrow keys).</span></li>
+    <li><span class="num">4</span><span><b>Slide</b> (808) — glide from note to note instead of restarting (or hold <kbd>Shift</kbd>).</span></li>
+    <li><span class="num">5</span><span><b>● Write notes</b> — while the song plays, whatever you play on the keys or pads gets written into the pattern, lined up to the grid. Turn it off when you're done.</span></li>
+    <li><span class="num">6</span><span><b>The keys</b> — click them, or use your computer keyboard: bottom row <kbd>Z</kbd>–<kbd>M</kbd> is the lower octave, top row <kbd>Q</kbd>–<kbd>U</kbd> the upper one (the letters are printed on the keys). For pads: <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> <kbd>F</kbd>…</span></li>
+    <li><span class="num">7</span><span><b>The knobs</b> for this sound. Move them while it plays. <b>Reset</b> puts them back.</span></li>
+    <li><span class="num">8</span><span><b>▾</b> hides the keyboard to free up the screen.</span></li>
+  </ul>
+
+  <!-- ─────────────────────────────────────────────── -->
+  <h2 id="record">9 · Recording</h2>
+  <figure class="shot" data-shot="topbar"></figure>
+  <ul class="callout-key">
+    <li><span class="num">1</span><span><b>↶ ↷</b> undo / redo.</span></li>
+    <li><span class="num">2</span><span><b>Play / Stop</b>.</span></li>
+    <li><span class="num">3</span><span><b>Click</b> — a metronome tick on every beat.</span></li>
+    <li><span class="num">4</span><span><b>● Rec</b> — start recording. If the song is stopped you get a count of <b>1 · 2 · 3 · 4</b> first, then it starts on the beat. Press again to stop (or it stops itself after the length in 6).</span></li>
+    <li><span class="num">5</span><span><b>What to record</b>: <b>my playing</b> (only what you play on the keys/pads — not the beat), <b>whole mix</b> (everything you hear, "bounced" into one clip), or <b>microphone</b> (vocals, guitar… use headphones).</span></li>
+    <li><span class="num">6</span><span><b>How long</b> — 1, 2, 4, 8 bars, or until you stop it.</span></li>
+    <li><span class="num">7</span><span><b>BPM</b> — the tempo. Type a number.</span></li>
+    <li><span class="num">8</span><span><b>Loop parts / Play song</b>.</span></li>
+    <li><span class="num">9</span><span><b>Save</b> to the server (there on your phone too).</span></li>
+    <li><span class="num">10</span><span><b>Export</b> — download a .wav, with auto-mastering.</span></li>
+  </ul>
+  <p>Every recording becomes a new <b>audio track</b> on the timeline — move it, stretch it, copy it like any block. A whole-mix "bounce" starts switched off so you don't hear everything twice; drag it where you want it and mute the parts it replaces.</p>
+  <div class="tip"><b>Recording notes instead of sound:</b> turn on <b>● Write notes</b> on the keyboard, press Play, and play. The notes land in the pattern, where you can fix any that are off.</div>
+
+  <!-- ─────────────────────────────────────────────── -->
+  <h2 id="audio">10 · Audio clips and uploads</h2>
+  <p><b>+ Add instrument → Upload an audio file…</b> brings in any audio file (a sample, a vocal, a loop). Click its name on the timeline to see it:</p>
+  <figure class="shot" data-shot="audio"></figure>
+  <ul class="callout-key">
+    <li><span class="num">1</span><span><b>The waveform</b> — the actual sound, with each bar marked. The red-tinted part (if any) is silence after the clip ends.</span></li>
+    <li><span class="num">2</span><span><b>Loop length</b> — how many bars of it to loop.</span></li>
+    <li><span class="num">3</span><span><b>Clip gain</b> — its volume (the mixer fader is on top of this).</span></li>
+  </ul>
+  <p>Uploads and recordings are saved with the song.</p>
+
+  <!-- ─────────────────────────────────────────────── -->
+  <h2 id="mixer">11 · The mixer</h2>
+  <p>Scroll down to the editor and click the <b>Mixer</b> tab.</p>
+  <figure class="shot" data-shot="mixer"></figure>
+  <ul class="callout-key">
+    <li><span class="num">1</span><span><b>Volume</b> of that instrument.</span></li>
+    <li><span class="num">2</span><span><b>Pan</b> — left / right. Double-click to centre.</span></li>
+    <li><span class="num">3</span><span><b>rev / dly</b> — how much goes into the shared reverb (room) and delay (echo). The <i>Reverb &amp; delay</i> tab sets how big the room is and how the echo repeats.</span></li>
+    <li><span class="num">4</span><span><b>pump</b> — makes this instrument duck down every time the kick hits and swell back: the "breathing" sound in house and EDM. Try it on pads and chords.</span></li>
+    <li><span class="num">5</span><span><b>M</b> mute, <b>S</b> solo.</span></li>
+    <li><span class="num">6</span><span><b>Master</b> — overall volume.</span></li>
+  </ul>
+
+  <!-- ─────────────────────────────────────────────── -->
+  <h2 id="mastering">12 · Auto-mastering and exporting</h2>
+  <p><b>Yes — it auto-masters.</b> When you Export, the finished song goes through a mastering chain before it's saved: it listens to the whole mix, fixes the balance (too much bass, too harsh…), adds depth, glues it together and brings it up to the loudness of a released song, with a limiter so it never distorts.</p>
+  <figure class="shot" data-shot="export"></figure>
+  <ul class="callout-key">
+    <li><span class="num">1</span><span><b>Length</b> — in Play song mode it's always the whole song; in Loop parts mode pick how many bars.</span></li>
+    <li><span class="num">2</span><span><b>Auto-mastering style</b>:
+      <br><b>Deep &amp; warm</b> (recommended) — fuller, heavier low end with the sub kept dead-centre so it hits, a touch of warmth (harmonics), wider stereo, gentle "glue" compression, a little air on top.
+      <br><b>Loud</b> — the same, pushed harder for maximum level.
+      <br><b>Clean</b> — only fixes the balance and level.
+      <br><b>Off</b> — exactly as mixed.</span></li>
+    <li><span class="num">3</span><span><b>▶ Hear it mastered</b> — plays the mastered version right here, before you download. Press again to stop.</span></li>
+    <li><span class="num">4</span><span><b>Download</b> — saves the .wav. The message underneath says exactly what the mastering did (e.g. "low-end weight +2.5dB, warmth, stereo 30% wider, glue compression, level +6dB").</span></li>
+  </ul>
+
+  <!-- ─────────────────────────────────────────────── -->
+  <h2 id="save">13 · Saving, opening, undo, autosave</h2>
+  <figure class="shot" data-shot="open"></figure>
+  <ul class="callout-key">
+    <li><span class="num">1</span><span><b>Open</b> lists your saved songs — click one to open it, <b>×</b> deletes it.</span></li>
+    <li><span class="num">2</span><span><b>New from a template…</b> brings back the start screen.</span></li>
+  </ul>
+  <ul>
+    <li><b>Save</b> (or <kbd>Ctrl</kbd>+<kbd>S</kbd>) puts the song on the server — name it in the box at the top left first. Saved songs are there on any device.</li>
+    <li><b>Autosave</b>: the Studio also keeps your latest work in this browser automatically, recordings included. Close the tab by mistake? Open the Studio and click <b>Continue where you left off</b>.</li>
+    <li><b>Undo / redo</b>: <kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd>, or ↶ ↷. Works for patterns, the timeline, sounds and knobs (not mixer faders).</li>
+  </ul>
+
+  <!-- ─────────────────────────────────────────────── -->
+  <h2 id="claude">14 · Ask Claude</h2>
+  <figure class="shot" data-shot="claude"></figure>
+  <ul class="callout-key">
+    <li><span class="num">1</span><span>Claude answers here, and lists exactly what it changed.</span></li>
+    <li><span class="num">2</span><span>Type what you want in plain words and press Enter.</span></li>
+  </ul>
+  <p>Claude actually changes the song — the same way you would with the buttons, so you can undo it. Things to try:</p>
+  <ul>
+    <li>"Add strings playing the chords in the hook."</li>
+    <li>"Make the hi-hats roll at the end of every bar in the hook."</li>
+    <li>"Drop the 808 for the last two bars of the verse."</li>
+    <li>"Give me a lo-fi beat at 80 with lots of swing."</li>
+    <li>"Turn the 808 drive up and make it slide more."</li>
+  </ul>
+
+  <!-- ─────────────────────────────────────────────── -->
+  <h2 id="midi">15 · A MIDI keyboard</h2>
+  <p>Plug it in, press <b>MIDI</b> at the top, then <b>Connect keyboard</b> and allow it. <b>Play</b> chooses what it drives — usually "Same as the on-screen keys". Velocity, the sustain pedal and the pitch wheel all work. A drum pad controller plays the drums directly.</p>
+  <p>Needs Chrome or Edge on a computer. iPhones and iPads can't do MIDI in any browser (Apple doesn't allow it).</p>
+
+  <!-- ─────────────────────────────────────────────── -->
+  <h2 id="phone">16 · On your phone</h2>
+  <p>Rhythm Shop installs like an app. <b>iPhone:</b> open it in Safari → Share → <b>Add to Home Screen</b>. <b>Android:</b> tap <b>Install the app</b> on the home page. Everything works except MIDI on iPhone; turn the phone sideways for the Studio.</p>
+
+  <!-- ─────────────────────────────────────────────── -->
+  <h2 id="keys">17 · Keyboard shortcuts</h2>
+  <table>
+    <tr><th>Key</th><th>Does</th></tr>
+    <tr><td><kbd>Space</kbd></td><td>Play / stop</td></tr>
+    <tr><td><kbd>Ctrl</kbd>+<kbd>Z</kbd> · <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd></td><td>Undo · redo</td></tr>
+    <tr><td><kbd>Ctrl</kbd>+<kbd>S</kbd></td><td>Save</td></tr>
+    <tr><td><kbd>Ctrl</kbd>+<kbd>C</kbd> · <kbd>Ctrl</kbd>+<kbd>V</kbd> · <kbd>Ctrl</kbd>+<kbd>D</kbd> · <kbd>Delete</kbd></td><td>Copy · paste · duplicate · delete the selected timeline block</td></tr>
+    <tr><td><kbd>Esc</kbd></td><td>Deselect / close a menu</td></tr>
+    <tr><td><kbd>Z</kbd>…<kbd>M</kbd> and <kbd>Q</kbd>…<kbd>U</kbd> (with the black keys on <kbd>S D G H J</kbd> and <kbd>2 3 5 6 7</kbd>)</td><td>Play the keyboard</td></tr>
+    <tr><td><kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> <kbd>F</kbd> <kbd>G</kbd> <kbd>H</kbd> <kbd>J</kbd> <kbd>K</kbd></td><td>Drum pads (when the keyboard is set to Drum pads)</td></tr>
+    <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>Keyboard octave down / up</td></tr>
+    <tr><td><kbd>Shift</kbd> (hold)</td><td>808 slide while playing the keys</td></tr>
+  </table>
+
+  <!-- ─────────────────────────────────────────────── -->
+  <h2 id="trouble">18 · When something's wrong</h2>
+  <table>
+    <tr><th>Problem</th><th>Fix</th></tr>
+    <tr><td>No sound at all</td><td>Press Play once (browsers won't make sound until you click something). Check the Master slider in the Mixer and your device volume. On iPhone, flip the silent switch off.</td></tr>
+    <tr><td>The timeline is greyed out / not following the song</td><td>You're in <b>Loop parts</b>. Click <b>Play song</b>.</td></tr>
+    <tr><td>I changed the drums but don't hear it</td><td>You may be editing a different letter than the one playing there. Click the block on the timeline first — that opens exactly the pattern it plays.</td></tr>
+    <tr><td>An instrument is silent</td><td>Look for a red <b>M</b> (muted) or another instrument's <b>S</b> (solo) — Mixer tab → <b>Clear solo</b>. Or it has no block on the timeline there.</td></tr>
+    <tr><td>Mic recordings land late</td><td>Choose microphone in the Rec box; a <b>Timing trim</b> slider appears — nudge it.</td></tr>
+    <tr><td>Recording picks up the beat</td><td>Use headphones — on speakers the mic hears the speakers.</td></tr>
+  </table>
+  <p style="margin:50px 0 30px;color:var(--dim);font-size:12px">The pictures in this manual are taken straight from the app by <code>tools/make-manual.js</code>, so they match what you see.</p>
+</div>
+
+<script>
+// Draw the numbered boxes on each screenshot from manual/callouts.json.
+fetch('manual/callouts.json').then(r => r.json()).then(all => {
+  document.querySelectorAll('figure.shot').forEach(fig => {
+    const id = fig.dataset.shot;
+    const box = document.createElement('div');
+    box.className = 'shotbox';
+    const img = document.createElement('img');
+    img.src = 'manual/' + id + '.png';
+    img.alt = 'Screenshot: ' + id;
+    img.loading = 'lazy';
+    box.appendChild(img);
+    (all[id] || []).forEach(c => {
+      const m = document.createElement('div');
+      m.className = 'mark';
+      m.style.left = c.x + '%'; m.style.top = c.y + '%';
+      m.style.width = Math.max(c.w, 1.2) + '%'; m.style.height = Math.max(c.h, 1.2) + '%';
+      const n = document.createElement('span');
+      n.className = 'num'; n.textContent = c.n;
+      m.appendChild(n);
+      box.appendChild(m);
+    });
+    // Small screens shrink the pictures — tap one to open it full size.
+    box.addEventListener('click', () => window.open(img.src, '_blank'));
+    fig.appendChild(box);
+    const hint = document.createElement('div');
+    hint.className = 'zoomhint'; hint.textContent = 'Tap the picture to see it full size.';
+    fig.appendChild(hint);
+  });
+});
+</script>
+<script src="js/pwa.js"></script>
+</body>
+</html>

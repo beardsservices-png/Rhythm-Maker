@@ -334,17 +334,6 @@ body:not(.songmode) .lane .sblock { opacity: .78; }
 details.how { margin-top: 6px; }
 details.how > summary { font-size: 11px; }
 
-/* ── a real DAW layout where there's room: nothing scrolls the page; the song
-   grid and the editor each scroll inside their own panel, and the dock sits
-   underneath both. ── */
-@media (min-width: 900px) and (min-height: 620px) {
-  body.studio { height: 100vh; overflow: hidden; padding-bottom: 0; display: flex; flex-direction: column; }
-  .workspace { flex: 1 1 auto; min-height: 0; padding-bottom: calc(var(--dockH, 190px) + 10px); }
-  .arrange { flex: 1 1 50%; display: flex; flex-direction: column; min-height: 150px; }
-  .agrid-scroll { max-height: none; flex: 1 1 auto; min-height: 0; }
-  .lower { flex: 1 1 50%; min-height: 160px; overflow: auto; }
-}
-
 /* ── smaller screens ── */
 @media (max-width: 1500px) {
   .tb-brand { display: none; }
@@ -448,3 +437,102 @@ details.how > summary { font-size: 11px; }
 .ss-close { position: absolute; top: 10px; right: 12px; border: none; background: none; font-size: 22px !important; padding: 2px 8px !important; }
 @media (max-width: 640px) { .ss-card { padding: 18px; } .ss-head h1 { font-size: 26px; } }
 @media (max-width: 640px) { .drumtools, .dbrushes { flex-wrap: wrap; min-width: 0; } .drumtools .field.inline { flex-wrap: wrap; } }
+
+
+/* ════════ round 3: page scrolls, nothing scrolls inside a box (except sideways) ════════ */
+.agrid-scroll { max-height: none !important; overflow-x: auto; overflow-y: visible; }
+.roll { height: auto !important; overflow-x: auto; overflow-y: hidden; }
+.lower { overflow: visible !important; }
+
+.stepnum {
+  display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%;
+  background: var(--amber); color: var(--bg2); font-family: 'Courier New', monospace; font-size: 14px; font-weight: bold; margin-right: 4px;
+}
+.h2sub { color: var(--dim); font-size: 13px; font-family: 'Courier New', monospace; }
+.help, .tb-help {
+  display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--amber); color: var(--amber);
+  text-decoration: none; border-radius: 50%; width: 24px; height: 24px; font-weight: bold; font-size: 13px;
+}
+.tb-help { border-radius: 3px; width: auto; height: auto; padding: 6px 9px; font-size: 12px; letter-spacing: .5px; }
+.help:hover, .tb-help:hover { background: var(--amber); color: var(--bg2); }
+.edpick { font-size: 15px !important; font-family: Georgia, serif !important; padding: 4px 8px !important; }
+.explain {
+  font-size: 12.5px; line-height: 1.6; color: var(--paper); background: rgba(217,154,58,0.07);
+  border-left: 3px solid var(--amber); padding: 8px 12px; margin: -2px 0 12px; max-width: 110ch;
+}
+.explain b { color: var(--amber); font-weight: normal; }
+
+/* clip toolbar */
+.clipbar { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; min-height: 30px; margin: 0 0 8px; font-size: 12px; }
+.clipbar b { font-family: Georgia, serif; font-weight: normal; font-size: 14px; }
+.clipbar .lbtn { width: 26px; }
+.clipbar .mini.on { background: var(--teal); border-color: var(--teal); color: var(--bg2); }
+
+/* ── the timeline ── */
+body.studio { --bar: 34px; --tlhead: 260px; }
+.tl { position: relative; display: inline-block; min-width: 100%; }
+.tl-row { display: flex; border-bottom: 1px solid var(--line); }
+.tl-head {
+  position: sticky; left: 0; z-index: 3; flex: 0 0 var(--tlhead); width: var(--tlhead);
+  display: flex; align-items: center; gap: 4px; padding: 3px 6px 3px 0; background: var(--bg);
+  border-right: 1px solid rgba(233,225,204,0.14); overflow: hidden;
+}
+.tl-head.corner { flex-direction: column; align-items: flex-start; justify-content: center; padding-left: 10px; gap: 2px; background: var(--bg2); }
+.tl-head.corner b { font-family: Georgia, serif; font-weight: normal; font-size: 14px; }
+.tl-head.corner .dim { font-size: 10px; line-height: 1.3; }
+.tl-row.track { height: 40px; }
+.tl-row.track.sel .tl-head { background: #22231d; box-shadow: inset 3px 0 0 var(--amber); }
+.tl-row.track.sel .tname { color: var(--amber); }
+.led { width: 8px; height: 8px; border-radius: 50%; background: #2c2d27; flex: none; transition: background .12s; }
+.tl-row.track.hit .led { background: #ffd27a; box-shadow: 0 0 8px #ffd27a; transition: none; }
+.tl-row.track.hit .tl-head { background: #2b2a20; }
+.editbtn { padding: 3px 7px !important; font-size: 13px !important; flex: none; border-color: var(--amber) !important; color: var(--amber); }
+.tl-lane { position: relative; flex: none; height: 100%;
+  background-image: linear-gradient(90deg, rgba(233,225,204,.06) 1px, transparent 1px);
+  background-size: var(--bar) 100%; }
+.tl-ruler { position: relative; z-index: 4; background: var(--bg2); }
+.ruler-lane { height: 58px; background-image: none; }
+.tl-sec {
+  position: absolute; top: 3px; height: 26px; display: flex; align-items: center; gap: 2px; padding: 0 4px 0 8px;
+  border: 1px solid var(--dim); border-radius: 3px; background: var(--bg); overflow: hidden; min-width: 0;
+}
+.tl-sec .sname { flex: 1 1 auto; min-width: 0; }
+.tl-sec .more { padding: 0 4px !important; font-size: 13px !important; }
+.sec-handle { position: absolute; right: 0; top: 0; bottom: 0; width: 6px; cursor: ew-resize; background: rgba(217,154,58,.35); }
+.tl-sec.now { border-color: var(--amber); box-shadow: inset 0 0 0 1px var(--amber); }
+.tl-nums { position: absolute; left: 0; right: 0; top: 32px; height: 24px; cursor: pointer; }
+.barnum {
+  position: absolute; top: 0; height: 24px; line-height: 24px; font-size: 10px; color: var(--dim); padding-left: 3px;
+  border-left: 1px solid rgba(233,225,204,.18);
+}
+.barnum:hover { color: var(--amber); background: rgba(217,154,58,.1); }
+.barnum.past { opacity: .35; }
+.secline { position: absolute; top: 0; bottom: 0; width: 2px; background: rgba(233,225,204,.28); pointer-events: none; }
+.songend { position: absolute; top: 0; bottom: 0; right: 0; background: rgba(0,0,0,.28); pointer-events: none; }
+.tl-cursor { position: absolute; top: 2px; bottom: 2px; width: 2px; background: var(--paper); box-shadow: 0 0 6px var(--paper); pointer-events: none; }
+.clip {
+  position: absolute; top: 5px; height: 30px; border-radius: 4px; cursor: grab; overflow: hidden;
+  background-repeat: no-repeat; background-position: 0 6px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.35);
+  touch-action: none; user-select: none;
+}
+.clip.v0 { background-color: var(--v0); } .clip.v1 { background-color: var(--v1); }
+.clip.v2 { background-color: var(--v2); } .clip.v3 { background-color: var(--v3); }
+.k-audio ~ .clip, .clip.audio { background-color: var(--red); }
+.clip.selected { box-shadow: 0 0 0 2px var(--paper), 0 0 10px rgba(233,225,204,.4); z-index: 2; }
+.clip.ghost, .clip.dragging { opacity: .75; box-shadow: 0 0 0 2px var(--paper); z-index: 3; }
+.clip-label { position: absolute; left: 5px; top: 1px; font-size: 11px; font-weight: bold; color: rgba(20,21,18,.85); pointer-events: none; white-space: nowrap; }
+.clip-solo { position: absolute; right: 9px; top: 2px; font-size: 9px; font-weight: bold; background: var(--teal); color: var(--bg2); padding: 0 3px; border-radius: 2px; }
+.clip-edge { position: absolute; top: 0; bottom: 0; width: 7px; cursor: ew-resize; }
+.clip-edge.l { left: 0; } .clip-edge.r { right: 0; }
+.clip:hover .clip-edge { background: rgba(255,255,255,.25); }
+.tl-playhead { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--paper); z-index: 5; pointer-events: none; box-shadow: 0 0 6px rgba(233,225,204,.6); }
+.tl.loopmode .clip { opacity: .45; }
+
+/* drum lane names light up when they sound */
+.dname.hit { background: #ffd27a !important; color: var(--bg2) !important; transition: none; }
+.pad.hit { background: #ffd27a; color: var(--bg2); }
+
+@media (max-width: 900px) { body.studio { --tlhead: 190px; --bar: 30px; } .tl-head .ms { display: none; } }
+@media (max-width: 640px) { body.studio { --tlhead: 130px; } .tl-head .editbtn, .tl-head .more { display: none; } .h2sub { display: none; } }
+.ss-manual { display: inline-block; margin: -8px 0 16px; font-size: 13px; color: var(--amber); text-decoration: none; }
+.ss-manual:hover { color: var(--paper); }

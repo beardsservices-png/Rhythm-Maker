@@ -59,6 +59,7 @@
     <button id="exportBtn" title="Download a .wav">Export</button>
     <button id="midiBtn" title="Connect a MIDI keyboard">MIDI</button>
     <button id="claudeBtn" title="Ask Claude to change the song">Claude</button>
+    <a class="tb-help" href="manual.html" target="_blank" title="The user manual — how to use everything">? Manual</a>
   </div>
 </header>
 
@@ -67,34 +68,28 @@
 
 <main class="workspace">
 
-  <!-- ── arrangement: every instrument, every section, on one screen ── -->
-  <section class="panel arrange">
+  <!-- ── 1. the song timeline: WHEN each instrument plays ── -->
+  <section class="panel arrange" id="arrangePanel">
     <div class="panel-head">
-      <h2>Song</h2>
-      <div class="brushes" role="group" aria-label="What clicking a bar does">
-        <span class="dim">Click a bar to</span>
-        <button data-brush="mute" class="on" title="Click or drag across bars to silence / bring back">mute / unmute</button>
-        <button data-brush="0">A</button><button data-brush="1">B</button><button data-brush="2">C</button><button data-brush="3">D</button>
-      </div>
+      <h2><span class="stepnum">1</span> Song timeline <span class="h2sub">— WHEN each instrument plays</span></h2>
+      <a class="help" href="manual.html#timeline" target="_blank" title="How the timeline works">?</a>
       <div class="panel-tools">
         <button id="addSectionBtn" title="Add a section at the end">+ Section</button>
-        <button id="addTrackBtn" class="primary" title="Add an instrument, drum, or audio">+ Add</button>
+        <button id="addTrackBtn" class="primary" title="Add an instrument, drum, or audio">+ Add instrument</button>
       </div>
     </div>
+    <div class="clipbar" id="clipBar"></div>
     <div class="agrid-scroll" id="arrangeScroll">
-      <div class="agrid" id="arrangeGrid"></div>
+      <div class="tl" id="arrangeGrid"></div>
     </div>
-    <details class="how">
-      <summary>How the song grid works</summary>
-      <p>Each row is an instrument; each block is a section. The letter at the start of a block is which pattern that
-        instrument plays there — click it to change (A → B → C → D → silent). <b>S</b> solos that instrument for that
-        section only. Click or drag across bars to mute just those bars, or pick A–D above and drag to paint a pattern in.
-        <b>Loop parts</b> loops whatever each instrument is set to; <b>Play song</b> plays the sections in order.</p>
-    </details>
   </section>
 
-  <!-- ── lower pane: edit the selected part, or mix ── -->
-  <section class="panel lower">
+  <!-- ── 2. the editor: WHAT the selected instrument plays ── -->
+  <section class="panel lower" id="editorPanel">
+    <div class="panel-head">
+      <h2><span class="stepnum">2</span> <span id="editorTitle">Editor</span> <span class="h2sub" id="editorSub">— WHAT it plays</span></h2>
+      <a class="help" href="manual.html#editor" target="_blank" title="How the editor works">?</a>
+    </div>
     <nav class="tabs" role="tablist">
       <button role="tab" data-tab="edit" class="on">Edit</button>
       <button role="tab" data-tab="mix">Mixer</button>
@@ -161,8 +156,19 @@
       <option value="16">16 bars</option><option value="32">32 bars</option>
     </select></label>
   <p class="hint" id="exportSongNote" hidden>Song mode is on, so the whole song is rendered.</p>
-  <label class="chk"><input type="checkbox" id="masterToggle" checked> Master it (even out the balance and loudness)</label>
-  <button id="exportGo" class="primary">Download</button>
+  <label class="field">Auto-mastering
+    <select id="masterStyle" class="tb-sel">
+      <option value="deep" selected>Deep &amp; warm — fuller bass, wider, warmer (recommended)</option>
+      <option value="loud">Loud — the same, pushed harder</option>
+      <option value="clean">Clean — just balance and level</option>
+      <option value="off">Off — exactly as mixed</option>
+    </select></label>
+  <p class="hint">Mastering listens to the finished song, fixes the balance, adds depth and brings it up to a
+    normal release loudness — like sending it to a mastering service. <a href="manual.html#mastering" target="_blank">More…</a></p>
+  <div class="row">
+    <button id="exportHear" title="Render the song mastered and play it here, before you download">&#9654; Hear it mastered</button>
+    <button id="exportGo" class="primary">Download</button>
+  </div>
   <div id="exportMsg" class="msg"></div>
 </div>
 <div class="pop pop-wide" id="midiMenu" hidden>
@@ -214,6 +220,7 @@
     <div class="ss-head">
       <h1 id="ssTitle">BHS Studio</h1>
       <p class="ss-tag">Make the beat. Lay out the song. Press record.</p>
+      <a class="ss-manual" href="manual.html" target="_blank">New here? <u>Read the manual</u> — pictures, arrows, every button explained.</a>
     </div>
     <button id="ssContinue" class="primary ss-continue" hidden></button>
     <h3>Start from a template</h3>
