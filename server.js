@@ -14,7 +14,7 @@ if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 const MIME = {
   '.html': 'text/html', '.css': 'text/css', '.js': 'application/javascript',
   '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml',
-  '.wav': 'audio/wav'
+  '.wav': 'audio/wav', '.webmanifest': 'application/manifest+json'
 };
 
 // Binary-safe. The text reader below concatenates chunks onto a string, which

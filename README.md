@@ -81,6 +81,15 @@ small name→data map that reads and writes atomically. `practice` patterns stor
 `{ notes: ["E","D","C", …] }`. Studio projects are JSON + sidecar WAVs under
 `$DATA_DIR/projects` and `$DATA_DIR/audio`.
 
+## Install as an app
+
+Rhythm Shop is a PWA (`public/manifest.webmanifest` + `public/sw.js`): it installs
+to a phone's home screen and opens full-screen, and its pages still open offline
+(saving to the server, loading saved tracks and Ask Claude need a connection).
+Android/desktop Chrome and Edge show an **Install the app** button on the home
+page; on iPhone it's Safari → Share → **Add to Home Screen** (the page says so).
+The service worker is network-first, so a deploy shows up on the next open.
+
 ## Running locally
 
 ```
