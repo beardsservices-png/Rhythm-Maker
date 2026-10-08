@@ -159,7 +159,7 @@
       gridEl.appendChild(row);
     });
     root.appendChild(gridEl);
-    root.appendChild(el('p', 'hint', 'Click or drag across steps to place hits. Each lane has its own A B C D, so the hats can change while the kick stays put. The Song grid above decides which letter each lane plays in each section.'));
+    root.appendChild(el('p', 'hint', 'Click or drag across steps to place hits. Each lane has its own A B C D, so the hats can change while the kick stays put. The timeline above decides which letter each lane plays, and when.'));
   }
 
   // Brush codes match Project.stepInfo: ones digit = level, tens = roll.
@@ -364,8 +364,7 @@
       (slideRow ? ' The S buttons on top make a note slide in from the one before — the 808 glide.' : '')));
 
     // Start scrolled to where the notes are (or the middle of the range).
-    const centre = notes.length ? notes.reduce((a, n) => a + n.m, 0) / notes.length : (lo + hi) / 2;
-    scroll.scrollTop = Math.max(0, (hi - centre) * RH - 120);
+    // The roll shows its whole range — no scrolling inside it.
 
     const pos = (e) => {
       const r = lane.getBoundingClientRect();
@@ -514,7 +513,7 @@
     const barSec = st.secondsPerStep * st.stepsPerBar;
     info.textContent = `${buf.duration.toFixed(1)} seconds of audio · ${(buf.duration / barSec).toFixed(1)} bars at ${st.bpm} BPM. ` +
       'It loops every ' + t.bars + ' bar' + (t.bars === 1 ? '' : 's') + ' from the start of each section. ' +
-      'Turn it on or off per section in the Song grid, like any other instrument.';
+      'Move, stretch or copy it on the timeline above, like any other instrument.';
     requestAnimationFrame(() => drawWave(cv, buf, t.bars, barSec));
     audioView = { t, ph, barSec, wrap };
   }
@@ -568,19 +567,63 @@
   function render() {
     if (dragging) return;
     roll = null; audioView = null;
-    const keepY = root.querySelector('.roll') ? root.querySelector('.roll').scrollTop : null;
     root.innerHTML = '';
     const t = Project.track(App.selected());
     current = t ? t.id : null;
-    if (!t) { root.appendChild(el('p', 'hint', 'Pick a track in the Song grid to edit it.')); return; }
+    renderTitle(t);
+    if (!t) { root.appendChild(el('p', 'hint', 'Click an instrument\'s name in the timeline above to edit it here.')); return; }
+    root.appendChild(explainer(t));
     if (t.kind === 'drum') renderDrums(t);
     else if (t.kind === 'synth') renderRoll(t);
     else renderAudio(t);
-    const r = root.querySelector('.roll');
-    if (r && keepY != null && lastRendered === t.id + ':' + t.edit) r.scrollTop = keepY;
     lastRendered = t.id + ':' + t.edit;
   }
+
+  /** "Editing [Kick ▾]" — jump straight to any instrument from here. */
+  function renderTitle(t) {
+    const title = document.getElementById('editorTitle');
+    const sub = document.getElementById('editorSub');
+    if (!title) return;
+    title.innerHTML = '';
+    title.appendChild(document.createTextNode('Editing '));
+    const sel = el('select', 'tb-sel edpick');
+    sel.title = 'Pick which instrument to edit';
+    Project.tracks().forEach(x => { const o = el('option', null, x.name); o.value = x.id; if (t && x.id === t.id) o.selected = true; sel.appendChild(o); });
+    sel.addEventListener('change', () => App.select(sel.value));
+    title.appendChild(sel);
+    sub.textContent = !t ? '' : t.kind === 'audio' ? '— the recorded/uploaded clip' :
+      `— WHAT it plays (pattern ${NAMES[t.edit]})`;
+  }
+
+  /** One plain sentence on how this editor relates to the timeline. */
+  function explainer(t) {
+    const p = el('div', 'explain');
+    const L = NAMES[t.edit];
+    if (t.kind === 'drum') {
+      p.innerHTML = `<b>Drum machine.</b> Every drum is its own row. The squares are sixteenth notes — <b>lit = it hits</b>. ` +
+        `You're looking at each row's pattern <b>${L}</b> (or the letter lit beside it). The <b>timeline above</b> decides <b>when</b> each pattern plays; this decides <b>what</b> it plays. ` +
+        `A row's name flashes when it sounds.`;
+    } else if (t.kind === 'synth') {
+      p.innerHTML = `<b>Piano roll for ${t.name}.</b> Up/down is the note (keyboard on the left), left-to-right is time. ` +
+        `<b>Click</b> to add a note, <b>drag</b> right while adding to make it longer, <b>drag</b> a note to move it, <b>click</b> a note to delete it. ` +
+        `This is pattern <b>${L}</b>; the <b>timeline above</b> decides when it plays.`;
+    } else {
+      p.innerHTML = `<b>Audio clip.</b> This is real recorded sound. It loops every ${t.bars} bar${t.bars === 1 ? '' : 's'}; ` +
+        `the <b>timeline above</b> decides where it plays.`;
+    }
+    return p;
+  }
   let lastRendered = '';
+
+  // A drum row's name flashes when that drum sounds.
+  Sequencer.onHit((ids) => {
+    ids.forEach(id => {
+      const b = root.querySelector(`.drow[data-id="${CSS.escape(id)}"] .dname`);
+      if (!b) return;
+      b.classList.remove('hit'); void b.offsetWidth; b.classList.add('hit');
+      clearTimeout(b._t); b._t = setTimeout(() => b.classList.remove('hit'), 140);
+    });
+  });
 
   // Playheads
   let lastDrumStep = null;

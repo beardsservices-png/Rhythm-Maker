@@ -77,6 +77,7 @@ const Keys = (() => {
     const h = Instruments.noteOn(ac, Sequencer.liveInput(t.id), t.instrument, midi, vel, ac.currentTime, t.params);
     if (!h) return false;
     if (bend) h.setBend(bend);
+    Sequencer.flash(t.id);
     const rec = { h, track: t.id };
     live.set(midi, rec);
     lastHandle = rec;
@@ -108,6 +109,7 @@ const Keys = (() => {
     if (!t || t.kind !== 'drum') return false;
     const ac = App.ensureAudio(); if (!ac) return false;
     DrumKits.hit(ac, Sequencer.liveInput(t.id), t.sound, ac.currentTime, velocity == null ? 0.9 : velocity);
+    Sequencer.flash(t.id);
     const pad = kbEl.querySelector(`.pad[data-id="${t.id}"]`);
     if (pad) { pad.classList.add('down'); setTimeout(() => pad.classList.remove('down'), 110); }
     if (recOn && Transport.isPlaying) {
@@ -395,6 +397,12 @@ const Keys = (() => {
     if (t && t.kind === 'synth') setTarget(t.id);
   });
   window.addEventListener('bhs:play-track', (e) => setTarget(e.detail.id));
+  // Pads light up when their drum plays — sequenced or by hand.
+  Sequencer.onHit((ids) => ids.forEach(id => {
+    const p = kbEl.querySelector(`.pad[data-id="${CSS.escape(id)}"]`);
+    if (!p) return;
+    p.classList.add('hit'); clearTimeout(p._t); p._t = setTimeout(() => p.classList.remove('hit'), 120);
+  }));
 
   const first = synthTracks()[0];
   target = first ? first.id : (drumTracks().length ? 'drums' : null);

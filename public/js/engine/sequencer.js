@@ -53,6 +53,7 @@ const Sequencer = (() => {
       g.gain.value = t.gain == null ? 1 : t.gain;
       src.connect(g).connect(target.out(t.id));
       src.start(ev.time, offset, Math.min(barSec - into, buf.duration - offset));
+      if (target.onHit) target.onHit(t.id, ev.time);
       sources.add(src);
       src.onended = () => sources.delete(src);
     }
@@ -73,6 +74,7 @@ const Sequencer = (() => {
           if (cur && !cur.h.stopped) cur.h.release(ev.time);
           const h = Instruments.noteOn(ac, out, t.instrument, n.m, vel, ev.time, t.params);
           if (h) mono.set(t.id, { h, end: abs + n.l });
+          if (target.onHit) target.onHit(t.id, ev.time);
         }
         return;
       }
@@ -80,6 +82,7 @@ const Sequencer = (() => {
         if (n.s !== idx) continue;
         const h = Instruments.noteOn(ac, out, t.instrument, n.m, n.vel == null ? 0.85 : n.vel, ev.time, t.params);
         if (!h) continue;
+        if (target.onHit) target.onHit(t.id, ev.time);
         // ev.time is already swung; a note ending on an off-beat ends swung too.
         const endStep = idx + n.l;
         const end = ev.time - swingOf(ev, idx % 16) + n.l * ev.stepDur + swingOf(ev, endStep % 16);
@@ -131,6 +134,7 @@ const Sequencer = (() => {
             for (let k = 0; k < info.roll; k++) {
               DrumKits.hit(ac, target.out(t.id), t.sound, t0 + k * ev.stepDur / info.roll, info.vel * (k ? 0.8 : 1));
             }
+            if (target.onHit) target.onHit(t.id, t0);
             if (t.sound.role === 'kick') pump(t0);
           }
         } else {
@@ -199,6 +203,22 @@ const Sequencer = (() => {
     else Transport.setLoop(0, SPB, false);
   }
 
+  // ── "what's making sound": hits surface on screen when they're heard ──
+  const hitQueue = [];
+  const hitFns = new Set();
+  function drainHits() {
+    if (ctx && hitQueue.length) {
+      const now = ctx.currentTime;
+      const due = new Set();
+      for (let i = hitQueue.length - 1; i >= 0; i--) {
+        if (hitQueue[i].time <= now) { due.add(hitQueue[i].id); hitQueue.splice(i, 1); }
+      }
+      if (due.size) hitFns.forEach(fn => { try { fn(due); } catch (e) { console.error(e); } });
+    }
+    requestAnimationFrame(drainHits);
+  }
+  requestAnimationFrame(drainHits);
+
   // ── metronome ──
   // Straight to the speakers, not through the mixer: a click should never end
   // up in a bounce or an export.
@@ -226,7 +246,8 @@ const Sequencer = (() => {
     live = createPlayer({
       ac: ctx, out: (id) => Mixer.input(id), live: true,
       duck: (id) => { const m = Mixer.get(id); return m ? m.duck : null; },
-      click: (time, downbeat) => { if (metronome) api.click(time, downbeat); }
+      click: (time, downbeat) => { if (metronome) api.click(time, downbeat); },
+      onHit: (id, time) => { hitQueue.push({ id, time }); }
     });
 
     Transport.onStep((ev) => {
@@ -237,7 +258,7 @@ const Sequencer = (() => {
       if (history.length > 48) history.shift();
     });
     Transport.onStateChange((s) => {
-      if (wasPlaying && !s.playing) { live.stopAll(); history.length = 0; }
+      if (wasPlaying && !s.playing) { live.stopAll(); history.length = 0; hitQueue.length = 0; }
       wasPlaying = s.playing;
     });
 
@@ -291,6 +312,10 @@ const Sequencer = (() => {
   const api = {
     createPlayer, init, liveInput, stepAt, trackPosition, click,
     setMetronome: (on) => { metronome = !!on; },
+    /** fn(Set of track ids) each frame something becomes audible. */
+    onHit: (fn) => { hitFns.add(fn); return () => hitFns.delete(fn); },
+    /** Light a track up right now (something played by hand). */
+    flash: (id) => { hitQueue.push({ id, time: 0 }); },
     metronome: () => metronome,
     liveBus: () => liveBus,
     context: () => ctx

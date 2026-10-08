@@ -39,9 +39,19 @@ and **BHS Studio** (`public/studio.html`). See `README.md` for the file map.
   ones digit = level (1 soft, 2 normal, 3 accent), tens digit = roll (2/3/4).
   Always read them through `Project.stepInfo()`. Swing, key and per-track `pump`
   live on the project; undo snapshots exclude live letters and play mode.
-- **Layout rule:** the dock (keyboard + current sound's knobs) stays pinned and the
-  page itself doesn't scroll on a laptop — the song grid and editor scroll inside
-  their panels. That was the main complaint about the old page; don't regress it.
+- **Layout rule:** the dock (keyboard + current sound's knobs) stays pinned at the
+  bottom. **No panel scrolls up/down inside itself** — every drum lane and every
+  timeline row is always visible; the *page* scrolls instead. The song timeline
+  scrolls sideways only. Brian hated hunting inside boxes; don't regress it.
+- **Timeline** (`studio-arrange.js`) is drawn from `Project.runs()` — the blocks
+  are just runs of equal cells, and edits go through `Project.setCells()` (which
+  grows the song). Clicking a block selects that track AND that pattern letter.
+- **What's sounding:** the sequencer calls `onHit(trackId)` on every hit; the
+  timeline LED, the drum-lane names and the pads light from `Sequencer.onHit`.
+- **Mastering** (`engine/master.js`): styles clean / deep (default) / loud, then a
+  lookahead limiter to −1 dBFS. Export has a "Hear it first" preview.
+- **User manual** `public/manual.html`; its pictures and callout boxes come from
+  `tools/make-manual.js` (run it after any visible UI change, with the server up).
 - **Retired:** Freeplay, Round Robin, and the old Studio page (scenes, per-slot
   looper, sample timeline). `audio-engine.js` is gone. Old saved projects still
   load — `Project.restore()` converts them.
@@ -51,6 +61,7 @@ and **BHS Studio** (`public/studio.html`). See `README.md` for the file map.
 ```
 npm install && node server.js          # then open the three pages
 node tests/studio.test.js               # needs: npm install --no-save playwright
+node tools/make-manual.js               # re-shoot the manual's screenshots
 ```
 
 Practice Mode's live mic path can't be automated (Chrome fake-audio doesn't flow

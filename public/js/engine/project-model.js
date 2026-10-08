@@ -377,6 +377,62 @@ const Project = (() => {
     emit('sections');
   }
 
+  // ── timeline view: the song as one long row of bars per track ───────
+  //
+  // Sections still hold the data, but the timeline edits by absolute song bar
+  // (0 = first bar of the song), like a video editor's time ruler.
+
+  function cellAt(trackId, gbar) {
+    let b = gbar;
+    for (const s of state.sections) {
+      if (b < s.bars) { const c = s.cells[trackId]; return c && c[b] != null ? c[b] : OFF; }
+      b -= s.bars;
+    }
+    return OFF;
+  }
+
+  /** Make the song at least `total` bars long by stretching the last section. */
+  function extendTo(total) {
+    const have = songBars();
+    if (total <= have || !state.sections.length) return;
+    const last = state.sections[state.sections.length - 1];
+    const add = total - have;
+    Object.keys(last.cells).forEach(id => { for (let i = 0; i < add; i++) last.cells[id].push(OFF); });
+    state.tracks.forEach(t => { if (!last.cells[t.id]) last.cells[t.id] = new Array(last.bars + add).fill(OFF); });
+    last.bars += add;
+  }
+
+  /** Apply many cell edits at once: [{ track, bar (song bar), v }]. One undo step, one redraw. */
+  function setCells(edits) {
+    if (!edits || !edits.length) return;
+    const maxBar = Math.max(...edits.map(e => e.bar));
+    if (maxBar >= songBars()) extendTo(maxBar + 1);
+    edits.forEach(({ track: id, bar, v }) => {
+      if (bar < 0) return;
+      let b = bar;
+      for (const s of state.sections) {
+        if (b < s.bars) { if (s.cells[id]) s.cells[id][b] = v; break; }
+        b -= s.bars;
+      }
+    });
+    emit('sections');
+  }
+
+  /** The clips on a track: runs of the same pattern across consecutive bars. */
+  function runs(trackId) {
+    const out = [];
+    const total = songBars();
+    let cur = null;
+    for (let b = 0; b < total; b++) {
+      const v = cellAt(trackId, b);
+      if (cur && v === cur.v) { cur.len++; continue; }
+      if (cur) out.push(cur);
+      cur = v >= 0 ? { start: b, len: 1, v } : null;
+    }
+    if (cur) out.push(cur);
+    return out;
+  }
+
   function songBars() { return state.sections.reduce((n, s) => n + s.bars, 0); }
 
   function sectionStart(index) {
@@ -614,7 +670,7 @@ const Project = (() => {
     setLive, setEdit, setAllLive, applyPending,
     sections, section, addSection, duplicateSection, removeSection, moveSection, renameSection,
     setSectionBars, setCell, setSectionTrack, replaceSections, toggleBarMute, toggleSolo, mainLetter,
-    songBars, sectionStart, locate, songStateAt,
+    songBars, sectionStart, locate, songStateAt, cellAt, setCells, runs, extendTo,
     setMode, mode, setBpm, bpm, setSwing, swing, setKey, key, setPump,
     stepInfo, stepCode,
     setAudio, getAudio, newAudioId,

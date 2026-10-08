@@ -47,7 +47,7 @@
       const t = addAudioTrack(s.take.buffer, s.take.bars, name, { off: src === 'mix' });
       App.msg(src === 'mix'
         ? `Bounced ${s.take.bars} bars to "${t.name}". It starts switched OFF so it doesn't double up — turn it on where you want it, and mute the parts it replaces.`
-        : `Recorded ${s.take.bars} bar${s.take.bars === 1 ? '' : 's'} to "${t.name}". It's on in every section — click its letters in the Song grid to choose where it plays.`);
+        : `Recorded ${s.take.bars} bar${s.take.bars === 1 ? '' : 's'} to "${t.name}". It's on in every section — drag, stretch or delete its blocks on the timeline to choose where it plays.`);
     }
   });
 

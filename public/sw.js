@@ -9,8 +9,8 @@
 // The /api/ routes (saving, loading, Ask Claude) and other sites (the
 // MediaPipe CDN) are never cached — they go straight to the network.
 
-const CACHE = 'rhythm-shop-v1';
-const SHELL = ['/', '/index.html', '/studio.html', '/practice.html', '/manifest.webmanifest',
+const CACHE = 'rhythm-shop-v2';
+const SHELL = ['/', '/index.html', '/studio.html', '/practice.html', '/manual.html', '/manifest.webmanifest',
                '/css/base.css', '/css/studio.css', '/css/practice.css', '/icons/icon-192.png'];
 
 self.addEventListener('install', (e) => {

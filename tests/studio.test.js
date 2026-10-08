@@ -90,13 +90,22 @@ function sineWav(file) {
   await helpers();
 
   // ────────────────────────────────────────────────────────────────
-  console.log('\n1. Layout — everything you need while recording is on one screen');
-  const inView = await page.evaluate(() => ['#playBtn', '#arrangeGrid', '.drumgrid', '#keyboard', '#knobs'].map(sel => {
-    const r = document.querySelector(sel).getBoundingClientRect();
-    return r.height > 0 && r.top >= 0 && r.top < innerHeight;
-  }));
-  ok('transport, song grid, drum machine, keyboard and 808 knobs all visible at 1440×900', inView.every(Boolean), JSON.stringify(inView));
-  ok('page itself does not scroll', await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight + 2));
+  console.log('\n1. Layout — the page scrolls, nothing scrolls inside a box');
+  const lay = await page.evaluate(() => {
+    const sc = document.getElementById('arrangeScroll');
+    const dg = document.querySelector('.drumgrid');
+    const inView = (sel) => { const r = document.querySelector(sel).getBoundingClientRect(); return r.height > 0 && r.top >= 0 && r.top < innerHeight; };
+    return {
+      timelineRows: document.querySelectorAll('.tl-row.track').length,
+      timelineNoVScroll: sc.scrollHeight <= sc.clientHeight + 2,
+      drumRows: document.querySelectorAll('.drow').length,
+      drumNoVScroll: dg.scrollHeight <= dg.clientHeight + 2,
+      dock: inView('#keyboard') && inView('#knobs') && inView('#playBtn')
+    };
+  });
+  ok('timeline shows every instrument with no scrolling inside it', lay.timelineRows === 8 && lay.timelineNoVScroll, JSON.stringify(lay));
+  ok('drum machine shows every lane with no scrolling inside it', lay.drumRows === 6 && lay.drumNoVScroll, JSON.stringify(lay));
+  ok('transport and the keyboard dock with its knobs are always on screen', lay.dock);
   ok('demo song has 8 tracks and 4 sections',
      await page.evaluate(() => Project.tracks().length === 8 && Project.sections().length === 4));
 
@@ -127,35 +136,63 @@ function sineWav(file) {
   await page.evaluate(() => { const v = Project.sections()[1]; const id = window.__track('Snare').id; Project.toggleBarMute(v.id, id, 2); Project.toggleBarMute(v.id, id, 3); });
 
   // ────────────────────────────────────────────────────────────────
-  console.log('\n3. The song grid UI');
-  const clapChip = 'div.arow.track:nth-child(4) .lane .sblock:nth-child(2) .chip';
-  ok('clap is silent in the verse to start', (await page.textContent(clapChip)).trim() === '—');
-  await page.click(clapChip);
-  ok('clicking its letter brings it in on A',
-     await page.evaluate(() => Project.sections()[1].cells[window.__track('Clap').id].every(v => v === 0)));
-  // Drag across two bars of the kick in the verse to mute them.
-  const cellsBox = await page.evaluate(() => {
-    const cs = document.querySelectorAll(`.bc[data-track="${window.__track('Kick').id}"][data-sec="${Project.sections()[1].id}"]`);
-    const a = cs[4].getBoundingClientRect(), b = cs[5].getBoundingClientRect();
-    return { ax: a.x + a.width / 2, ay: a.y + a.height / 2, bx: b.x + b.width / 2, by: b.y + b.height / 2 };
-  });
-  await page.mouse.move(cellsBox.ax, cellsBox.ay);
-  await page.mouse.down();
-  await page.mouse.move(cellsBox.bx, cellsBox.by, { steps: 4 });
-  await page.mouse.up();
-  ok('dragging across two bars mutes exactly those bars',
-     await page.evaluate(() => Project.sections()[1].cells[window.__track('Kick').id].join() === '0,0,0,0,-1,-1,0,0'),
-     await page.evaluate(() => Project.sections()[1].cells[window.__track('Kick').id].join()));
-  await page.click('[data-brush="2"]');
-  await page.click(`.bc[data-track="${await page.evaluate(() => window.__track('Hi-hat').id)}"][data-sec="${await page.evaluate(() => Project.sections()[2].id)}"][data-bar="7"]`);
-  ok('the C brush paints a single bar to pattern C',
-     await page.evaluate(() => Project.sections()[2].cells[window.__track('Hi-hat').id][7] === 2));
-  await page.click('[data-brush="mute"]');
+  console.log('\n3. The timeline — draw, click, move, stretch, copy, paste, delete');
+  const laneXY = async (name, bar) => page.evaluate(([n, b]) => {
+    const t = window.__track(n);
+    const lane = document.querySelector(`.tl-lane[data-track="${t.id}"]`);
+    lane.scrollIntoView({ block: 'center', inline: 'nearest' });
+    const BAR = parseFloat(getComputedStyle(document.body).getPropertyValue('--bar'));
+    const sc = document.getElementById('arrangeScroll');
+    const r0 = lane.getBoundingClientRect();
+    const want = r0.left + (b + 0.5) * BAR;
+    if (want > sc.getBoundingClientRect().right - 20) sc.scrollLeft += want - sc.getBoundingClientRect().right + 200;
+    const r = lane.getBoundingClientRect();
+    return { x: r.left + (b + 0.5) * BAR, y: r.top + r.height / 2, BAR };
+  }, [name, bar]);
+  const drag = async (from, to) => { await page.mouse.move(from.x, from.y); await page.mouse.down(); await page.mouse.move(to.x, to.y, { steps: 6 }); await page.mouse.up(); await page.waitForTimeout(60); };
+  const runsOf = (name) => page.evaluate((n) => JSON.stringify(Project.runs(window.__track(n).id)), name);
+  ok('clap is silent in the verse to start', await page.evaluate(() => Project.runs(window.__track('Clap').id).every(r => r.start >= 12)));
+  await drag(await laneXY('Clap', 4), await laneXY('Clap', 7));
+  ok('dragging on an empty row draws a block (bars 5–8)', (await runsOf('Clap')).startsWith('[{"start":4,"len":4,"v":0}'), await runsOf('Clap'));
+  let p0 = await laneXY('Clap', 5);
+  await page.mouse.click(p0.x, p0.y);
+  await page.waitForTimeout(80);
+  ok('clicking a block selects it and opens that instrument in the editor',
+     await page.evaluate(() => window.__bhsTimeline.sel() && window.__bhsTimeline.sel().start === 4 && App.selected() === window.__track('Clap').id &&
+       document.querySelector('#editorTitle select').value === window.__track('Clap').id));
+  await drag(await laneXY('Clap', 5), await laneXY('Clap', 9));
+  ok('dragging a block moves it (now bars 9–12)', (await runsOf('Clap')).startsWith('[{"start":8,"len":4,"v":0}'), await runsOf('Clap'));
+  const edge = await page.evaluate(() => { const c = document.querySelector(`.tl-lane[data-track="${window.__track('Clap').id}"] .clip.selected .clip-edge.r`); const r = c.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+  const BARW = (await laneXY('Clap', 0)).BAR;
+  await drag(edge, { x: edge.x + BARW * 2, y: edge.y });
+  ok('dragging its right edge stretches it (bars 9–14)', await page.evaluate(() => { const r = Project.runs(window.__track('Clap').id)[0]; return r.start === 8 && r.len === 6; }), await runsOf('Clap'));
+  await page.keyboard.press('Control+c');
+  p0 = await laneXY('Clap', 24);
+  await page.mouse.click(p0.x, p0.y);
+  await page.keyboard.press('Control+v');
+  await page.waitForTimeout(80);
+  ok('copy, click a spot, paste — lands there', await page.evaluate(() => Project.runs(window.__track('Clap').id).some(r => r.start === 24 && r.len === 6)), await runsOf('Clap'));
+  await page.keyboard.press('Control+d');
+  await page.waitForTimeout(80);
+  ok('Ctrl+D duplicates it right after itself, growing the song if needed', await page.evaluate(() =>
+    [30, 35].every(b => Project.cellAt(window.__track('Clap').id, b) === 0) && Project.songBars() >= 36), await runsOf('Clap'));
+  await page.keyboard.press('Delete');
+  await page.waitForTimeout(80);
+  ok('Delete removes the selected block', await page.evaluate(() =>
+    Project.cellAt(window.__track('Clap').id, 30) === -1 && Project.cellAt(window.__track('Clap').id, 29) === 0), await runsOf('Clap'));
+  await page.click('.tl-lane[data-track] .clip.v0 >> nth=0');
+  await page.click('.clipbar .lbtn:has-text("C")');
+  ok('the toolbar changes which pattern a block plays', await page.evaluate(() => { const s = window.__bhsTimeline.sel(); return Project.cellAt(s.track, s.start) === 2; }));
+  await page.evaluate(() => { Project.setMode('pattern'); });
+  await page.click('.barnum[data-bar="12"]');
+  await page.waitForTimeout(300);
+  ok('clicking a bar number plays the song from that bar', await page.evaluate(() => Project.mode() === 'song' && Transport.isPlaying && Transport.getState().position.bar >= 12));
+  await page.click('#playBtn');
+  await page.evaluate(() => Project.reset());
   const nSec = await page.evaluate(() => Project.sections().length);
   await page.click('#addSectionBtn');
-  ok('+ Section adds a copy of the last section',
-     await page.evaluate((n) => Project.sections().length === n + 1 &&
-       JSON.stringify(Object.values(Project.sections()[n].cells).map(c => c[0])) !== '[]', nSec));
+  ok('+ Section adds a section at the end', await page.evaluate((n) => Project.sections().length === n + 1, nSec));
+  await page.evaluate(() => Project.reset());
 
   // ────────────────────────────────────────────────────────────────
   console.log('\n4. Loop-parts mode and live switching');
@@ -221,7 +258,7 @@ function sineWav(file) {
   // piano roll: click empty to add, drag to lengthen
   const lane = await page.evaluate(() => { const r = document.querySelector('.roll-lane').getBoundingClientRect(); return { x: r.x, y: r.y }; });
   const cw = await page.evaluate(() => parseFloat(document.querySelector('.roll-inner').style.getPropertyValue('--cw')));
-  await page.evaluate(() => { document.querySelector('.roll').scrollTop = 0; });
+  await page.evaluate(() => { document.querySelector('.roll-lane').scrollIntoView({ block: 'start' }); window.scrollBy(0, -60); });
   const lane2 = await page.evaluate(() => { const r = document.querySelector('.roll-lane').getBoundingClientRect(); return { x: r.x, y: r.y }; });
   await page.mouse.move(lane2.x + cw * 2 + 3, lane2.y + 14 * 3 + 5);
   await page.mouse.down();
@@ -329,6 +366,21 @@ function sineWav(file) {
     return peak;
   });
   ok('export respects mixer mutes (everything muted → silence)', muteCheck < 1e-4, 'peak ' + muteCheck);
+
+  const mst = await page.evaluate(async () => {
+    Project.setMode('pattern');
+    const r = await window.__bhsRender(4, { master: false });
+    const out = {};
+    for (const st of ['clean', 'deep', 'loud']) {
+      const m = await Mastering.master(r.rendered, { style: st });
+      let peak = 0; for (let c = 0; c < 2; c++) m.buffer.getChannelData(c).forEach(v => { peak = Math.max(peak, Math.abs(v)); });
+      out[st] = { rms: +m.report.after.rmsDb.toFixed(1), peak: +peak.toFixed(3), summary: m.report.summary };
+    }
+    return out;
+  });
+  ok('auto-mastering: Clean < Deep < Loud in loudness', mst.clean.rms < mst.deep.rms && mst.deep.rms < mst.loud.rms, JSON.stringify(mst));
+  ok('…and the limiter never lets a peak past −1 dB', ['clean', 'deep', 'loud'].every(k => mst[k].peak <= 0.891));
+  ok('…and Deep reports what it did (low end, warmth, width)', /low-end weight/.test(mst.deep.summary) && /wider/.test(mst.deep.summary), mst.deep.summary);
 
   // ────────────────────────────────────────────────────────────────
   console.log('\n11. Save and open — audio included');
@@ -626,6 +678,20 @@ function sineWav(file) {
   ok('phone width loads without errors or sideways page scroll',
      errs5.length === 0 && await p5.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), errs5.join('; '));
   await p5.close();
+  const p6 = await browser.newPage();
+  const errs6 = [];
+  p6.on('pageerror', e => errs6.push(e.message));
+  await p6.goto(BASE + '/manual.html', { waitUntil: 'networkidle' });
+  await p6.waitForTimeout(300);
+  const man = await p6.evaluate(async () => {
+    const shots = [...document.querySelectorAll('figure.shot')].map(f => f.dataset.shot);
+    const missing = [];
+    for (const s of shots) { const r = await fetch('manual/' + s + '.png', { method: 'HEAD' }); if (!r.ok) missing.push(s); }
+    return { shots: shots.length, marks: document.querySelectorAll('.mark').length, missing };
+  });
+  ok('the user manual loads with every screenshot and its numbered callouts',
+     errs6.length === 0 && man.shots >= 12 && man.marks >= 50 && man.missing.length === 0, JSON.stringify(man) + errs6.join('; '));
+  await p6.close();
 
   console.log('\n14b. Installable app');
   const pwa = await page.evaluate(async () => {
