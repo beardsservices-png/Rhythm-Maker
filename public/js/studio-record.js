@@ -38,6 +38,7 @@
 
   Recorder.onChange((s) => {
     paint(s.state);
+    if (s.countingIn) recBtn.innerHTML = '1 · 2 · 3 · 4…';
     if (s.error) App.msg('Nothing was captured (' + s.error + '). Try again — keep it under a minute.', true);
     if (s.done && s.take) {
       const src = s.take.source;

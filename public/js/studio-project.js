@@ -127,13 +127,8 @@
   nameIn.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); save(); } });
   $('openBtn').addEventListener('click', (e) => { refresh(); App.togglePop($('openMenu'), e.currentTarget); });
   $('newProjBtn').addEventListener('click', () => {
-    if (!confirm('Start a new track? Anything unsaved here is lost.')) return;
     $('openMenu').hidden = true;
-    if (Transport.isPlaying) Transport.stop();
-    Project.reset();
-    nameIn.value = '';
-    App.select(Project.tracks()[0] && Project.tracks()[0].id);
-    App.msg('New track — the demo beat is loaded so there is something to start from.');
+    StartScreen.show(true);
   });
 
   // Ctrl/Cmd+S saves.

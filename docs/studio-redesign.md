@@ -130,13 +130,31 @@ sound, mixer levels and loops.
 - Ask Claude's actions, and MIDI.
 - Practice Mode still loads.
 
-## Next, if wanted
+## Round 2 (same week)
 
-- A start screen like Groovebox's: recent tracks, plus "new from template"
-  (trap, boom bap, lo-fi).
-- Time-stretching recorded loops when the BPM changes. Right now a take keeps its
-  original speed.
-- Swing/shuffle per track, and velocity per drum step.
+- **Start screen** every time the Studio opens: Continue where you left off,
+  six templates (Trap, Boom Bap, Lo-Fi, House, R&B, Blank) plus the demo beat,
+  and your saved tracks. Also under Open → "New from a template…".
+- **Undo / redo:** the ↶ ↷ buttons, Ctrl+Z, and Ctrl+Shift+Z. They cover
+  patterns, sections, sounds, knobs, swing, key and pump. Mixer faders and
+  what's playing live are left alone.
+- **Autosave** in the browser, including recorded and uploaded audio, so a closed
+  tab loses nothing. Save still puts the track on the server.
+- **Drum brushes:** Hit, Accent, Soft (ghost note) and Roll ×2/×3/×4 for trap
+  hi-hat rolls. **Swing** for the whole song sits in the drum machine.
+- **Click (metronome).** Recording from a stop counts in one bar first, and the
+  take starts exactly on the downbeat.
+- **Key and chords** in the piano roll. Notes in the key are lit. With Chords on,
+  one click places a three-note chord that fits the key.
+- **Pump** slider on every mixer strip: the sidechain "breathing" effect, ducking
+  that track on every kick. It's also in the export.
+- Ask Claude can now set swing, key and pump, and write accents and rolls.
+
+## Still not built
+
+- Time-stretching recorded loops when the BPM changes. A take keeps its original
+  speed.
+- A per-track filter sweep for builds.
 
 ## Sources
 

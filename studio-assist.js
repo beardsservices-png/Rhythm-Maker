@@ -39,10 +39,12 @@ const TOOLS = [
   {
     name: 'set_drum_pattern',
     description:
-      'Write one drum track\'s pattern into one variation. `steps` is one boolean per sixteenth note: 16 per bar, ' +
-      'so 16 for a 1-bar pattern, 32 for 2 bars, 64 for 4. Step 0 is the downbeat; 4, 8, 12 are beats 2, 3, 4.',
+      'Write one drum track\'s pattern into one variation, as a string with one character per sixteenth note: ' +
+      '"." off, "x" hit, "X" accent (louder), "o" soft ghost note, "2"/"3"/"4" a roll of that many quick hits inside the ' +
+      'sixteenth (trap hi-hat rolls). 16 characters per bar: 16 for a 1-bar pattern, 32 for 2 bars, 64 for 4. Step 0 is the ' +
+      'downbeat; 4, 8, 12 are beats 2, 3, 4. Example trap hats: "x.x.x.x.x.x.3x44".',
     strict: true,
-    input_schema: obj({ track: trackField, variation: variationField, steps: { type: 'array', items: { type: 'boolean' } } })
+    input_schema: obj({ track: trackField, variation: variationField, pattern: { type: 'string' } })
   },
   {
     name: 'set_notes',
@@ -129,6 +131,24 @@ const TOOLS = [
     input_schema: obj({ track: trackField, param: { type: 'string' }, value: { type: 'number' } })
   },
   {
+    name: 'set_swing',
+    description: 'Swing for the whole song: 0 is straight, 0.15 a light bounce, 0.3 a lazy shuffle, 0.6 maximum.',
+    strict: true,
+    input_schema: obj({ amount: { type: 'number' } })
+  },
+  {
+    name: 'set_key',
+    description: 'Set the song\'s key (used for the piano roll\'s highlighting and chords). root is 0–11 (0 = C, 9 = A); scale "major" or "minor", or "none" to clear.',
+    strict: true,
+    input_schema: obj({ root: { type: 'integer' }, scale: { type: 'string', enum: ['major', 'minor', 'none'] } })
+  },
+  {
+    name: 'set_pump',
+    description: 'Sidechain pump: duck a track every time a kick hits, 0 (off) to 0.9 (heavy). Typical on pads, chords and bass in house and EDM.',
+    strict: true,
+    input_schema: obj({ track: trackField, amount: { type: 'number' } })
+  },
+  {
     name: 'mute_track',
     description: 'Mute or unmute a track everywhere (its mixer mute).',
     strict: true,
@@ -170,11 +190,22 @@ Then tell them what you changed in one or two plain sentences. No jargon, no too
 
 const L = (v) => (v >= 0 ? VARIATIONS[v] : 'off');
 
+/** One drum step in the set_drum_pattern notation. */
+function stepChar(v) {
+  if (!v) return '.';
+  if (v === true) return 'x';
+  const roll = Math.floor(v / 10), level = v % 10;
+  if (roll > 1) return String(roll);
+  return level === 3 ? 'X' : level === 1 ? 'o' : 'x';
+}
+
 /** Describe the current song so Claude edits what's actually there. */
 function describeState(state) {
   if (!state || !Array.isArray(state.tracks)) return 'The project state was not provided.';
   const lines = [];
-  lines.push(`Tempo: ${state.bpm} BPM. Mode: ${state.mode === 'song' ? 'song' : 'loop'}. Drum kit: ${state.kit}.`);
+  const NOTE = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+  lines.push(`Tempo: ${state.bpm} BPM. Mode: ${state.mode === 'song' ? 'song' : 'loop'}. Drum kit: ${state.kit}. ` +
+    `Swing: ${Math.round((state.swing || 0) * 100)}%. Key: ${state.key ? NOTE[state.key.root] + ' ' + state.key.scale : 'not set'}.`);
   const byId = {};
   state.tracks.forEach(t => { byId[t.id] = t; });
 
@@ -185,13 +216,13 @@ function describeState(state) {
     if (t.kind === 'drum') {
       lines.push(`- "${t.name}": drum (${t.sound.role}, ${t.sound.kit} kit), ${t.bars}-bar patterns, ${mixNote}, loop plays ${L(t.live)}`);
       (t.patterns || []).forEach((p, v) => {
-        if ((p || []).some(Boolean)) lines.push(`    ${VARIATIONS[v]}: ${p.map(x => (x ? 1 : 0)).join('')}`);
+        if ((p || []).some(Boolean)) lines.push(`    ${VARIATIONS[v]}: ${p.map(stepChar).join('')}`);
         else lines.push(`    ${VARIATIONS[v]}: empty`);
       });
     } else if (t.kind === 'synth') {
       const knobs = Object.entries(t.params || {}).filter(([k]) => k !== 'gain')
         .map(([k, v]) => `${k}=${typeof v === 'number' ? +v.toFixed(3) : v}`).join(', ');
-      lines.push(`- "${t.name}": ${t.instrument}, ${t.bars}-bar patterns, ${mixNote}, loop plays ${L(t.live)}; knobs: ${knobs}`);
+      lines.push(`- "${t.name}": ${t.instrument}, ${t.bars}-bar patterns, ${mixNote}${t.pump ? ', pump ' + t.pump : ''}, loop plays ${L(t.live)}; knobs: ${knobs}`);
       (t.patterns || []).forEach((p, v) => {
         const notes = (p || []).slice().sort((a, b) => a.s - b.s || a.m - b.m)
           .map(n => `${n.s}:${n.m}x${n.l}${n.sl ? 's' : ''}`).join(' ');
@@ -201,7 +232,7 @@ function describeState(state) {
       lines.push(`- "${t.name}": audio clip, loops every ${t.bars} bars, ${mixNote}`);
     }
   });
-  lines.push('  (drum steps are 1/0 per sixteenth; notes are step:midi x length, s = slides in)');
+  lines.push('  (drum steps use the set_drum_pattern notation; notes are step:midi x length, s = slides in)');
 
   lines.push('\nSections, in order:');
   (state.sections || []).forEach(s => {

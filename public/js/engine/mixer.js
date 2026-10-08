@@ -70,6 +70,10 @@ const Mixer = (() => {
     if (tracks.has(id)) return tracks.get(id);
 
     const gain = ctx.createGain();
+    // The duck node sits in front of the fader: the sequencer pulls it down on
+    // every kick for tracks with Pump turned up, without fighting the fader.
+    const duck = ctx.createGain();
+    duck.connect(gain);
     const pan = ctx.createStereoPanner
       ? ctx.createStereoPanner()
       : null;   // very old Safari: fall through to plain gain
@@ -93,7 +97,7 @@ const Mixer = (() => {
       volume: opts.volume == null ? 0.85 : opts.volume,
       pan: 0, muted: false, soloed: false,
       reverb: opts.reverb || 0, delay: opts.delay || 0,
-      gain, panner: pan, revSend, delSend
+      gain, duck, panner: pan, revSend, delSend
     };
     gain.gain.value = t.volume;
     tracks.set(id, t);
@@ -108,7 +112,7 @@ const Mixer = (() => {
   function removeTrack(id) {
     const t = tracks.get(id);
     if (!t) return;
-    [t.gain, t.panner, t.revSend, t.delSend].forEach(n => { if (n) n.disconnect(); });
+    [t.duck, t.gain, t.panner, t.revSend, t.delSend].forEach(n => { if (n) n.disconnect(); });
     tracks.delete(id);
     applyGains();
     emit();
@@ -126,7 +130,7 @@ const Mixer = (() => {
   /** Where a voice should connect to land on this track. */
   function input(id) {
     const t = tracks.get(id);
-    return t ? t.gain : master;
+    return t ? t.duck : master;
   }
 
   function anySoloed() {

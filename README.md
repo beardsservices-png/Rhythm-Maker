@@ -16,7 +16,10 @@ Two things, from one static Node server:
   (what you play, the whole mix, or the mic) or upload audio — each becomes an
   audio track with a waveform. Mixer with shared reverb/delay, auto-master,
   offline `.wav` export, MIDI keyboards, and "Ask Claude" edits the song via tool
-  use. Design and research notes: `docs/studio-redesign.md`.
+  use. Also: a start screen with templates, undo/redo, browser autosave (audio
+  included), drum accents/ghost notes/rolls, swing, metronome with count-in, a
+  key + chord helper in the piano roll, and sidechain "pump" per track. Design
+  and research notes: `docs/studio-redesign.md`.
 
 (Freeplay and Round Robin, the original 32-step pattern games, were retired when
 Practice Mode landed. Their one reusable idea — practising something in growing
@@ -50,10 +53,12 @@ public/
       instruments.js      melodic instruments (808 + synth recipes)
       drumkits.js         drum sounds, grouped into kits
       recorder.js         bar-quantised takes: keys / whole mix / mic
+      templates.js        start-screen templates, written in a compact notation
       transport, mixer, effects, master, midi, wav, synth-808, recorder-worklet
     studio-*.js          the Studio's UI: app (top bar), arrange (song grid),
                          editor (drums / piano roll / waveform), keys (the dock),
-                         record, mixer, effects, midi, project, export, claude
+                         record, mixer, effects, midi, project, export, claude,
+                         history (undo + autosave), start (start screen)
 server.js               static files + JSON APIs, no framework
 studio-assist.js        Studio's Claude tool-use endpoint
 ```

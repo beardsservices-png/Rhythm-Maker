@@ -32,13 +32,14 @@ const Recorder = (() => {
   const pending = new Map();
 
   let state = 'idle';         // idle | recording | finishing
+  let countingIn = false;
   let punchIn = 0;
   let autoBars = 0;
   let autoTimer = null;
 
   const listeners = new Set();
   function emit(extra) {
-    const snap = Object.assign({ state, source, punchIn }, extra || {});
+    const snap = Object.assign({ state, source, punchIn, countingIn }, extra || {});
     listeners.forEach(fn => { try { fn(snap); } catch (e) { console.error(e); } });
   }
   function onChange(fn) { listeners.add(fn); return () => listeners.delete(fn); }
@@ -120,10 +121,22 @@ const Recorder = (() => {
   async function start(bars) {
     if (state !== 'idle') return { ok: false, error: 'Already recording.' };
     try { await connectSource(source); } catch (e) { return { ok: false, error: e.message || String(e) }; }
-    if (!Transport.isPlaying) Transport.play();
-    punchIn = nearestBar(ctx.currentTime);
-    // Snapping backwards only works if the ring was already listening then.
-    if (punchIn < connectedAt + 0.02) punchIn = Transport.timeAtNextBar(ctx.currentTime);
+    if (!Transport.isPlaying) {
+      // Count-in: one bar of clicks, then the song starts exactly on the next
+      // downbeat and the take starts with it.
+      const st = Transport.getState();
+      const beat = st.secondsPerStep * st.stepsPerBeat;
+      const t0 = ctx.currentTime + 0.1;
+      for (let i = 0; i < st.beatsPerBar; i++) Sequencer.click(t0 + i * beat, i === 0);
+      punchIn = t0 + st.beatsPerBar * beat;
+      Transport.play(punchIn);
+      countingIn = true;
+      setTimeout(() => { countingIn = false; emit(); }, (punchIn - ctx.currentTime) * 1000);
+    } else {
+      punchIn = nearestBar(ctx.currentTime);
+      // Snapping backwards only works if the ring was already listening then.
+      if (punchIn < connectedAt + 0.02) punchIn = Transport.timeAtNextBar(ctx.currentTime);
+    }
     state = 'recording';
     autoBars = bars | 0;
     if (autoBars > 0) {

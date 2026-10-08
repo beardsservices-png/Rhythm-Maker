@@ -110,6 +110,27 @@
     head.appendChild(btn('', 'Clear lane', `Empty ${sel.name} ${NAMES[sel.edit]}`, () => Project.clearPattern(sel.id, sel.edit)));
     root.appendChild(head);
 
+    // What a click places: a normal hit, an accent, a soft ghost note, or a
+    // roll (2, 3 or 4 hits inside the step — the trap hi-hat roll).
+    const tools = el('div', 'ed-head drumtools');
+    const brushes = el('div', 'letters dbrushes');
+    brushes.appendChild(el('span', 'dim', 'Click places'));
+    BRUSHES.forEach(([code, label, title]) => {
+      const b = btn('dbrush' + (drumBrush === code ? ' on' : ''), label, title, () => { drumBrush = code; render(); });
+      brushes.appendChild(b);
+    });
+    tools.appendChild(brushes);
+    const sw = el('input');
+    sw.type = 'range'; sw.min = '0'; sw.max = '0.6'; sw.step = '0.01'; sw.value = String(Project.swing());
+    sw.title = 'Swing: pushes every second sixteenth late — 0 is straight, ~30% is a lazy shuffle';
+    const swv = el('b', 'swingval', Math.round(Project.swing() * 100) + '%');
+    sw.addEventListener('input', () => { swv.textContent = Math.round(parseFloat(sw.value) * 100) + '%'; });
+    sw.addEventListener('change', () => Project.setSwing(parseFloat(sw.value)));
+    const swl = el('label', 'field inline', 'Swing (whole song) ');
+    swl.appendChild(sw); swl.appendChild(swv);
+    tools.appendChild(swl);
+    root.appendChild(tools);
+
     const gridEl = el('div', 'drumgrid');
     drums.forEach(t => {
       const row = el('div', 'drow' + (t.id === sel.id ? ' sel' : ''));
@@ -121,14 +142,16 @@
       const cells = el('div', 'dcells');
       const pat = t.patterns[t.edit];
       for (let i = 0; i < t.bars * SPB; i++) {
-        const c = el('div', 'dcell' + (pat[i] ? ' on' : '') + (i % 4 === 0 ? ' beat' : '') + (i % SPB === 0 && i ? ' bar' : ''));
+        const info = Project.stepInfo(pat[i]);
+        const c = el('div', 'dcell' + (info ? ' on lv' + info.level : '') + (info && info.roll > 1 ? ' roll' : '') +
+          (i % 4 === 0 ? ' beat' : '') + (i % SPB === 0 && i ? ' bar' : ''), info && info.roll > 1 ? '×' + info.roll : '');
         c.dataset.track = t.id;
         c.dataset.step = String(i);
         c.setAttribute('role', 'button');
         c.tabIndex = 0;
         c.setAttribute('aria-label', `${t.name} step ${i + 1}`);
         c.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') { e.preventDefault(); setDrum(t, i, !Project.pattern(t.id, t.edit)[i]); }
+          if (e.key === 'Enter') { e.preventDefault(); setDrum(t, i, targetFor(Project.pattern(t.id, t.edit)[i])); }
         });
         cells.appendChild(c);
       }
@@ -139,14 +162,31 @@
     root.appendChild(el('p', 'hint', 'Click or drag across steps to place hits. Each lane has its own A B C D, so the hats can change while the kick stays put. The Song grid above decides which letter each lane plays in each section.'));
   }
 
-  function setDrum(t, i, on) {
+  // Brush codes match Project.stepInfo: ones digit = level, tens = roll.
+  const BRUSHES = [
+    [2, 'Hit', 'A normal hit'],
+    [3, 'Accent', 'A louder hit'],
+    [1, 'Soft', 'A quiet ghost note'],
+    [22, 'Roll ×2', 'Two quick hits in the step'],
+    [32, 'Roll ×3', 'Three quick hits — the triplet trap roll'],
+    [42, 'Roll ×4', 'Four quick hits']
+  ];
+  let drumBrush = 2;
+  const codeOf = (v) => (v === true ? 2 : (v || 0));
+  /** Clicking a step that already holds the brush clears it; anything else becomes the brush. */
+  function targetFor(cur) { return codeOf(cur) === drumBrush ? false : drumBrush; }
+
+  function setDrum(t, i, value) {
     const p = Project.pattern(t.id, t.edit).slice();
-    if (!!p[i] === on) return;
-    p[i] = on;
+    if (codeOf(p[i]) === codeOf(value)) return;
+    p[i] = value;
     Project.setPatternSteps(t.id, t.edit, p);
-    if (on && !Transport.isPlaying) {
+    const info = Project.stepInfo(value);
+    if (info && !Transport.isPlaying) {
       const ac = App.ensureAudio();
-      if (ac) DrumKits.hit(ac, Mixer.input(t.id), t.sound, ac.currentTime, 0.9);
+      if (!ac) return;
+      const step = Transport.getState().secondsPerStep;
+      for (let k = 0; k < info.roll; k++) DrumKits.hit(ac, Mixer.input(t.id), t.sound, ac.currentTime + k * step / info.roll, info.vel * 0.9);
     }
   }
 
@@ -156,7 +196,7 @@
     e.preventDefault();
     const t = Project.track(c.dataset.track);
     const i = parseInt(c.dataset.step, 10);
-    const on = !Project.pattern(t.id, t.edit)[i];
+    const on = targetFor(Project.pattern(t.id, t.edit)[i]);
     drumPaint = { track: t.id, on, touch: e.pointerType === 'touch' };
     setDrum(t, i, on);
   });
@@ -210,9 +250,35 @@
     head.appendChild(nll);
     head.appendChild(btn('', 'Copy to…', 'Copy this pattern to another letter', (e, b) => copyMenu(t, b, false)));
     head.appendChild(btn('', 'Clear', `Empty ${NAMES[t.edit]}`, () => Project.clearPattern(t.id, t.edit)));
+
+    // Key + chord helper: rows in the song's key are lit, and with Chords on a
+    // click places the whole chord that fits the key from that note up.
+    const keySel = el('select', 'tb-sel');
+    keySel.title = 'The song\'s key — lights up the notes that fit';
+    const off = el('option', null, 'No key'); off.value = ''; keySel.appendChild(off);
+    ['minor', 'major'].forEach(sc => NOTE.forEach((nm, r) => {
+      const o = el('option', null, `${nm} ${sc}`); o.value = r + ':' + sc; keySel.appendChild(o);
+    }));
+    const k = Project.key();
+    keySel.value = k ? k.root + ':' + k.scale : '';
+    keySel.addEventListener('change', () => {
+      if (!keySel.value) Project.setKey(null);
+      else { const [r, sc] = keySel.value.split(':'); Project.setKey({ root: +r, scale: sc }); }
+    });
+    const kl2 = el('label', 'field inline', 'Key ');
+    kl2.appendChild(keySel);
+    head.appendChild(kl2);
+    if (!Instruments.isMono(t.instrument)) {
+      head.appendChild(btn('chordbtn' + (chordMode ? ' on' : ''), 'Chords', 'Click places a 3-note chord that fits the key', () => {
+        chordMode = !chordMode;
+        if (chordMode && !Project.key()) App.msg('Chords on. Pick a Key so the chords fit the song — without one they are major chords.');
+        render();
+      }));
+    }
     root.appendChild(head);
 
     const notes = Project.pattern(t.id, t.edit);
+    const keyPcs = scalePcs(Project.key());
     const steps = t.bars * SPB;
     let [lo, hi] = Instruments.range(t.instrument);
     notes.forEach(n => { lo = Math.min(lo, n.m - 2); hi = Math.max(hi, n.m + 2); });
@@ -256,7 +322,9 @@
     body.style.top = topH + 'px';
     body.style.height = rows * RH + 'px';
     for (let m = hi; m >= lo; m--) {
-      const r = el('div', 'rrow' + (isBlack(m) ? ' blk' : '') + (m % 12 === 0 ? ' oct' : ''));
+      const inKey = keyPcs ? keyPcs.includes(((m % 12) + 12) % 12) : null;
+      const r = el('div', 'rrow' + (isBlack(m) ? ' blk' : '') + (m % 12 === 0 ? ' oct' : '') +
+        (inKey === true ? ' inkey' : inKey === false ? ' outkey' : '') + (keyPcs && ((m % 12) + 12) % 12 === keyPcs[0] ? ' keyroot' : ''));
       r.style.top = (hi - m) * RH + 'px';
       const k = el('div', 'rkey', m % 12 === 0 ? noteName(m) : '');
       k.title = noteName(m);
@@ -311,6 +379,7 @@
       const p = pos(e);
       const hitEl = e.target.closest('.rnote');
       let mode, note, d, origin = { s: 0, m: 0, l: 0 }, moved = false;
+      const mates = [];          // the other notes of a chord being drawn
       if (hitEl) {
         const pair = noteEls.find(x => x[1] === hitEl);
         note = pair[0]; d = pair[1];
@@ -330,6 +399,20 @@
         noteEls.push([note, d]);
         origin = { s: note.s, m: note.m, l: note.l };
         preview(t, note.m);
+        if (chordMode && !Instruments.isMono(t.instrument)) {
+          chordAbove(note.m, Project.key()).slice(1).forEach(m2 => {
+            if (m2 > hi) return;
+            const n2 = { s: note.s, m: m2, l: note.l, sl: false };
+            live.push(n2);
+            const d2 = el('div', 'rnote');
+            d2.appendChild(el('span', 'rgrip'));
+            lane.appendChild(d2);
+            place(n2, d2);
+            noteEls.push([n2, d2]);
+            mates.push([n2, d2]);
+            preview(t, m2);
+          });
+        }
       }
       dragging = true;
       const start = p;
@@ -348,6 +431,7 @@
           note.l = mode === 'create' ? Math.max(origin.l, end - note.s) : end - note.s;
         }
         place(note, d);
+        mates.forEach(([n2, d2]) => { n2.l = note.l; place(n2, d2); });
       };
       const up = () => {
         window.removeEventListener('pointermove', move);
@@ -368,6 +452,26 @@
     roll = { t, cw, ph, steps };
   }
   let roll = null;
+  let chordMode = false;
+
+  const SCALES = { major: [0, 2, 4, 5, 7, 9, 11], minor: [0, 2, 3, 5, 7, 8, 10] };
+  /** Pitch classes of the key, root first. */
+  function scalePcs(k) {
+    return k ? SCALES[k.scale].map(i => (i + k.root) % 12) : null;
+  }
+  /** The chord built up from a note: stacked thirds in the key, or a major triad. */
+  function chordAbove(m, k) {
+    if (!k) return [m, m + 4, m + 7];
+    const pcs = scalePcs(k);
+    const deg = pcs.indexOf(((m % 12) + 12) % 12);
+    if (deg < 0) return [m, m + 4, m + 7];
+    const up = (steps) => {
+      let n = m, d = deg;
+      for (let i = 0; i < steps; i++) { const nd = (d + 1) % 7; n += ((pcs[nd] - pcs[d]) + 12) % 12; d = nd; }
+      return n;
+    };
+    return [m, up(2), up(4)];
+  }
 
   // ════════════════ audio ════════════════
   function renderAudio(t) {
@@ -514,7 +618,7 @@
   });
 
   Project.on((reason, d) => {
-    if (['pattern', 'live', 'sound', 'tracks', 'load', 'audio', 'mode'].includes(reason)) render();
+    if (['pattern', 'live', 'sound', 'tracks', 'load', 'audio', 'mode', 'swing', 'key'].includes(reason)) render();
   });
   App.on((k) => { if (k === 'select') render(); });
   let rz = null;

@@ -273,7 +273,7 @@ const DrumKits = (() => {
     const p = kit[sound.role];
     const fn = VOICES[sound.role];
     if (!p || !fn) return;
-    const v = velocity == null ? 1 : Math.max(0.05, Math.min(1, velocity));
+    const v = velocity == null ? 1 : Math.max(0.05, Math.min(1.3, velocity));   // 1.3 = accent
     fn(ac, dest, Math.max(ac.currentTime, when == null ? ac.currentTime : when), p, v);
   }
 
