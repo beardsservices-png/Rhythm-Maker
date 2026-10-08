@@ -42,9 +42,10 @@ const Effects = (() => {
   }
 
   /** Exponentially decaying noise — a serviceable room without an IR file. */
-  function buildImpulse(seconds, decay) {
-    const len = Math.max(1, Math.floor(ctx.sampleRate * seconds));
-    const buf = ctx.createBuffer(2, len, ctx.sampleRate);
+  function buildImpulse(seconds, decay, ac) {
+    ac = ac || ctx;
+    const len = Math.max(1, Math.floor(ac.sampleRate * seconds));
+    const buf = ac.createBuffer(2, len, ac.sampleRate);
     for (let ch = 0; ch < 2; ch++) {
       const d = buf.getChannelData(ch);
       for (let i = 0; i < len; i++) {
@@ -157,8 +158,32 @@ const Effects = (() => {
     { label: '1/2', beats: 2 }
   ];
 
+  /**
+   * The same reverb and delay, built into another context — the offline
+   * export uses this so the downloaded file has the effects you heard.
+   */
+  function buildOffline(ac, dest, bpm) {
+    const rIn = ac.createGain();
+    const conv = ac.createConvolver();
+    conv.buffer = buildImpulse(params.reverbSize, params.reverbDecay, ac);
+    const rTone = ac.createBiquadFilter();
+    rTone.type = 'lowpass'; rTone.frequency.value = params.reverbTone;
+    rIn.connect(conv).connect(rTone).connect(dest);
+
+    const dIn = ac.createGain();
+    const d = ac.createDelay(2.0);
+    d.delayTime.value = Math.min(1.99, Math.max(0.01, (60 / bpm) * params.delayDivision));
+    const fb = ac.createGain(); fb.gain.value = params.delayFeedback;
+    const dTone = ac.createBiquadFilter();
+    dTone.type = 'lowpass'; dTone.frequency.value = params.delayTone;
+    dIn.connect(d);
+    d.connect(dTone).connect(dest);
+    dTone.connect(fb).connect(d);
+    return { reverbIn: rIn, delayIn: dIn };
+  }
+
   return {
-    init, ready, reverbInput, delayInput,
+    init, ready, reverbInput, delayInput, buildOffline,
     set, getParams, serialize, restore, onChange,
     syncDelayToTempo, DIVISIONS
   };

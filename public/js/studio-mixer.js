@@ -1,4 +1,8 @@
-// studio-mixer.js — the fader strips.
+// studio-mixer.js — one fader strip per track.
+//
+// Strips are rebuilt only when tracks come or go. A fader move just updates
+// the strip in place — rebuilding mid-drag would yank the slider out from
+// under the mouse.
 
 (function () {
   const wrap = document.getElementById('mixerStrips');
@@ -6,37 +10,45 @@
   const masterVal = document.getElementById('masterVolVal');
   if (!wrap) return;
 
-  function render(snap) {
+  let sig = '';
+
+  function kindOf(id) {
+    const t = Project.track(id);
+    return t ? t.kind : 'synth';
+  }
+
+  function build(snap) {
     wrap.innerHTML = '';
     snap.forEach(t => {
       const el = document.createElement('div');
-      el.className = 'strip' + (t.audible ? '' : ' quiet');
+      el.className = 'strip';
+      el.dataset.id = t.id;
 
       const name = document.createElement('div');
-      name.className = 'stripname';
+      name.className = 'stripname k-' + kindOf(t.id);
       name.textContent = t.label;
       el.appendChild(name);
 
       const vol = document.createElement('input');
       vol.type = 'range'; vol.min = '0'; vol.max = '1.5'; vol.step = '0.01';
-      vol.value = String(t.volume);
       vol.className = 'fader';
       vol.title = 'Volume';
+      vol.dataset.role = 'vol';
       vol.addEventListener('input', () => Mixer.setVolume(t.id, parseFloat(vol.value)));
       el.appendChild(vol);
 
       const pct = document.createElement('div');
       pct.className = 'striplev';
-      pct.textContent = Math.round(t.volume * 100) + '%';
+      pct.dataset.role = 'pct';
       el.appendChild(pct);
 
       const pan = document.createElement('input');
       pan.type = 'range'; pan.min = '-1'; pan.max = '1'; pan.step = '0.05';
-      pan.value = String(t.pan);
       pan.className = 'panknob';
-      pan.title = 'Pan left / right';
+      pan.title = 'Left / right (double-click to centre)';
+      pan.dataset.role = 'pan';
       pan.addEventListener('input', () => Mixer.setPan(t.id, parseFloat(pan.value)));
-      pan.addEventListener('dblclick', () => Mixer.setPan(t.id, 0));
+      pan.addEventListener('dblclick', () => { Mixer.setPan(t.id, 0); pan.value = '0'; });
       el.appendChild(pan);
 
       ['reverb', 'delay'].forEach(kind => {
@@ -46,9 +58,8 @@
         lab.textContent = kind === 'reverb' ? 'rev' : 'dly';
         const sl = document.createElement('input');
         sl.type = 'range'; sl.min = '0'; sl.max = '1'; sl.step = '0.02';
-        sl.value = String(t[kind]);
-        sl.title = kind === 'reverb' ? 'How much of this track goes to the reverb'
-                                     : 'How much goes to the delay';
+        sl.dataset.role = kind;
+        sl.title = kind === 'reverb' ? 'How much of this track goes to the reverb' : 'How much goes to the delay';
         sl.addEventListener('input', () => Mixer.setSend(t.id, kind, parseFloat(sl.value)));
         row.appendChild(lab); row.appendChild(sl);
         el.appendChild(row);
@@ -57,18 +68,37 @@
       const btns = document.createElement('div');
       btns.className = 'stripbtns';
       const m = document.createElement('button');
-      m.textContent = 'M'; m.title = 'Mute';
-      m.className = t.muted ? 'on-mute' : '';
-      m.addEventListener('click', () => Mixer.setMuted(t.id, !t.muted));
+      m.textContent = 'M'; m.title = 'Mute'; m.dataset.role = 'm';
+      m.addEventListener('click', () => Mixer.setMuted(t.id, !Mixer.get(t.id).muted));
       const s = document.createElement('button');
-      s.textContent = 'S'; s.title = 'Solo — hear only this';
-      s.className = t.soloed ? 'on-solo' : '';
-      s.addEventListener('click', () => Mixer.setSoloed(t.id, !t.soloed));
+      s.textContent = 'S'; s.title = 'Solo — hear only soloed tracks'; s.dataset.role = 's';
+      s.addEventListener('click', () => Mixer.setSoloed(t.id, !Mixer.get(t.id).soloed));
       btns.appendChild(m); btns.appendChild(s);
       el.appendChild(btns);
-
       wrap.appendChild(el);
     });
+  }
+
+  function update(snap) {
+    snap.forEach(t => {
+      const el = wrap.querySelector(`.strip[data-id="${CSS.escape(t.id)}"]`);
+      if (!el) return;
+      el.classList.toggle('quiet', !t.audible);
+      const set = (role, v) => {
+        const i = el.querySelector(`[data-role="${role}"]`);
+        if (i && document.activeElement !== i) i.value = String(v);
+      };
+      set('vol', t.volume); set('pan', t.pan); set('reverb', t.reverb); set('delay', t.delay);
+      el.querySelector('[data-role="pct"]').textContent = Math.round(t.volume * 100) + '%';
+      el.querySelector('[data-role="m"]').className = t.muted ? 'on-mute' : '';
+      el.querySelector('[data-role="s"]').className = t.soloed ? 'on-solo' : '';
+    });
+  }
+
+  function render(snap) {
+    const s = snap.map(t => t.id + ':' + t.label).join('|');
+    if (s !== sig) { sig = s; build(snap); }
+    update(snap);
   }
 
   masterIn.addEventListener('input', () => {
@@ -79,19 +109,9 @@
   document.getElementById('clearSolo').addEventListener('click', () => Mixer.clearSolo());
 
   Mixer.onChange(render);
+  render(Mixer.snapshot());
 
-  // Tracks are registered by the modules that own them, which run before this
-  // one — but a track added later still shows up on the next change event.
-  render(Mixer.ids().map(id => {
-    const t = Mixer.get(id);
-    return { id, label: t.label, volume: t.volume, pan: t.pan,
-             reverb: t.reverb, delay: t.delay,
-             muted: t.muted, soloed: t.soloed, audible: Mixer.isAudible(id) };
-  }));
-
-  window.addEventListener('bhs:collect-mixer', (e) => { e.detail.mixer = Mixer.serialize(); });
-  window.addEventListener('bhs:apply-mixer', (e) => {
-    Mixer.restore(e.detail.mixer);
+  window.addEventListener('bhs:mixer-restored', () => {
     masterIn.value = String(Mixer.getMasterVolume());
     masterVal.textContent = Math.round(Mixer.getMasterVolume() * 100) + '%';
   });

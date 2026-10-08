@@ -1,64 +1,38 @@
-// studio-project.js — save and load a whole session.
+// studio-project.js — save, open and start over.
 //
-// A project is JSON plus sidecar WAVs, not one document: recorded loops are
-// megabytes of PCM, and base64 in JSON inflates them ~33% while forcing a
-// rewrite of the whole file on every save. The JSON references each loop by
-// slot; the audio is uploaded and fetched separately.
+// A project is JSON plus sidecar WAVs: recorded takes and uploaded files are
+// megabytes of audio, and base64 inside JSON would inflate them and rewrite
+// the whole file on every save. The JSON names each clip by its audio id; the
+// audio goes up and comes back separately. (Uploads are now saved too — the
+// old sample timeline forgot them on reload.)
 //
-// Everything lands on the Railway volume at DATA_DIR, so it survives redeploys.
+// Projects saved by the old studio still open: Project.restore() converts
+// them, and their mixer strips keep their old ids so the faders land right.
 
 (function () {
-  const listEl = document.getElementById('projList');
-  const saveBtn = document.getElementById('projSave');
-  const nameIn = document.getElementById('projName');
-  const msgEl = document.getElementById('projMsg');
+  const $ = (id) => document.getElementById(id);
+  const listEl = $('projList');
+  const nameIn = $('projName');
+  const saveBtn = $('saveBtn');
   if (!saveBtn) return;
 
-  function msg(t, bad) {
-    msgEl.textContent = t || '';
-    msgEl.classList.toggle('bad', !!bad);
-  }
-
-  // Other modules own their own state, so they publish a snapshot on request
-  // rather than this file reaching into them.
   function collect() {
-    const req = (type) => {
-      const ev = new CustomEvent(type, { detail: {} });
-      window.dispatchEvent(ev);
-      return ev.detail;
-    };
-    const seq = req('bhs:collect-sequencer');
-    const voice = req('bhs:collect-voice');
-    const drums = req('bhs:collect-drums');
-    const song = req('bhs:collect-song');
-    const mixer = req('bhs:collect-mixer');
-    const fx = req('bhs:collect-fx');
-    const timeline = req('bhs:collect-timeline');
-    const st = Transport.getState();
-    return {
+    return Object.assign(Project.serialize(), {
       savedAt: new Date().toISOString(),
-      bpm: st.bpm,
-      version: 2,
-      bass: seq.part || null,
-      drumParts: drums.parts || [],
-      drumsMuted: drums.muted || [],
-      voice: voice.params || {},
-      song: song.song || null,
-      mixer: mixer.mixer || null,
-      fx: fx.fx || null,
-      timeline: timeline.timeline || null,
-      loops: Looper.getSlots()
-        .filter(s => !!s.buffer)
-        .map(s => ({ index: s.index, bars: s.bars, volume: s.volume }))
-    };
+      mixer: Mixer.serialize(),
+      fx: Effects.serialize()
+    });
   }
 
   async function save() {
-    const name = (nameIn.value || '').trim();
-    if (!name) { msg('Give it a name first.', true); nameIn.focus(); return; }
-
+    let name = (nameIn.value || '').trim();
+    if (!name) {
+      name = (prompt('Name this track') || '').trim();
+      if (!name) return;
+      nameIn.value = name;
+    }
     saveBtn.disabled = true;
-    msg('Saving…');
+    App.msg('Saving…');
     try {
       const data = collect();
       const res = await fetch('/api/projects/' + encodeURIComponent(name), {
@@ -66,98 +40,83 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ data })
       });
-      if (!res.ok) throw new Error('Server refused the project (' + res.status + ')');
+      if (!res.ok) throw new Error('the server refused it (' + res.status + ')');
 
-      // Upload each recorded loop as a real WAV alongside it.
+      const ids = new Set(Project.tracks().filter(t => t.kind === 'audio').map(t => t.audioId));
       let uploaded = 0;
-      for (const s of Looper.getSlots()) {
-        if (!s.buffer) continue;
-        const blob = WavCodec.toBlob(s.buffer);
-        const up = await fetch(`/api/projects/${encodeURIComponent(name)}/audio/${s.index}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'audio/wav' },
-          body: blob
+      for (const id of ids) {
+        const buf = Project.getAudio(id);
+        if (!buf) continue;
+        const up = await fetch(`/api/projects/${encodeURIComponent(name)}/audio/${id}`, {
+          method: 'POST', headers: { 'Content-Type': 'audio/wav' }, body: WavCodec.toBlob(buf)
         });
         if (up.ok) uploaded++;
       }
-
-      msg(`Saved "${name}"` + (uploaded ? ` with ${uploaded} loop${uploaded === 1 ? '' : 's'}.` : '.'));
-      refresh();
+      App.msg(`Saved "${name}"` + (uploaded ? ` with ${uploaded} audio clip${uploaded === 1 ? '' : 's'}.` : '.'));
     } catch (e) {
-      msg('Could not save: ' + e.message, true);
+      App.msg('Could not save: ' + e.message, true);
     } finally {
       saveBtn.disabled = false;
     }
   }
 
   async function load(name) {
-    msg('Loading…');
+    App.msg('Opening…');
     try {
       const res = await fetch('/api/projects/' + encodeURIComponent(name));
-      if (!res.ok) throw new Error('Not found');
+      if (!res.ok) throw new Error('not found');
       const { data } = await res.json();
+      if (Transport.isPlaying) Transport.stop();
+      const ctx = App.ensureAudio();
+      Project.restore(data);
+      window.dispatchEvent(new CustomEvent('bhs:apply-fx', { detail: { fx: data.fx || Effects.serialize() } }));
+      if (data.mixer) { Mixer.restore(data.mixer); window.dispatchEvent(new CustomEvent('bhs:mixer-restored')); }
 
-      if (data.bpm) Transport.setBpm(data.bpm);
-      window.dispatchEvent(new CustomEvent('bhs:apply-sequencer', {
-        detail: { part: data.bass, pattern: data.pattern || [], bpm: data.bpm }
-      }));
-      window.dispatchEvent(new CustomEvent('bhs:apply-drums', {
-        detail: { parts: data.drumParts, lanes: data.drums || [], muted: data.drumsMuted || [] }
-      }));
-      if (data.timeline) {
-        window.dispatchEvent(new CustomEvent('bhs:apply-timeline', { detail: { timeline: data.timeline } }));
-      }
-      if (data.fx) {
-        window.dispatchEvent(new CustomEvent('bhs:apply-fx', { detail: { fx: data.fx } }));
-      }
-      if (data.mixer) {
-        window.dispatchEvent(new CustomEvent('bhs:apply-mixer', { detail: { mixer: data.mixer } }));
-      }
-      if (data.song) {
-        window.dispatchEvent(new CustomEvent('bhs:apply-song', { detail: { song: data.song } }));
-      }
-      if (data.voice) {
-        window.dispatchEvent(new CustomEvent('bhs:apply-voice', { detail: { params: data.voice } }));
-      }
-
-      // Pull each loop's audio back and hand it to the looper.
-      const ctx = Synth808.ensureContext();
       let restored = 0;
-      for (const l of (data.loops || [])) {
+      for (const t of Project.tracks().filter(x => x.kind === 'audio')) {
+        if (Project.getAudio(t.audioId)) continue;
         try {
-          const a = await fetch(`/api/projects/${encodeURIComponent(name)}/audio/${l.index}`);
+          const a = await fetch(`/api/projects/${encodeURIComponent(name)}/audio/${t.audioId}`);
           if (!a.ok) continue;
-          const buf = await WavCodec.decode(ctx, await a.arrayBuffer());
-          Looper.restoreSlot(l.index, buf, l.bars, l.volume);
+          Project.setAudio(t.audioId, await WavCodec.decode(ctx, await a.arrayBuffer()));
           restored++;
-        } catch (_) { /* a missing loop shouldn't fail the whole load */ }
+        } catch (_) { /* one missing clip shouldn't fail the whole load */ }
       }
-
-      msg(`Loaded "${name}"` + (restored ? ` with ${restored} loop${restored === 1 ? '' : 's'}.` : '.'));
       nameIn.value = name;
+      App.select(Project.tracks()[0] && Project.tracks()[0].id);
+      App.msg(`Opened "${name}"` + (restored ? ` with ${restored} audio clip${restored === 1 ? '' : 's'}.` : '.'));
     } catch (e) {
-      msg('Could not load: ' + e.message, true);
+      App.msg('Could not open: ' + e.message, true);
     }
   }
 
   async function remove(name) {
+    if (!confirm(`Delete "${name}" from the server? This can't be undone.`)) return;
     await fetch('/api/projects/' + encodeURIComponent(name), { method: 'DELETE' });
-    msg(`Deleted "${name}".`);
+    App.msg(`Deleted "${name}".`);
     refresh();
   }
 
   async function refresh() {
+    listEl.innerHTML = '';
     try {
       const res = await fetch('/api/projects');
       const { names } = await res.json();
-      listEl.innerHTML = '';
       if (!names || !names.length) { listEl.textContent = 'Nothing saved yet.'; return; }
-      names.forEach(n => {
+      names.sort((a, b) => a.localeCompare(b)).forEach(n => {
+        const row = document.createElement('div');
+        row.className = 'projrow';
         const b = document.createElement('button');
+        b.className = 'menuitem';
         b.textContent = n;
-        b.title = 'Click to load, shift-click to delete';
-        b.addEventListener('click', (e) => e.shiftKey ? remove(n) : load(n));
-        listEl.appendChild(b);
+        b.addEventListener('click', () => { $('openMenu').hidden = true; load(n); });
+        const x = document.createElement('button');
+        x.className = 'mini danger';
+        x.textContent = '×';
+        x.title = 'Delete';
+        x.addEventListener('click', () => remove(n));
+        row.appendChild(b); row.appendChild(x);
+        listEl.appendChild(row);
       });
     } catch (e) {
       listEl.textContent = 'Could not reach the server.';
@@ -165,6 +124,23 @@
   }
 
   saveBtn.addEventListener('click', save);
-  nameIn.addEventListener('keydown', (e) => { if (e.key === 'Enter') save(); });
-  refresh();
+  nameIn.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); save(); } });
+  $('openBtn').addEventListener('click', (e) => { refresh(); App.togglePop($('openMenu'), e.currentTarget); });
+  $('newProjBtn').addEventListener('click', () => {
+    if (!confirm('Start a new track? Anything unsaved here is lost.')) return;
+    $('openMenu').hidden = true;
+    if (Transport.isPlaying) Transport.stop();
+    Project.reset();
+    nameIn.value = '';
+    App.select(Project.tracks()[0] && Project.tracks()[0].id);
+    App.msg('New track — the demo beat is loaded so there is something to start from.');
+  });
+
+  // Ctrl/Cmd+S saves.
+  window.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); save(); }
+  });
+
+  window.__bhsCollect = collect;
+  window.__bhsLoad = load;
 })();

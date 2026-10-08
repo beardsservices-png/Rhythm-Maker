@@ -3,277 +3,222 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BHS Studio — 808</title>
+<title>BHS Studio</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23191a17'/%3E%3Ccircle cx='11' cy='23' r='5' fill='%23d99a3a'/%3E%3Crect x='15' y='7' width='3' height='16' fill='%23d99a3a'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="css/base.css">
 <link rel="stylesheet" href="css/studio.css">
 </head>
-<body>
-<div class="wrap">
-  <div class="hdr">
-    <div>
-      <h1>808</h1>
-      <div class="sub">playable bass</div>
-    </div>
-    <a class="back" href="index.html">&larr; Modes</a>
+<body class="studio">
+
+<!-- ── top bar: everything you reach for while playing, always on screen ── -->
+<header class="topbar">
+  <a class="tb-back" href="index.html" title="Back to modes">&larr;</a>
+  <div class="tb-brand">BHS&nbsp;Studio</div>
+  <input type="text" id="projName" class="tb-name" placeholder="Untitled track" autocomplete="off" aria-label="Track name">
+
+  <div class="tb-group tb-transport">
+    <button id="playBtn" class="tb-play" title="Play / stop (Space)">&#9654; Play</button>
+    <button id="recBtn" class="tb-rec" title="Record a take — becomes a new track">&#9679; Rec</button>
+    <select id="recSource" class="tb-sel" title="What Rec records" aria-label="Record source">
+      <option value="keys">my playing</option>
+      <option value="mix">whole mix</option>
+      <option value="mic">microphone</option>
+    </select>
+    <select id="recBars" class="tb-sel" title="How long a take is" aria-label="Take length">
+      <option value="0">until stop</option>
+      <option value="1">1 bar</option>
+      <option value="2">2 bars</option>
+      <option value="4" selected>4 bars</option>
+      <option value="8">8 bars</option>
+    </select>
   </div>
 
-  <div id="notice" class="notice"></div>
-
-  <div class="transport">
-    <button id="slideBtn" aria-pressed="false" title="Hold Shift for the same thing">Slide</button>
-    <button id="octDown" title="Left arrow">Oct &minus;</button>
-    <button id="octUp" title="Right arrow">Oct +</button>
-    <button id="resetBtn">Reset knobs</button>
-    <div class="field">
-      <label>Range</label>
-      <span class="val" id="octLabel">&mdash;</span>
-    </div>
-    <div class="mississippi" id="nowNote">&mdash;</div>
+  <div class="tb-group">
+    <label class="tb-bpm">BPM <input type="number" id="bpm" min="40" max="220" value="90"></label>
+    <div class="tb-pos" id="pos" title="Bar . beat">1.1</div>
   </div>
 
-  <div class="keyboard" id="keyboard"></div>
+  <div class="tb-mode" role="group" aria-label="Play mode">
+    <button id="modePattern" class="on" title="Loop the parts — each instrument plays the letter you pick">Loop parts</button>
+    <button id="modeSong" title="Play the sections in order, start to finish">Play song</button>
+  </div>
 
-  <p class="playhint">
-    Play with the mouse, or the computer keyboard &mdash;
-    <b>Z S X D C V G B H N J M</b> for the lower octave, <b>Q 2 W 3 E R 5 T 6 Y 7 U</b> for the one above.
-    Arrow keys shift the range. <b>Hold Shift</b> to slide from the note you're on into the next one instead of restarting it.
-  </p>
+  <div class="tb-group tb-right">
+    <button id="openBtn" title="Open a saved track">Open</button>
+    <button id="saveBtn" class="primary" title="Save to the server">Save</button>
+    <button id="exportBtn" title="Download a .wav">Export</button>
+    <button id="midiBtn" title="Connect a MIDI keyboard">MIDI</button>
+    <button id="claudeBtn" title="Ask Claude to change the song">Claude</button>
+  </div>
+</header>
 
-  <h3 class="sect">MIDI keyboard</h3>
-  <div class="transport seqbar" id="midiPanel">
+<div id="notice" class="notice"></div>
+<div id="status" class="statusline" role="status" aria-live="polite"></div>
+
+<main class="workspace">
+
+  <!-- ── arrangement: every instrument, every section, on one screen ── -->
+  <section class="panel arrange">
+    <div class="panel-head">
+      <h2>Song</h2>
+      <div class="brushes" role="group" aria-label="What clicking a bar does">
+        <span class="dim">Click a bar to</span>
+        <button data-brush="mute" class="on" title="Click or drag across bars to silence / bring back">mute / unmute</button>
+        <button data-brush="0">A</button><button data-brush="1">B</button><button data-brush="2">C</button><button data-brush="3">D</button>
+      </div>
+      <div class="panel-tools">
+        <button id="addSectionBtn" title="Add a section at the end">+ Section</button>
+        <button id="addTrackBtn" class="primary" title="Add an instrument, drum, or audio">+ Add</button>
+      </div>
+    </div>
+    <div class="agrid-scroll" id="arrangeScroll">
+      <div class="agrid" id="arrangeGrid"></div>
+    </div>
+    <details class="how">
+      <summary>How the song grid works</summary>
+      <p>Each row is an instrument; each block is a section. The letter at the start of a block is which pattern that
+        instrument plays there — click it to change (A → B → C → D → silent). <b>S</b> solos that instrument for that
+        section only. Click or drag across bars to mute just those bars, or pick A–D above and drag to paint a pattern in.
+        <b>Loop parts</b> loops whatever each instrument is set to; <b>Play song</b> plays the sections in order.</p>
+    </details>
+  </section>
+
+  <!-- ── lower pane: edit the selected part, or mix ── -->
+  <section class="panel lower">
+    <nav class="tabs" role="tablist">
+      <button role="tab" data-tab="edit" class="on">Edit</button>
+      <button role="tab" data-tab="mix">Mixer</button>
+      <button role="tab" data-tab="fx">Reverb &amp; delay</button>
+    </nav>
+    <div class="tabpane" id="tab-edit">
+      <div id="editor"></div>
+    </div>
+    <div class="tabpane" id="tab-mix" hidden>
+      <div class="mixbar">
+        <button id="clearSolo">Clear solo</button>
+        <label class="field">Master <span id="masterVolVal">90%</span>
+          <input type="range" id="masterVol" min="0" max="1.5" step="0.01" value="0.9"></label>
+      </div>
+      <div class="mixer" id="mixerStrips"></div>
+    </div>
+    <div class="tabpane" id="tab-fx" hidden>
+      <div class="controls" id="fxPanel"></div>
+      <p class="hint">One reverb and one delay shared by everything; the <b>rev</b> and <b>dly</b> sliders on each
+        mixer strip decide how much of that track goes in. The delay follows the tempo.</p>
+    </div>
+  </section>
+</main>
+
+<!-- ── the dock: keyboard + the sound's knobs, always visible under everything ── -->
+<footer class="dock" id="dock">
+  <div class="dock-head">
+    <label class="dock-field">Play
+      <select id="keysTarget" class="tb-sel" aria-label="What the keyboard plays"></select></label>
+    <label class="dock-field" id="soundField">Sound
+      <select id="keysSound" class="tb-sel" aria-label="Instrument sound"></select></label>
+    <label class="dock-field" id="kitField" hidden>Kit
+      <select id="keysKit" class="tb-sel" aria-label="Drum kit"></select></label>
+    <div class="dock-btns">
+      <button id="octDown" title="Lower octave (←)">Oct &minus;</button>
+      <span id="octLabel" class="dim">C2</span>
+      <button id="octUp" title="Higher octave (→)">Oct +</button>
+      <button id="slideBtn" aria-pressed="false" title="Glide into the next note instead of restarting (or hold Shift)">Slide</button>
+      <button id="recNotes" aria-pressed="false" title="While playing, what you play is written into the pattern">&#9679; Write notes</button>
+    </div>
+    <div class="dock-now" id="nowNote">&mdash;</div>
+    <button id="dockToggle" class="dock-toggle" title="Hide / show the keyboard">&#9662;</button>
+  </div>
+  <div class="dock-body">
+    <div class="keyboard" id="keyboard"></div>
+    <div class="knobs" id="knobs"></div>
+  </div>
+</footer>
+
+<!-- ── popovers ── -->
+<div class="pop" id="addMenu" hidden></div>
+<div class="pop" id="trackMenu" hidden></div>
+<div class="pop" id="openMenu" hidden>
+  <div class="pop-title">Open a saved track</div>
+  <div id="projList" class="poplist"></div>
+  <button id="newProjBtn">Start a new track</button>
+  <p class="hint">Saved on the server, so it's there on your phone too. &times; deletes.</p>
+</div>
+<div class="pop" id="exportMenu" hidden>
+  <div class="pop-title">Download a .wav</div>
+  <label class="field" id="exportBarsField">Length
+    <select id="exportBars" class="tb-sel">
+      <option value="4">4 bars</option><option value="8" selected>8 bars</option>
+      <option value="16">16 bars</option><option value="32">32 bars</option>
+    </select></label>
+  <p class="hint" id="exportSongNote" hidden>Song mode is on, so the whole song is rendered.</p>
+  <label class="chk"><input type="checkbox" id="masterToggle" checked> Master it (even out the balance and loudness)</label>
+  <button id="exportGo" class="primary">Download</button>
+  <div id="exportMsg" class="msg"></div>
+</div>
+<div class="pop pop-wide" id="midiMenu" hidden>
+  <div class="pop-title">MIDI keyboard</div>
+  <div class="row" id="midiPanel">
     <button id="midiConnect" class="primary">Connect keyboard</button>
-    <div class="field">
-      <label for="midiTarget">Play</label>
-      <select id="midiTarget" class="barsel"></select>
-    </div>
-    <div class="field">
-      <label for="midiChannel">Channel</label>
-      <select id="midiChannel" class="barsel">
+    <label class="field">Play <select id="midiTarget" class="tb-sel"></select></label>
+    <label class="field">Channel
+      <select id="midiChannel" class="tb-sel">
         <option value="0" selected>All</option>
-        <option value="1">1</option><option value="2">2</option><option value="3">3</option>
-        <option value="4">4</option><option value="5">5</option><option value="6">6</option>
-        <option value="7">7</option><option value="8">8</option><option value="9">9</option>
-        <option value="10">10</option><option value="11">11</option><option value="12">12</option>
-        <option value="13">13</option><option value="14">14</option><option value="15">15</option>
-        <option value="16">16</option>
-      </select>
-    </div>
+        <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
+        <option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option>
+        <option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option>
+        <option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option>
+      </select></label>
     <label class="chk"><input type="checkbox" id="midiVelocity" checked> Respond to how hard I play</label>
-    <div class="mississippi" id="midiActivity">&mdash;</div>
+    <div class="tb-pos" id="midiActivity">&mdash;</div>
   </div>
-  <div id="midiStatus" class="loopmsg"></div>
-  <div class="saved-list" id="midiDevices"></div>
-  <p class="playhint">
-    Plug a MIDI keyboard in, press <b>Connect keyboard</b>, and say yes to the permission box.
-    <b>Play</b> chooses what it drives &mdash; the 808, the drum lanes, your uploaded samples, or one of the synth voices.
-    The readout blinks with every note it receives, so you can tell it's working before you hear anything.<br><br>
-    <b>Chrome or Edge, on a computer.</b> Safari has no MIDI at all, so <b>iPhone and iPad can't do this</b> &mdash;
-    including Chrome on an iPhone, which is Safari underneath.
-    And it only works on the <b>https:// web address</b>: opening the app on a home-network address
-    like 192.168.1.50 will make the Connect button fail no matter what you do.
-  </p>
-
-
-
-
-
-
-  <h3 class="sect">Ask Claude</h3>
-  <div class="claudebox">
-    <div id="claudeLog" class="claudelog">
-      <div class="cmsg claude meta">Tell me what to change &mdash; "make the hats busier", "give me a trap beat at 140",
-      "write a chorus in B", "turn the bass drive up". I'll change the song itself, not just describe it.</div>
-    </div>
-    <form id="claudeForm" class="clauderow">
-      <input type="text" id="claudeInput" placeholder="What should I change?" autocomplete="off">
-      <button type="submit" class="primary">Send</button>
-    </form>
-  </div>
-
-  <h3 class="sect">Arrangement</h3>
-  <div class="transport seqbar">
-    <button id="songToggle">Song mode: off</button>
-    <button id="songAdd">Add section</button>
-    <div class="mississippi" id="songPos">&mdash;</div>
-  </div>
-  <div class="songstrip" id="songStrip"></div>
-  <p class="playhint">
-    Write the song down once and it plays itself. Each block is a section &mdash; click its letter to change which variation it plays,
-    and <b>&minus;</b>/<b>+</b> to make it longer or shorter. Turn <b>Song mode</b> on and press Play; the sections change on their own,
-    and <b>Download</b> renders the whole arrangement instead of just what's on screen.
-  </p>
-
-  <h3 class="sect">Song sections</h3>
-  <div class="transport seqbar scenes">
-    <span class="dhint">Move everything to</span>
-    <div id="sceneRow" class="scenerow"></div>
-    <span class="dhint">Copy what's playing</span>
-    <div id="copyRow" class="scenerow"></div>
-  </div>
-  <div id="sceneMsg" class="loopmsg"></div>
-  <p class="playhint">
-    Every instrument has its own <b>A B C D</b> next to it &mdash; so the hats can change while the kick stays put.
-    Changes land on the next bar, never mid&#8209;beat. The buttons above move everything at once.
-    To build a chorus: hit <b>Copy what's playing &rarr; B</b>, switch to B, and change it from there.
-  </p>
-
-
-  <h3 class="sect">Sample timeline</h3>
-  <div class="transport seqbar">
-    <input type="file" id="sampleUpload" accept="audio/*" multiple>
-    <label class="chk"><input type="checkbox" id="timelineLoop" checked> Loop timeline</label>
-  </div>
-  <div class="saved-list" id="sampleLib"></div>
-  <div id="timelineMsg" class="loopmsg"></div>
-  <div class="tlwrap">
-    <div class="truler" id="timelineRuler"></div>
-    <div class="ttracks" id="timelineTracks"></div>
-  </div>
-  <p class="playhint">
-    Upload a clip, click it in the list, then click a bar below to drop it in. Drag a clip to move it,
-    drag its right edge to trim how much plays. Bars are marked every four.
-  </p>
-
-  <h3 class="sect">Drums</h3>
-  <div class="transport seqbar">
-    <button id="drumClear">Clear drums</button>
-    <span class="dhint">Click a lane name to mute it</span>
-  </div>
-  <div class="drumgrid" id="drumGrid"></div>
-
-  <h3 class="sect">Bassline</h3>
-  <div class="transport seqbar">
-    <button id="seqPlay">Play</button>
-    <button id="seqClear">Clear</button>
-    <div class="field">
-      <label for="seqBpm">BPM: <span id="seqBpmVal">90</span></label>
-      <input type="range" id="seqBpm" min="50" max="180" value="90">
-    </div>
-    <div class="mississippi" id="seqPos">&mdash;</div>
-    <span id="bassVar"></span>
-  </div>
-  <div class="seqgrid" id="seqGrid"></div>
-  <p class="playhint">
-    Click a cell to place a note, click it again to clear it. One note per column &mdash; a bassline is one note at a time.
-    The <b>S</b> button under a column slides into that note from the one before instead of restarting it.
-    Bars are marked every four columns.
-  </p>
-
-
-  <h3 class="sect">Live looper</h3>
-  <div class="transport seqbar">
-    <button id="loopArm">Turn mic on</button>
-    <div class="field">
-      <label for="loopLatency">Timing trim: <span id="loopLatencyVal">0ms</span></label>
-      <input type="range" id="loopLatency" min="-200" max="200" step="5" value="0">
-    </div>
-  </div>
-  <div id="loopMsg" class="loopmsg"></div>
-  <div class="slots" id="loopSlots"></div>
-  <p class="playhint">
-    Press <b>Rec</b> and play &mdash; recording starts on the nearest bar line, so being a little early or late doesn't matter.
-    Press <b>Stop</b> and it snaps to a bar and starts looping immediately.
-    Turning a loop off and back on brings it in <i>in time with the song</i>, not from its own beginning.
-    <b>Use headphones:</b> on speakers the microphone records the backing track into your loop.
-    If your layers drift late, nudge <b>Timing trim</b>.
-  </p>
-
-
-
-
-  <h3 class="sect">Mixer</h3>
-  <div class="transport seqbar">
-    <button id="clearSolo">Clear solo</button>
-    <div class="field">
-      <label for="masterVol">Master: <span id="masterVolVal">90%</span></label>
-      <input type="range" id="masterVol" min="0" max="1.5" step="0.01" value="0.9">
-    </div>
-  </div>
-  <div class="mixer" id="mixerStrips"></div>
-  <p class="playhint">
-    One strip per instrument. The slider is volume, the thin one under it is left/right
-    (double&#8209;click to re&#8209;centre). <b>M</b> mutes, <b>S</b> plays only that track &mdash;
-    solo several at once to hear just those.
-  </p>
-
-
-  <h3 class="sect">Reverb &amp; delay</h3>
-  <div class="controls" id="fxPanel"></div>
-  <p class="playhint">
-    One reverb and one delay, shared by everything &mdash; the <b>rev</b> and <b>dly</b> sliders on each mixer strip
-    decide how much of that track goes into them. Sharing is the point: it's what makes parts sound like they're
-    in the same room. The delay is locked to the tempo, so it stays in time when you change the BPM.
-  </p>
-
-  <h3 class="sect">Export</h3>
-  <div class="transport seqbar">
-    <button id="exportBtn" class="primary">Download .wav</button>
-    <div class="field">
-      <label for="exportBars">Length</label>
-      <select id="exportBars" class="barsel">
-        <option value="4">4 bars</option>
-        <option value="8" selected>8 bars</option>
-        <option value="16">16 bars</option>
-        <option value="32">32 bars</option>
-      </select>
-    </div>
-    <label class="chk"><input type="checkbox" id="masterToggle" checked> Master it</label>
-  </div>
-  <div id="exportMsg" class="loopmsg"></div>
-  <p class="playhint">
-    <b>Master it</b> measures the finished mix &mdash; how loud it is, and whether it's bass&#8209;heavy or harsh &mdash;
-    then corrects the balance and brings it up to a normal listening level. It tells you exactly what it changed,
-    and it won't touch anything that's already sitting right.<br><br>
-    Renders the drums, the bassline and any loop that's switched on into a single audio file you can send to anyone.
-    It's rendered rather than recorded, so it comes out clean no matter what the browser is doing &mdash; and faster than real time.
-  </p>
-
-  <h3 class="sect">Save your work</h3>
-  <div class="transport seqbar">
-    <input type="text" id="projName" class="projname" placeholder="Name this track" autocomplete="off">
-    <button id="projSave" class="primary">Save</button>
-  </div>
-  <div id="projMsg" class="loopmsg"></div>
-  <div class="saved-list" id="projList"></div>
-  <p class="playhint">
-    Saves the bassline, the tempo, your sound settings and every recorded loop &mdash; to the server, not this browser,
-    so it's still there on your phone. Click a name to load it, shift-click to delete it.
-  </p>
-
-  <h3 class="sect">Shape the sound</h3>
-  <div class="controls" id="controls"></div>
-
-  <div class="footer-note">
-    The punch is a fast pitch drop <i>into</i> the note, set as a ratio above it rather than fixed Hz &mdash; so a low note and a high note keep the same character.
-    Drive is what makes a sub note audible on a phone speaker: the fundamental is below what the speaker can reproduce, so you hear the harmonics instead.
-  </div>
+  <div id="midiStatus" class="msg"></div>
+  <div class="poplist" id="midiDevices"></div>
+  <p class="hint"><b>Play</b> picks what the keyboard drives. "Same as the on-screen keys" follows the dock below.
+    Chrome or Edge on a computer, on the https:// address — Safari (and every iPhone/iPad browser) has no MIDI.</p>
+</div>
+<div class="pop" id="recMenu" hidden>
+  <div class="pop-title">Microphone timing</div>
+  <label class="field">Timing trim <span id="micTrimVal">0ms</span>
+    <input type="range" id="micTrim" min="-200" max="200" step="5" value="0"></label>
+  <p class="hint">Use headphones — on speakers the mic records the beat too. If your takes land late, nudge this.</p>
 </div>
 
-<script src="js/audio-engine.js"></script>
+<aside class="drawer" id="claudeDrawer" hidden>
+  <div class="drawer-head"><h2>Ask Claude</h2><button id="claudeClose" title="Close">&times;</button></div>
+  <div id="claudeLog" class="claudelog">
+    <div class="cmsg claude meta">Tell me what to change &mdash; "make the hats busier in the hook", "add strings playing
+      the chords", "drop the 808 for the last 2 bars of the verse", "give me a trap beat at 140". I change the song itself.</div>
+  </div>
+  <form id="claudeForm" class="clauderow">
+    <input type="text" id="claudeInput" placeholder="What should I change?" autocomplete="off">
+    <button type="submit" class="primary">Send</button>
+  </form>
+</aside>
+
+<input type="file" id="audioUpload" accept="audio/*" multiple hidden>
+
 <script src="js/engine/synth-808.js"></script>
 <script src="js/engine/transport.js"></script>
-<script src="js/engine/variations.js"></script>
-<script src="js/engine/song.js"></script>
 <script src="js/engine/effects.js"></script>
 <script src="js/engine/master.js"></script>
 <script src="js/engine/mixer.js"></script>
-<script src="js/engine/sample-timeline.js"></script>
 <script src="js/engine/midi.js"></script>
-<script src="js/studio-808.js"></script>
 <script src="js/engine/wav.js"></script>
-<script src="js/engine/looper.js"></script>
-<script src="js/studio-sequencer.js"></script>
-<script src="js/studio-timeline.js"></script>
-<script src="js/studio-drums.js"></script>
-<script src="js/studio-midi.js"></script>
-<script src="js/studio-scenes.js"></script>
-<script src="js/studio-song.js"></script>
-<script src="js/studio-claude.js"></script>
-<script src="js/studio-looper.js"></script>
+<script src="js/engine/drumkits.js"></script>
+<script src="js/engine/instruments.js"></script>
+<script src="js/engine/project-model.js"></script>
+<script src="js/engine/sequencer.js"></script>
+<script src="js/engine/recorder.js"></script>
+<script src="js/studio-app.js"></script>
+<script src="js/studio-arrange.js"></script>
+<script src="js/studio-editor.js"></script>
+<script src="js/studio-keys.js"></script>
+<script src="js/studio-record.js"></script>
 <script src="js/studio-mixer.js"></script>
 <script src="js/studio-effects.js"></script>
+<script src="js/studio-midi.js"></script>
 <script src="js/studio-project.js"></script>
 <script src="js/studio-export.js"></script>
+<script src="js/studio-claude.js"></script>
 </body>
 </html>

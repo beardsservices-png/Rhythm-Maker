@@ -20,15 +20,22 @@ const Mixer = (() => {
   let master = null;
   let limiter = null;
   const tracks = new Map();
+  let order = null;           // display order, set by the project
 
   const listeners = new Set();
+  function orderedIds() {
+    const ids = Array.from(tracks.keys());
+    if (!order) return ids;
+    const rank = new Map(order.map((id, i) => [id, i]));
+    return ids.sort((a, b) => (rank.has(a) ? rank.get(a) : 1e9) - (rank.has(b) ? rank.get(b) : 1e9));
+  }
   function emit() {
     const snap = [];
-    tracks.forEach((t, id) => snap.push({
+    orderedIds().forEach((id) => { const t = tracks.get(id); snap.push({
       id, label: t.label, volume: t.volume, pan: t.pan,
       reverb: t.reverb, delay: t.delay,
       muted: t.muted, soloed: t.soloed, audible: isAudible(id)
-    }));
+    }); });
     listeners.forEach(fn => { try { fn(snap); } catch (e) { console.error(e); } });
   }
   function onChange(fn) { listeners.add(fn); return () => listeners.delete(fn); }
@@ -97,6 +104,24 @@ const Mixer = (() => {
     emit();
     return t;
   }
+
+  function removeTrack(id) {
+    const t = tracks.get(id);
+    if (!t) return;
+    [t.gain, t.panner, t.revSend, t.delSend].forEach(n => { if (n) n.disconnect(); });
+    tracks.delete(id);
+    applyGains();
+    emit();
+  }
+
+  function setLabel(id, label) {
+    const t = tracks.get(id);
+    if (!t || t.label === label) return;
+    t.label = label;
+    emit();
+  }
+
+  function setOrder(ids) { order = ids.slice(); emit(); }
 
   /** Where a voice should connect to land on this track. */
   function input(id) {
@@ -215,11 +240,14 @@ const Mixer = (() => {
   }
 
   return {
-    init, addTrack, input, masterNode,
+    init, addTrack, removeTrack, setLabel, setOrder, input, masterNode,
     setVolume, setPan, setSend, setMuted, setSoloed, clearSolo,
     setMasterVolume, getMasterVolume,
     isAudible, onChange, serialize, restore,
     get(id) { return tracks.get(id); },
-    ids: () => Array.from(tracks.keys())
+    ids: () => orderedIds(),
+    snapshot: () => { const out = []; orderedIds().forEach(id => { const t = tracks.get(id);
+      out.push({ id, label: t.label, volume: t.volume, pan: t.pan, reverb: t.reverb, delay: t.delay,
+                 muted: t.muted, soloed: t.soloed, audible: isAudible(id) }); }); return out; }
   };
 })();

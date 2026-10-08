@@ -25,10 +25,10 @@
 // index, and a bar boundary in seconds converts to one by multiplication.
 
 // Has to hold the longest take anyone can punch in one go, because the slice
-// is taken after the fact. 4 bars of 4/4 at 60bpm is 16s; 30s leaves room for
-// slower tempos and longer loops. At 48kHz mono that is ~5.8MB, paid once.
+// is taken after the fact. 8 bars of 4/4 at 60bpm is 32s; 60s leaves room for
+// slower tempos and longer takes. At 48kHz mono that is ~11.5MB, paid once.
 // A take longer than this comes back as 'too-old' rather than silently wrong.
-const RING_SECONDS = 30;
+const RING_SECONDS = 60;
 
 class RecorderProcessor extends AudioWorkletProcessor {
   constructor() {
@@ -81,8 +81,13 @@ class RecorderProcessor extends AudioWorkletProcessor {
 
     if (this.startTime < 0) this.startTime = currentTime;
 
+    // A stereo source (the studio's own mix) is folded to mono; the mic is
+    // already mono, so this is a plain copy for it.
+    const n = input.length;
     for (let i = 0; i < ch.length; i++) {
-      this.ring[(this.written + i) % this.ringLength] = ch[i];
+      let v = ch[i];
+      if (n > 1) { for (let c = 1; c < n; c++) v += input[c][i]; v /= n; }
+      this.ring[(this.written + i) % this.ringLength] = v;
     }
     this.written += ch.length;
     return true;   // keep the node alive even while the mic is silent
