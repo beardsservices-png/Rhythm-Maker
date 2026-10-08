@@ -116,6 +116,14 @@ const App = (() => {
     if (e.code === 'Space' && (e.target.tagName || '').toLowerCase() === 'button') e.preventDefault();
   });
 
+  const clickBtn = $('clickBtn');
+  clickBtn.addEventListener('click', () => {
+    const on = !Sequencer.metronome();
+    Sequencer.setMetronome(on);
+    clickBtn.classList.toggle('on', on);
+    clickBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+
   const bpmIn = $('bpm');
   bpmIn.addEventListener('change', () => {
     const v = parseInt(bpmIn.value, 10);

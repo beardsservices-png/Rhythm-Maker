@@ -80,9 +80,28 @@ const Sequencer = (() => {
         if (n.s !== idx) continue;
         const h = Instruments.noteOn(ac, out, t.instrument, n.m, n.vel == null ? 0.85 : n.vel, ev.time, t.params);
         if (!h) continue;
-        const end = ev.time + n.l * ev.stepDur;
+        // ev.time is already swung; a note ending on an off-beat ends swung too.
+        const endStep = idx + n.l;
+        const end = ev.time - swingOf(ev, idx % 16) + n.l * ev.stepDur + swingOf(ev, endStep % 16);
         h.release(end);
         poly.push({ h, end });
+      }
+    }
+
+    /** Swing pushes every second sixteenth late. */
+    function swingOf(ev, stepInBar) {
+      return (stepInBar % 2 === 1) ? Project.swing() * ev.stepDur : 0;
+    }
+
+    /** Sidechain pump: every kick ducks the tracks that have Pump turned up. */
+    function pump(at) {
+      if (!target.duck) return;
+      for (const t of Project.tracks()) {
+        if (!t.pump) continue;
+        const g = target.duck(t.id);
+        if (!g) continue;
+        g.gain.setTargetAtTime(1 - t.pump, at, 0.004);
+        g.gain.setTargetAtTime(1, at + 0.035, 0.09);
       }
     }
 
@@ -104,9 +123,18 @@ const Sequencer = (() => {
         const len = t.bars * SPB;
         const idx = ((((st.phase % t.bars) + t.bars) % t.bars) * SPB + ev.stepInBar) % len;
         if (t.kind === 'drum') {
-          if (pat[idx]) DrumKits.hit(ac, target.out(t.id), t.sound, ev.time, 1);
+          const info = Project.stepInfo(pat[idx]);
+          if (info) {
+            const t0 = ev.time + swingOf(ev, ev.stepInBar);
+            // A roll squeezes 2–4 hits into the sixteenth; the follow-ups a
+            // touch softer so it rolls rather than machine-guns.
+            for (let k = 0; k < info.roll; k++) {
+              DrumKits.hit(ac, target.out(t.id), t.sound, t0 + k * ev.stepDur / info.roll, info.vel * (k ? 0.8 : 1));
+            }
+            if (t.sound.role === 'kick') pump(t0);
+          }
         } else {
-          playNotes(t, pat, idx, ev);
+          playNotes(t, pat, idx, Object.assign({}, ev, { time: ev.time + swingOf(ev, ev.stepInBar) }));
         }
       }
       // Mono notes end when their length runs out — unless a slide on this
@@ -118,6 +146,7 @@ const Sequencer = (() => {
         const now = ac.currentTime;
         for (let i = poly.length - 1; i >= 0; i--) if (poly[i].end < now) poly.splice(i, 1);
       }
+      if (target.click && ev.stepInBar % 4 === 0) target.click(ev.time, ev.stepInBar === 0);
       fresh = false;
       abs++;
     }
@@ -170,6 +199,23 @@ const Sequencer = (() => {
     else Transport.setLoop(0, SPB, false);
   }
 
+  // ── metronome ──
+  // Straight to the speakers, not through the mixer: a click should never end
+  // up in a bounce or an export.
+  let metronome = false;
+  let clickOut = null;
+  function click(time, downbeat) {
+    if (!ctx) return;
+    if (!clickOut) { clickOut = ctx.createGain(); clickOut.gain.value = 0.35; clickOut.connect(ctx.destination); }
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.frequency.value = downbeat ? 1760 : 1175;
+    g.gain.setValueAtTime(0.0001, time);
+    g.gain.linearRampToValueAtTime(1, time + 0.002);
+    g.gain.exponentialRampToValueAtTime(0.0001, time + 0.05);
+    o.connect(g).connect(clickOut);
+    o.start(time); o.stop(time + 0.06);
+  }
+
   function init() {
     if (ctx) return ctx;
     ctx = Synth808.ensureContext();
@@ -177,7 +223,11 @@ const Sequencer = (() => {
     Mixer.init(ctx);
     liveBus = ctx.createGain();
     syncMixer();
-    live = createPlayer({ ac: ctx, out: (id) => Mixer.input(id), live: true });
+    live = createPlayer({
+      ac: ctx, out: (id) => Mixer.input(id), live: true,
+      duck: (id) => { const m = Mixer.get(id); return m ? m.duck : null; },
+      click: (time, downbeat) => { if (metronome) api.click(time, downbeat); }
+    });
 
     Transport.onStep((ev) => {
       const st = Transport.getState();
@@ -238,9 +288,12 @@ const Sequencer = (() => {
     return { v: st.v, idx };
   }
 
-  return {
-    createPlayer, init, liveInput, stepAt, trackPosition,
+  const api = {
+    createPlayer, init, liveInput, stepAt, trackPosition, click,
+    setMetronome: (on) => { metronome = !!on; },
+    metronome: () => metronome,
     liveBus: () => liveBus,
     context: () => ctx
   };
+  return api;
 })();

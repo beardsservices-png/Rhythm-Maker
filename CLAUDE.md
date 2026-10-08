@@ -35,6 +35,10 @@ and **BHS Studio** (`public/studio.html`). See `README.md` for the file map.
   (`engine/sequencer.js`) plays it live AND renders the export — keep it that way
   so the download always matches what you hear. Add an instrument = a recipe in
   `engine/instruments.js`; a kit = an entry in `engine/drumkits.js`.
+- **Drum step values:** `false` off, `true` normal (old projects), or a number —
+  ones digit = level (1 soft, 2 normal, 3 accent), tens digit = roll (2/3/4).
+  Always read them through `Project.stepInfo()`. Swing, key and per-track `pump`
+  live on the project; undo snapshots exclude live letters and play mode.
 - **Layout rule:** the dock (keyboard + current sound's knobs) stays pinned and the
   page itself doesn't scroll on a laptop — the song grid and editor scroll inside
   their panels. That was the main complaint about the old page; don't regress it.

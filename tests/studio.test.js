@@ -64,15 +64,19 @@ function sineWav(file) {
   await page.addInitScript(FAKE_MIDI);
   await page.goto(URL, { waitUntil: 'load' });
   await page.waitForTimeout(500);
+  ok('start screen greets you with templates', await page.evaluate(() =>
+    StartScreen.isOpen() && document.querySelectorAll('.ss-tpl').length === Templates.list().length + 1));
+  await page.evaluate(() => StartScreen.choose('demo'));
+  await page.waitForTimeout(150);
 
   // A recorder for what the sequencer plays, run offline so it's exact.
-  await page.evaluate(() => {
+  const helpers = () => page.evaluate(() => {
     window.__events = (songMode, bars) => {
       const ev = [];
       const ac = new OfflineAudioContext(1, 4410, 44100);
       const sink = ac.createGain();
       const hit = DrumKits.hit, note = Instruments.noteOn;
-      DrumKits.hit = (a, d, sound, when) => { ev.push({ kind: 'drum', role: sound.role, kit: sound.kit, t: when }); };
+      DrumKits.hit = (a, d, sound, when, vel) => { ev.push({ kind: 'drum', role: sound.role, kit: sound.kit, t: when, vel }); };
       Instruments.noteOn = (a, d, id, midi, vel, when) => { ev.push({ kind: 'note', id, midi, vel, t: when }); return note(a, d, id, midi, vel, when); };
       try {
         const p = Sequencer.createPlayer({ ac, out: () => sink });
@@ -83,6 +87,7 @@ function sineWav(file) {
     };
     window.__track = (name) => Project.tracks().find(t => t.name === name);
   });
+  await helpers();
 
   // ────────────────────────────────────────────────────────────────
   console.log('\n1. Layout — everything you need while recording is on one screen');
@@ -166,7 +171,7 @@ function sineWav(file) {
   await page.evaluate(() => App.select(window.__track('Kick').id));
   await page.waitForTimeout(50);
   await page.click('.drow[data-id="t1"] .dcell[data-step="3"]');
-  ok('clicking a step adds a kick hit', await page.evaluate(() => Project.pattern('t1', 0)[3] === true));
+  ok('clicking a step adds a kick hit', await page.evaluate(() => Project.stepInfo(Project.pattern('t1', 0)[3]).level === 2));
   await page.click('.drow[data-id="t1"] .dcell[data-step="3"]');
   ok('clicking it again removes it', await page.evaluate(() => Project.pattern('t1', 0)[3] === false));
   await page.selectOption('.ed-head select', 'boombap');
@@ -437,6 +442,167 @@ function sineWav(file) {
   await page.selectOption('#midiTarget', 'dock');
 
   // ────────────────────────────────────────────────────────────────
+
+  // ────────────────────────────────────────────────────────────────
+  console.log('\n13b. Accents, rolls and swing');
+  ev = await page.evaluate(() => {
+    Project.reset(); Project.setMode('pattern');
+    const h = window.__track('Hi-hat');
+    const p = new Array(16).fill(false); p[0] = 3; p[2] = 1; p[4] = 32; p[8] = 42; p[12] = 2;
+    Project.setPatternSteps(h.id, 0, p);
+    return window.__events(false, 1).filter(e => e.role === 'hat');
+  });
+  ok('an accent is louder than a normal hit, a ghost note softer',
+     ev.find(e => Math.abs(e.t) < 1e-9).vel > ev.find(e => Math.abs(e.t - 1.2) < 1e-9).vel &&
+     ev.find(e => Math.abs(e.t - 0.2) < 1e-9).vel < 1, JSON.stringify(ev.slice(0, 3).map(e => e.vel)));
+  const rollTimes = (from) => ev.filter(e => e.t >= from - 1e-9 && e.t < from + 0.1 - 1e-9).map(e => +e.t.toFixed(4));
+  ok('a ×3 roll plays three hits inside its sixteenth', rollTimes(0.4).join() === '0.4,0.4333,0.4667', rollTimes(0.4).join());
+  ok('a ×4 roll plays four', rollTimes(0.8).length === 4);
+  ev = await page.evaluate(() => {
+    const h = window.__track('Hi-hat');
+    const p = new Array(16).fill(false); p[0] = 2; p[1] = 2; p[2] = 2; p[3] = 2;
+    Project.setPatternSteps(h.id, 0, p);
+    Project.setSwing(0.3);
+    const r = window.__events(false, 1).filter(e => e.role === 'hat').map(e => +e.t.toFixed(4));
+    Project.setSwing(0);
+    return r;
+  });
+  ok('swing pushes every second sixteenth late (30% → 0.03s at 0.1s steps)', ev.join() === '0,0.13,0.2,0.33', ev.join());
+  await page.evaluate(() => App.select(window.__track('Hi-hat').id));
+  await page.waitForTimeout(80);
+  await page.click('.dbrush:has-text("Roll ×3")');
+  await page.click(`.drow[data-id="${await page.evaluate(() => window.__track('Hi-hat').id)}"] .dcell[data-step="7"]`);
+  ok('the Roll ×3 brush places a triplet roll, shown as ×3',
+     await page.evaluate(() => { const t = window.__track('Hi-hat'); return Project.stepInfo(Project.pattern(t.id, t.edit)[7]).roll === 3 &&
+       document.querySelector(`.drow[data-id="${t.id}"] .dcell[data-step="7"]`).textContent === '×3'; }));
+  await page.click('.dbrush:has-text("Hit")');
+
+  // ────────────────────────────────────────────────────────────────
+  console.log('\n13c. Undo and redo');
+  await page.evaluate(() => { Mixer.setVolume(window.__track('Kick').id, 0.5); App.select(window.__track('Kick').id); });
+  await page.waitForTimeout(400);
+  await page.click(`.drow[data-id="${await page.evaluate(() => window.__track('Kick').id)}"] .dcell[data-step="5"]`);
+  await page.waitForTimeout(400);
+  ok('step placed', await page.evaluate(() => !!Project.pattern(window.__track('Kick').id, 0)[5]));
+  await page.keyboard.press('Control+z');
+  await page.waitForTimeout(100);
+  ok('Ctrl+Z takes it back', await page.evaluate(() => !Project.pattern(window.__track('Kick').id, 0)[5]));
+  ok('…without touching the mixer', await page.evaluate(() => Math.abs(Mixer.get(window.__track('Kick').id).volume - 0.5) < 1e-6));
+  await page.keyboard.press('Control+Shift+z');
+  await page.waitForTimeout(100);
+  ok('Ctrl+Shift+Z puts it back', await page.evaluate(() => !!Project.pattern(window.__track('Kick').id, 0)[5]));
+  await page.evaluate(() => { Project.removeTrack(window.__track('Clap').id); });
+  await page.waitForTimeout(400);
+  await page.click('#undoBtn');
+  await page.waitForTimeout(100);
+  ok('undo brings back a deleted track, with its mixer strip', await page.evaluate(() => !!window.__track('Clap') && !!Mixer.get(window.__track('Clap').id)));
+
+  // ────────────────────────────────────────────────────────────────
+  console.log('\n13d. Key highlight and chord helper');
+  await page.evaluate(() => { Project.setKey({ root: 0, scale: 'minor' }); App.select(window.__track('Keys').id); Project.setLive(window.__track('Keys').id, 3); Project.clearPattern(window.__track('Keys').id, 3); });
+  await page.waitForTimeout(100);
+  ok('rows in C minor are lit, others dimmed', await page.evaluate(() =>
+    document.querySelectorAll('.rrow.inkey').length > 0 && document.querySelectorAll('.rrow.outkey').length > 0));
+  await page.click('.chordbtn');
+  const rowY = await page.evaluate(() => {
+    const rows = [...document.querySelectorAll('.rrow')];
+    const c = rows.find(r => r.querySelector('.rkey').title === 'C4');
+    c.scrollIntoView({ block: 'center' });
+    const lane = document.querySelector('.roll-lane').getBoundingClientRect();
+    const r = c.getBoundingClientRect();
+    return { x: lane.x + 5, y: r.y + r.height / 2 };
+  });
+  await page.mouse.click(rowY.x, rowY.y);
+  const chord = await page.evaluate(() => Project.pattern(window.__track('Keys').id, 3).map(n => n.m).sort((a, b) => a - b));
+  ok('with Chords on, clicking C4 in C minor places C–E♭–G', chord.join() === '60,63,67', chord.join());
+  await page.click('.chordbtn');
+
+  // ────────────────────────────────────────────────────────────────
+  console.log('\n13e. Pump and metronome');
+  const pumps = await page.evaluate(() => {
+    Project.setMode('pattern'); Project.setAllLive(0);
+    Project.setPump(window.__track('Keys').id, 0.6);
+    const ac = new OfflineAudioContext(1, 4410, 44100);
+    const calls = [];
+    const fake = { gain: { setTargetAtTime: (v, t) => calls.push([+v.toFixed(2), t]) } };
+    const p = Sequencer.createPlayer({ ac, out: () => ac.destination, duck: (id) => (id === window.__track('Keys').id ? fake : null) });
+    for (let s = 0; s < 16; s++) p.step({ time: s * 0.1, bar: 0, stepInBar: s, stepDur: 0.1, songMode: false });
+    return calls;
+  });
+  ok('every kick ducks a pumped track and lets it back up', pumps.length >= 6 && pumps.length % 2 === 0 && pumps.every((c, i) => c[0] === (i % 2 ? 1 : 0.4)), JSON.stringify(pumps));
+  const pumpedRender = await page.evaluate(async () => {
+    const r = await window.__bhsRender(1, { master: false });
+    return r.rendered.duration > 0;
+  });
+  ok('export renders with pump on', pumpedRender);
+  await page.evaluate(() => Project.setPump(window.__track('Keys').id, 0));
+
+  await page.evaluate(() => { window.__clicks = []; const o = Sequencer.click; Sequencer.click = (t, d) => { window.__clicks.push([t, d]); return o(t, d); }; });
+  await page.click('#clickBtn');
+  await page.click('#playBtn');
+  await page.waitForTimeout(1500);
+  await page.click('#playBtn');
+  await page.click('#clickBtn');
+  ok('Click plays the metronome on the beats, accent on the downbeat', await page.evaluate(() =>
+    window.__clicks.length >= 2 && window.__clicks[0][1] === true && window.__clicks.slice(1, 4).every(c => c[1] === false)), await page.evaluate(() => window.__clicks.length));
+  await page.evaluate(() => { window.__clicks = []; });
+  await page.selectOption('#recSource', 'keys');
+  await page.selectOption('#recBars', '1');
+  const nBefore = await page.evaluate(() => Project.tracks().length);
+  await page.click('#recBtn');
+  await page.waitForTimeout(100);
+  const ci = await page.evaluate(() => ({ clicks: window.__clicks.map(c => c[0]), playing: Transport.isPlaying, label: document.getElementById('recBtn').textContent }));
+  ok('recording from stop counts in one bar of clicks first', ci.clicks.length === 4 && /1 · 2/.test(ci.label), JSON.stringify(ci));
+  await page.waitForFunction((n) => Project.tracks().length > n, nBefore, { timeout: 25000 }).catch(() => {});
+  ok('…then the take starts on the downbeat and lasts one bar', await page.evaluate(() => {
+    const t = Project.tracks()[Project.tracks().length - 1];
+    const b = t.kind === 'audio' && Project.getAudio(t.audioId);
+    const st = Transport.getState();
+    return !!b && Math.abs(b.duration - st.secondsPerStep * 16) < 0.01;
+  }), await page.evaluate(() => { const t = Project.tracks()[Project.tracks().length - 1];
+    return t.name + ' | ' + document.getElementById('status').textContent + ' | rec=' + Recorder.getState(); }));
+  if (await page.evaluate(() => Transport.isPlaying)) await page.click('#playBtn');
+
+  // ────────────────────────────────────────────────────────────────
+  console.log('\n13f. Templates');
+  const tpl = await page.evaluate(async () => {
+    const out = {};
+    for (const t of Templates.list()) {
+      Project.restore(Templates.build(t.id));
+      Project.setMode('pattern');
+      const r = await window.__bhsRender(2, { master: false });
+      let rms = 0; const d = r.rendered.getChannelData(0); for (let i = 0; i < d.length; i++) rms += d[i] * d[i];
+      out[t.id] = { rms: +Math.sqrt(rms / d.length).toFixed(3), tracks: Project.tracks().length, secs: Project.sections().length, bpm: Project.bpm() };
+    }
+    return out;
+  });
+  ok('every template builds and makes sound (blank is silent)',
+     Object.entries(tpl).every(([id, v]) => id === 'blank' ? v.rms === 0 : v.rms > 0.01), JSON.stringify(tpl));
+  await page.evaluate(() => StartScreen.show(true));
+  await page.evaluate(() => { window.confirm = () => true; });
+  await page.click('.ss-tpl[data-id="trap"]');
+  await page.waitForTimeout(150);
+  ok('choosing Trap on the start screen loads it in song mode with hi-hat rolls', await page.evaluate(() =>
+    !StartScreen.isOpen() && Project.bpm() === 140 && Project.mode() === 'song' &&
+    window.__track('Hi-hat').patterns[1].some(v => Project.stepInfo(v) && Project.stepInfo(v).roll > 1)));
+
+  // ────────────────────────────────────────────────────────────────
+  console.log('\n13g. Autosave — close the tab, come back, carry on');
+  await page.setInputFiles('#audioUpload', path.join(os.tmpdir(), 'bhs-sine.wav'));
+  await page.waitForFunction(() => Project.tracks().some(t => t.name === 'bhs-sine'), null, { timeout: 5000 }).catch(() => {});
+  await page.evaluate(() => { Project.renameTrack(window.__track('Pluck').id, 'Lead line'); Project.setSwing(0.21); });
+  await page.waitForTimeout(1800);
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForTimeout(500);
+  ok('start screen offers "Continue where you left off"', await page.evaluate(() =>
+    StartScreen.isOpen() && !document.getElementById('ssContinue').hidden && /Continue/.test(document.getElementById('ssContinue').textContent)));
+  await page.click('#ssContinue');
+  await page.waitForTimeout(600);
+  await helpers();
+  ok('the song comes back exactly — renamed track, swing, template', await page.evaluate(() =>
+    !!window.__track('Lead line') && Math.abs(Project.swing() - 0.21) < 1e-9 && Project.bpm() === 140));
+  ok('…including the uploaded audio', await page.evaluate(() => { const t = window.__track('bhs-sine'); return !!t && !!Project.getAudio(t.audioId); }));
+
   console.log('\n14. Other pages, and browsers without MIDI');
   const p2 = await browser.newPage();
   const errs2 = [];

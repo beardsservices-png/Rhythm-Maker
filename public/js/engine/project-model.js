@@ -120,7 +120,7 @@ const Project = (() => {
       t.patterns = t.patterns.map(p => {
         if (t.kind === 'drum') {
           const out = new Array(newSteps).fill(false);
-          for (let i = 0; i < newSteps; i++) out[i] = !!p[i % oldSteps];
+          for (let i = 0; i < newSteps; i++) out[i] = p[i % oldSteps] || false;
           return out;
         }
         const out = [];
@@ -186,7 +186,8 @@ const Project = (() => {
     const t = track(id); if (!t || t.kind !== 'drum') return;
     const n = t.bars * STEPS_PER_BAR;
     const out = new Array(n).fill(false);
-    for (let i = 0; i < n; i++) out[i] = !!steps[i % Math.max(1, steps.length)];
+    const keep = (x) => (typeof x === 'number' ? (x > 0 ? x : false) : !!x);   // levels and rolls survive
+    for (let i = 0; i < n; i++) out[i] = keep(steps[i % Math.max(1, steps.length)]);
     t.patterns[v] = out;
     emit('pattern', { track: id });
   }
@@ -413,12 +414,52 @@ const Project = (() => {
     return { v, phase: loc.barIn, section: s, sectionIndex: loc.index };
   }
 
+  // ── drum steps: off, soft, normal, accent, and rolls ───────────────
+  //
+  // A drum step is false/0 (off), true (a normal hit — what every project
+  // before accents stored), or a number: the ones digit is the level
+  // (1 soft, 2 normal, 3 accent) and the tens digit is a roll (2, 3 or 4
+  // hits squeezed into the sixteenth — the trap hi-hat roll). So 32 is a
+  // normal-level triplet roll, 3 a plain accent.
+  const LEVEL_VEL = [0, 0.5, 1, 1.3];
+  function stepInfo(v) {
+    if (!v) return null;
+    if (v === true) return { level: 2, vel: 1, roll: 1 };
+    const level = Math.max(1, Math.min(3, v % 10 || 2));
+    const roll = Math.max(1, Math.min(4, Math.floor(v / 10) || 1));
+    return { level, vel: LEVEL_VEL[level], roll };
+  }
+  function stepCode(level, roll) {
+    return (roll > 1 ? roll * 10 : 0) + (level || 2);
+  }
+
   // ── global ─────────────────────────────────────────────────────────
   function setMode(mode) {
     state.mode = mode === 'song' ? 'song' : 'pattern';
     emit('mode');
   }
   function mode() { return state.mode; }
+
+  /** Swing: how far every second sixteenth is pushed late (0 straight – 0.6 heavy shuffle). */
+  function setSwing(v) {
+    state.swing = Math.max(0, Math.min(0.6, Number(v) || 0));
+    emit('swing');
+  }
+  function swing() { return state.swing || 0; }
+
+  /** The song's key, for the piano roll's highlighting and chord helper. null = off. */
+  function setKey(k) {
+    state.key = k && k.scale ? { root: ((k.root | 0) % 12 + 12) % 12, scale: k.scale === 'major' ? 'major' : 'minor' } : null;
+    emit('key');
+  }
+  function key() { return state.key || null; }
+
+  /** Pump: how much this track ducks every time a kick plays (sidechain). */
+  function setPump(id, amount) {
+    const t = track(id); if (!t) return;
+    t.pump = Math.max(0, Math.min(0.9, Number(amount) || 0));
+    emit('pump', { track: id });
+  }
 
   function setBpm(bpm) {
     state.bpm = Math.max(40, Math.min(220, Math.round(bpm)));
@@ -528,8 +569,14 @@ const Project = (() => {
     if (d.song && d.song.enabled) state.mode = 'song';
   }
 
-  function restore(d) {
-    audio.clear();
+  /**
+   * Load a project. opts.keep (undo, autosave) keeps the audio clips and
+   * announces the change as ordinary edits rather than a new song, so the
+   * mixer strips and their faders stay put.
+   */
+  function restore(d, opts) {
+    const keep = opts && opts.keep;
+    if (!keep) audio.clear();
     if (!d || !d.version || d.version < 3) migrateV2(d || {});
     else {
       state = clone(d);
@@ -546,7 +593,8 @@ const Project = (() => {
       if (!state.sections.length) state.sections.push(makeSection('Section 1', 4, null));
     }
     if (typeof Transport !== 'undefined') Transport.setBpm(state.bpm);
-    emit('load');
+    if (keep) ['tracks', 'sections', 'mode', 'bpm', 'swing', 'key', 'pattern'].forEach(r => emit(r));
+    else emit('load');
   }
 
   function reset() {
@@ -567,7 +615,8 @@ const Project = (() => {
     sections, section, addSection, duplicateSection, removeSection, moveSection, renameSection,
     setSectionBars, setCell, setSectionTrack, replaceSections, toggleBarMute, toggleSolo, mainLetter,
     songBars, sectionStart, locate, songStateAt,
-    setMode, mode, setBpm, bpm,
+    setMode, mode, setBpm, bpm, setSwing, swing, setKey, key, setPump,
+    stepInfo, stepCode,
     setAudio, getAudio, newAudioId,
     serialize, restore, reset
   };

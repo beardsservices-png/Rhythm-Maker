@@ -65,6 +65,19 @@
         el.appendChild(row);
       });
 
+      // Pump: duck this track on every kick — the sidechain "breathing" sound.
+      const pr = document.createElement('div');
+      pr.className = 'sendrow pumprow';
+      const pl = document.createElement('span');
+      pl.textContent = 'pump';
+      const ps = document.createElement('input');
+      ps.type = 'range'; ps.min = '0'; ps.max = '0.9'; ps.step = '0.05';
+      ps.dataset.role = 'pump';
+      ps.title = 'Duck this track every time a kick hits (sidechain pump)';
+      ps.addEventListener('input', () => Project.setPump(t.id, parseFloat(ps.value)));
+      pr.appendChild(pl); pr.appendChild(ps);
+      el.appendChild(pr);
+
       const btns = document.createElement('div');
       btns.className = 'stripbtns';
       const m = document.createElement('button');
@@ -89,6 +102,8 @@
         if (i && document.activeElement !== i) i.value = String(v);
       };
       set('vol', t.volume); set('pan', t.pan); set('reverb', t.reverb); set('delay', t.delay);
+      const pt = Project.track(t.id);
+      set('pump', pt && pt.pump ? pt.pump : 0);
       el.querySelector('[data-role="pct"]').textContent = Math.round(t.volume * 100) + '%';
       el.querySelector('[data-role="m"]').className = t.muted ? 'on-mute' : '';
       el.querySelector('[data-role="s"]').className = t.soloed ? 'on-solo' : '';
@@ -109,6 +124,7 @@
   document.getElementById('clearSolo').addEventListener('click', () => Mixer.clearSolo());
 
   Mixer.onChange(render);
+  Project.on((r) => { if (r === 'pump' || r === 'load' || r === 'tracks') update(Mixer.snapshot()); });
   render(Mixer.snapshot());
 
   window.addEventListener('bhs:mixer-restored', () => {

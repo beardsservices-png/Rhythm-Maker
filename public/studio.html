@@ -17,7 +17,10 @@
   <input type="text" id="projName" class="tb-name" placeholder="Untitled track" autocomplete="off" aria-label="Track name">
 
   <div class="tb-group tb-transport">
+    <button id="undoBtn" class="tb-icon" title="Undo (Ctrl+Z)" disabled>&#8630;</button>
+    <button id="redoBtn" class="tb-icon" title="Redo (Ctrl+Shift+Z)" disabled>&#8631;</button>
     <button id="playBtn" class="tb-play" title="Play / stop (Space)">&#9654; Play</button>
+    <button id="clickBtn" class="tb-icon" title="Metronome click while playing (recording from stop always counts in one bar)" aria-pressed="false">Click</button>
     <button id="recBtn" class="tb-rec" title="Record a take — becomes a new track">&#9679; Rec</button>
     <select id="recSource" class="tb-sel" title="What Rec records" aria-label="Record source">
       <option value="keys">my playing</option>
@@ -140,7 +143,7 @@
 <div class="pop" id="openMenu" hidden>
   <div class="pop-title">Open a saved track</div>
   <div id="projList" class="poplist"></div>
-  <button id="newProjBtn">Start a new track</button>
+  <button id="newProjBtn">New from a template…</button>
   <p class="hint">Saved on the server, so it's there on your phone too. &times; deletes.</p>
 </div>
 <div class="pop" id="exportMenu" hidden>
@@ -197,6 +200,22 @@
 
 <input type="file" id="audioUpload" accept="audio/*" multiple hidden>
 
+<!-- ── start screen ── -->
+<div class="startscreen" id="startScreen" hidden>
+  <div class="ss-card" role="dialog" aria-labelledby="ssTitle">
+    <button class="ss-close" id="ssClose" title="Close (Esc)">&times;</button>
+    <div class="ss-head">
+      <h1 id="ssTitle">BHS Studio</h1>
+      <p class="ss-tag">Make the beat. Lay out the song. Press record.</p>
+    </div>
+    <button id="ssContinue" class="primary ss-continue" hidden></button>
+    <h3>Start from a template</h3>
+    <div class="ss-grid" id="ssTemplates"></div>
+    <h3>Your saved tracks</h3>
+    <div class="ss-saved" id="ssSaved"></div>
+  </div>
+</div>
+
 <script src="js/engine/synth-808.js"></script>
 <script src="js/engine/transport.js"></script>
 <script src="js/engine/effects.js"></script>
@@ -209,6 +228,7 @@
 <script src="js/engine/project-model.js"></script>
 <script src="js/engine/sequencer.js"></script>
 <script src="js/engine/recorder.js"></script>
+<script src="js/engine/templates.js"></script>
 <script src="js/studio-app.js"></script>
 <script src="js/studio-arrange.js"></script>
 <script src="js/studio-editor.js"></script>
@@ -220,5 +240,7 @@
 <script src="js/studio-project.js"></script>
 <script src="js/studio-export.js"></script>
 <script src="js/studio-claude.js"></script>
+<script src="js/studio-history.js"></script>
+<script src="js/studio-start.js"></script>
 </body>
 </html>

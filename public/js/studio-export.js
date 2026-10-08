@@ -45,19 +45,22 @@
     function stripFor(id) {
       if (strips.has(id)) return strips.get(id);
       const m = Mixer.get(id);
+      const duck = oac.createGain();
       const g = oac.createGain();
+      duck.connect(g);
       g.gain.value = m ? m.volume : 0.85;
       const pan = oac.createStereoPanner ? oac.createStereoPanner() : null;
       if (pan) { pan.pan.value = m ? m.pan : 0; g.connect(pan).connect(bus); } else g.connect(bus);
       if (m && m.reverb > 0) { const s = oac.createGain(); s.gain.value = m.reverb; g.connect(s).connect(fx.reverbIn); }
       if (m && m.delay > 0) { const s = oac.createGain(); s.gain.value = m.delay; g.connect(s).connect(fx.delayIn); }
-      strips.set(id, g);
-      return g;
+      strips.set(id, duck);
+      return duck;
     }
 
     const player = Sequencer.createPlayer({
       ac: oac,
       out: stripFor,
+      duck: stripFor,
       audible: (id) => !Mixer.get(id) || Mixer.isAudible(id)
     });
     for (let s = 0; s < totalSteps; s++) {

@@ -28,6 +28,12 @@
       || null;
   }
 
+  /** ". x X o 2 3 4" → step values (see Project.stepInfo). */
+  function parsePattern(str) {
+    return String(str || '').replace(/\s+/g, '').split('').map(c =>
+      c === 'x' ? 2 : c === 'X' ? 3 : c === 'o' ? 1 : (c >= '2' && c <= '4') ? (+c) * 10 + 2 : false);
+  }
+
   function say(who, text, cls) {
     const el = document.createElement('div');
     el.className = 'cmsg ' + who + (cls ? ' ' + cls : '');
@@ -49,7 +55,9 @@
     set_drum_pattern(a) {
       const t = findTrack(a.track);
       if (!t || t.kind !== 'drum') return null;
-      Project.setPatternSteps(t.id, varIndex(a.variation), (a.steps || []).map(Boolean));
+      const steps = typeof a.pattern === 'string' ? parsePattern(a.pattern) : (a.steps || []).map(Boolean);
+      if (!steps.length) return null;
+      Project.setPatternSteps(t.id, varIndex(a.variation), steps);
       return `${t.name} ${a.variation}`;
     },
     set_notes(a) {
@@ -129,6 +137,21 @@
       if (!k) return null;
       Project.setParam(t.id, k.id, clamp(a.value, k.min, k.max));
       return `${t.name} ${k.label.toLowerCase()}`;
+    },
+    set_swing(a) {
+      Project.setSwing(clamp(a.amount, 0, 0.6));
+      return `swing ${Math.round(Project.swing() * 100)}%`;
+    },
+    set_key(a) {
+      if (a.scale === 'none') { Project.setKey(null); return 'key cleared'; }
+      Project.setKey({ root: clamp(a.root | 0, 0, 11), scale: a.scale });
+      return 'key set';
+    },
+    set_pump(a) {
+      const t = findTrack(a.track);
+      if (!t) return null;
+      Project.setPump(t.id, clamp(a.amount, 0, 0.9));
+      return `${t.name} pump`;
     },
     mute_track(a) {
       const t = findTrack(a.track);

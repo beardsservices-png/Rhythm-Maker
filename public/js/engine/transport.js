@@ -151,13 +151,14 @@ const Transport = (() => {
   }
 
   // ── controls ───────────────────────────────────────────────────────
-  function play() {
+  /** @param at optional audio-clock start time — how a count-in lands the downbeat exactly. */
+  function play(at) {
     if (playing) return;
     const ac = getContext();
     if (!ac) return;
     playing = true;
     currentStep = startStep;
-    nextStepTime = ac.currentTime + 0.06;
+    nextStepTime = Math.max(ac.currentTime + 0.02, at == null ? ac.currentTime + 0.06 : at);
     visualQueue = [];
     timerId = setInterval(scheduleAhead, TICK_MS);
     if (!rafId) rafId = requestAnimationFrame(visualTick);
