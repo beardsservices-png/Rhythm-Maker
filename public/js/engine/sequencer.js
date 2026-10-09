@@ -35,13 +35,22 @@ const Sequencer = (() => {
     const poly = [];             // { h, end(time) }
     const sources = new Set();
 
+    /** A hit or note set left/right by hand goes through its own panner. */
+    function panned(dest, pan) {
+      if (!pan || !ac.createStereoPanner) return dest;
+      const p = ac.createStereoPanner();
+      p.pan.value = pan;
+      p.connect(dest);
+      return p;
+    }
+
     function stateFor(t, ev) {
       if (ev.songMode) return Project.songStateAt(t, ev.bar);
       return { v: t.live, phase: ev.bar };
     }
 
     function playAudioBar(t, st, ev) {
-      const buf = Project.getAudio(t.audioId);
+      const buf = Project.playbackAudio(t);
       if (!buf) return;
       const barSec = SPB * ev.stepDur;
       const into = ev.stepInBar * ev.stepDur;
@@ -72,7 +81,7 @@ const Sequencer = (() => {
           cur.end = abs + n.l;
         } else {
           if (cur && !cur.h.stopped) cur.h.release(ev.time);
-          const h = Instruments.noteOn(ac, out, t.instrument, n.m, vel, ev.time, t.params);
+          const h = Instruments.noteOn(ac, panned(out, n.pan), t.instrument, n.m, vel, ev.time, t.params);
           if (h) mono.set(t.id, { h, end: abs + n.l });
           if (target.onHit) target.onHit(t.id, ev.time);
         }
@@ -80,7 +89,7 @@ const Sequencer = (() => {
       }
       for (const n of pat) {
         if (n.s !== idx) continue;
-        const h = Instruments.noteOn(ac, out, t.instrument, n.m, n.vel == null ? 0.85 : n.vel, ev.time, t.params);
+        const h = Instruments.noteOn(ac, panned(out, n.pan), t.instrument, n.m, n.vel == null ? 0.85 : n.vel, ev.time, t.params);
         if (!h) continue;
         if (target.onHit) target.onHit(t.id, ev.time);
         // ev.time is already swung; a note ending on an off-beat ends swung too.
@@ -131,8 +140,9 @@ const Sequencer = (() => {
             const t0 = ev.time + swingOf(ev, ev.stepInBar);
             // A roll squeezes 2–4 hits into the sixteenth; the follow-ups a
             // touch softer so it rolls rather than machine-guns.
+            const dest = panned(target.out(t.id), info.pan);
             for (let k = 0; k < info.roll; k++) {
-              DrumKits.hit(ac, target.out(t.id), t.sound, t0 + k * ev.stepDur / info.roll, info.vel * (k ? 0.8 : 1));
+              DrumKits.hit(ac, dest, t.sound, t0 + k * ev.stepDur / info.roll, info.vel * (k ? 0.8 : 1));
             }
             if (target.onHit) target.onHit(t.id, t0);
             if (t.sound.role === 'kick') pump(t0);
@@ -187,6 +197,8 @@ const Sequencer = (() => {
       } else {
         Mixer.setLabel(t.id, t.name);
       }
+      const ch = t.character || {};
+      Mixer.setCharacter(t.id, ch.id || 'none', ch.amount);
     });
     Mixer.ids().forEach(id => {
       if (!ids.has(id)) {
@@ -270,11 +282,14 @@ const Sequencer = (() => {
         liveIns.forEach(g => g.disconnect());
         liveIns.clear();
       }
-      if (reason === 'tracks' || reason === 'load') syncMixer();
+      if (reason === 'tracks' || reason === 'load' || reason === 'character') syncMixer();
+      // Fetch any recorded instruments and drums the song now uses.
+      if (['tracks', 'load', 'sound'].includes(reason) && typeof Samples !== 'undefined') Samples.preloadFor(Project.tracks());
       if (reason === 'mode' || reason === 'sections' || reason === 'load') syncLoop();
     });
     syncLoop();
     Transport.setBpm(Project.bpm());
+    if (typeof Samples !== 'undefined') Samples.preloadFor(Project.tracks());
     return ctx;
   }
 

@@ -28,6 +28,7 @@ const Project = (() => {
 
   let state = null;
   const audio = new Map();      // audioId -> AudioBuffer (never serialised)
+  const processed = new Map();  // trackId -> pitch-corrected copy of its take (rebuilt, never saved)
   const listeners = new Set();
 
   function emit(reason, detail) {
@@ -36,6 +37,7 @@ const Project = (() => {
   function on(fn) { listeners.add(fn); return () => listeners.delete(fn); }
 
   const clone = (x) => JSON.parse(JSON.stringify(x));
+  const clamp = (x, a, b) => Math.max(a, Math.min(b, Number(x) || 0));
   function newId() { return 't' + (state.nextId++); }
 
   function blankPattern(kind, bars) {
@@ -178,7 +180,8 @@ const Project = (() => {
     const max = t.bars * STEPS_PER_BAR;
     t.patterns[v] = notes
       .filter(n => n && n.s >= 0 && n.s < max)
-      .map(n => ({ s: n.s | 0, m: n.m | 0, l: Math.max(1, Math.min(max - n.s, n.l | 0 || 1)), sl: !!n.sl, vel: n.vel == null ? undefined : n.vel }));
+      .map(n => ({ s: n.s | 0, m: n.m | 0, l: Math.max(1, Math.min(max - n.s, n.l | 0 || 1)), sl: !!n.sl,
+                   vel: n.vel == null ? undefined : clamp(n.vel, 0.05, 1), pan: n.pan ? clamp(n.pan, -1, 1) : undefined }));
     emit('pattern', { track: id });
   }
 
@@ -186,7 +189,8 @@ const Project = (() => {
     const t = track(id); if (!t || t.kind !== 'drum') return;
     const n = t.bars * STEPS_PER_BAR;
     const out = new Array(n).fill(false);
-    const keep = (x) => (typeof x === 'number' ? (x > 0 ? x : false) : !!x);   // levels and rolls survive
+    // levels, rolls, and per-hit volume/pan survive
+    const keep = (x) => (x && typeof x === 'object' ? (x.c > 0 ? x : false) : typeof x === 'number' ? (x > 0 ? x : false) : !!x);
     for (let i = 0; i < n; i++) out[i] = keep(steps[i % Math.max(1, steps.length)]);
     t.patterns[v] = out;
     emit('pattern', { track: id });
@@ -477,16 +481,57 @@ const Project = (() => {
   // (1 soft, 2 normal, 3 accent) and the tens digit is a roll (2, 3 or 4
   // hits squeezed into the sixteenth — the trap hi-hat roll). So 32 is a
   // normal-level triplet roll, 3 a plain accent.
+  //
+  // A hit whose volume or left/right has been set by hand is an object
+  // { c: code, v: volume 0.05–1.3, p: pan −1…1 } — the code still carries
+  // the roll, the v replaces the level's volume.
   const LEVEL_VEL = [0, 0.5, 1, 1.3];
   function stepInfo(v) {
     if (!v) return null;
-    if (v === true) return { level: 2, vel: 1, roll: 1 };
+    if (v === true) return { level: 2, vel: 1, roll: 1, pan: 0 };
+    if (typeof v === 'object') {
+      const base = stepInfo(v.c || 2);
+      if (!base) return null;
+      if (v.v != null) {
+        base.vel = clamp(v.v, 0.05, 1.3);
+        base.level = base.vel < 0.75 ? 1 : base.vel < 1.15 ? 2 : 3;
+      }
+      base.pan = v.p ? clamp(v.p, -1, 1) : 0;
+      return base;
+    }
     const level = Math.max(1, Math.min(3, v % 10 || 2));
     const roll = Math.max(1, Math.min(4, Math.floor(v / 10) || 1));
-    return { level, vel: LEVEL_VEL[level], roll };
+    return { level, vel: LEVEL_VEL[level], roll, pan: 0 };
   }
   function stepCode(level, roll) {
     return (roll > 1 ? roll * 10 : 0) + (level || 2);
+  }
+  /** The plain code of a step (what kind of hit), ignoring hand-set volume/pan. */
+  function codeOf(v) {
+    if (!v) return 0;
+    if (v === true) return 2;
+    return typeof v === 'object' ? (v.c || 2) : v;
+  }
+  /** Set one hit's volume and/or left-right. Steps that are off stay off. */
+  function setStepMix(id, v, i, mix) {
+    const t = track(id); if (!t || t.kind !== 'drum') return;
+    const p = t.patterns[v];
+    const cur = p && p[i];
+    if (!cur) return;
+    const o = typeof cur === 'object' ? Object.assign({}, cur) : { c: codeOf(cur) };
+    if (mix.vel !== undefined) { if (mix.vel == null) delete o.v; else o.v = +clamp(mix.vel, 0.05, 1.3).toFixed(3); }
+    if (mix.pan !== undefined) { if (!mix.pan) delete o.p; else o.p = +clamp(mix.pan, -1, 1).toFixed(3); }
+    p[i] = (o.v == null && o.p == null) ? o.c : o;
+    emit('pattern', { track: id, mixOnly: true });
+  }
+  /** Set a note's volume and/or left-right (notes are matched by start + pitch). */
+  function setNoteMix(id, v, s, m, mix) {
+    const t = track(id); if (!t || t.kind !== 'synth') return;
+    const n = (t.patterns[v] || []).find(x => x.s === s && x.m === m);
+    if (!n) return;
+    if (mix.vel !== undefined) { if (mix.vel == null) delete n.vel; else n.vel = +clamp(mix.vel, 0.05, 1).toFixed(3); }
+    if (mix.pan !== undefined) { if (!mix.pan) delete n.pan; else n.pan = +clamp(mix.pan, -1, 1).toFixed(3); }
+    emit('pattern', { track: id, mixOnly: true });
   }
 
   // ── global ─────────────────────────────────────────────────────────
@@ -510,6 +555,14 @@ const Project = (() => {
   }
   function key() { return state.key || null; }
 
+  /** Character: a one-knob tone flavour for the track (character.js). */
+  function setCharacter(id, preset, amount) {
+    const t = track(id); if (!t) return;
+    if (!preset || preset === 'none') delete t.character;
+    else t.character = { id: preset, amount: clamp(amount == null ? 0.6 : amount, 0, 1) };
+    emit('character', { track: id });
+  }
+
   /** Pump: how much this track ducks every time a kick plays (sidechain). */
   function setPump(id, amount) {
     const t = track(id); if (!t) return;
@@ -525,6 +578,17 @@ const Project = (() => {
   function bpm() { return state.bpm; }
 
   function setAudio(id, buffer) { audio.set(id, buffer); emit('audio', { id }); }
+  /** Pitch correction for an audio track: 'natural', 'hard', or off. */
+  function setTune(id, mode) {
+    const t = track(id); if (!t || t.kind !== 'audio') return;
+    if (mode === 'natural' || mode === 'hard') t.tune = mode; else delete t.tune;
+    processed.delete(id);
+    emit('tune', { track: id });
+  }
+  function setProcessed(trackId, buffer) { processed.set(trackId, buffer); emit('audio', { track: trackId, processed: true }); }
+  function hasProcessed(trackId) { return processed.has(trackId); }
+  /** What an audio track actually plays: its tuned copy when Tune is on and ready. */
+  function playbackAudio(t) { return (t.tune && processed.get(t.id)) || audio.get(t.audioId) || null; }
   function getAudio(id) { return audio.get(id) || null; }
   function newAudioId() { return state.nextAudioId++; }
 
@@ -632,7 +696,7 @@ const Project = (() => {
    */
   function restore(d, opts) {
     const keep = opts && opts.keep;
-    if (!keep) audio.clear();
+    if (!keep) { audio.clear(); processed.clear(); }
     if (!d || !d.version || d.version < 3) migrateV2(d || {});
     else {
       state = clone(d);
@@ -655,6 +719,7 @@ const Project = (() => {
 
   function reset() {
     audio.clear();
+    processed.clear();
     demo();
     if (typeof Transport !== 'undefined') Transport.setBpm(state.bpm);
     emit('load');
@@ -671,9 +736,9 @@ const Project = (() => {
     sections, section, addSection, duplicateSection, removeSection, moveSection, renameSection,
     setSectionBars, setCell, setSectionTrack, replaceSections, toggleBarMute, toggleSolo, mainLetter,
     songBars, sectionStart, locate, songStateAt, cellAt, setCells, runs, extendTo,
-    setMode, mode, setBpm, bpm, setSwing, swing, setKey, key, setPump,
-    stepInfo, stepCode,
-    setAudio, getAudio, newAudioId,
+    setMode, mode, setBpm, bpm, setSwing, swing, setKey, key, setPump, setCharacter,
+    stepInfo, stepCode, codeOf, setStepMix, setNoteMix,
+    setAudio, getAudio, newAudioId, setTune, setProcessed, hasProcessed, playbackAudio,
     serialize, restore, reset
   };
 })();

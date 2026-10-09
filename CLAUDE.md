@@ -48,6 +48,26 @@ and **BHS Studio** (`public/studio.html`). See `README.md` for the file map.
   grows the song). Clicking a block selects that track AND that pattern letter.
 - **What's sounding:** the sequencer calls `onHit(trackId)` on every hit; the
   timeline LED, the drum-lane names and the pads light from `Sequencer.onHit`.
+- **Recorded instruments** (`engine/samples.js`, files in `public/samples/`, map in
+  the GENERATED `sample-manifest.js`): presets with `sampled: true` in
+  `instruments.js` and kits with `recorded: true` in `drumkits.js`. Lazy-loaded;
+  until a file arrives the synth `fallback` plays. Export awaits
+  `Samples.preloadFor()`. To change the set, edit and run `tools/build-samples.js`
+  (pitch-checks every file; some libraries name octaves differently) and bump the
+  cache name in `sw.js` (samples are cache-first). Credits/licences are in the
+  manifest and the manual — the Rhodes and upright bass are BY-NC samples (music
+  made with them is free); swap them if the app is ever sold.
+- **Per-hit / per-note mix:** a drum step may be `{c, v, p}` (code, volume, pan) —
+  set via `Project.setStepMix`, notes carry `vel`/`pan` via `Project.setNoteMix`.
+  The sequencer puts a StereoPanner per hit only when pan ≠ 0.
+- **Character** (`engine/character.js`): `track.character = {id, amount}`; the mixer
+  strip inserts the chain between duck and fader, export builds the same chain.
+  Amount 0 must stay transparent.
+- **Tune** (`engine/tune.js`, glue in `studio-voice.js`): `track.tune` on audio
+  tracks; the tuned copy lives in memory only (`Project.playbackAudio`), rebuilt
+  from the untouched original when tune/key/audio change.
+- **Tour** (`studio-tour.js`): steps point at real elements by selector and advance
+  on Project/App/Transport events — if you rename an id or class it uses, update it.
 - **Mastering** (`engine/master.js`): styles clean / deep (default) / loud, then a
   lookahead limiter to −1 dBFS. Export has a "Hear it first" preview.
 - **User manual** `public/manual.html`; its pictures and callout boxes come from

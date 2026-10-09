@@ -23,6 +23,9 @@
   }
 
   async function render(requestedBars, opts = {}) {
+    // Every recorded instrument and drum the song uses must be in before the
+    // render starts, or the file would get the synth stand-ins.
+    if (typeof Samples !== 'undefined') await Samples.preloadFor(Project.tracks());
     const songMode = Project.mode() === 'song';
     const totalBars = songMode ? Project.songBars() : requestedBars;
     const live = Sequencer.init();
@@ -47,7 +50,10 @@
       const m = Mixer.get(id);
       const duck = oac.createGain();
       const g = oac.createGain();
-      duck.connect(g);
+      // the track's Character, built from the same numbers as the live strip
+      const pt = Project.track(id);
+      const ch = pt && pt.character && typeof Character !== 'undefined' ? Character.build(oac, pt.character.id, pt.character.amount) : null;
+      if (ch) { duck.connect(ch.input); ch.output.connect(g); } else duck.connect(g);
       g.gain.value = m ? m.volume : 0.85;
       const pan = oac.createStereoPanner ? oac.createStereoPanner() : null;
       if (pan) { pan.pan.value = m ? m.pan : 0; g.connect(pan).connect(bus); } else g.connect(bus);

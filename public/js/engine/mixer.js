@@ -97,7 +97,8 @@ const Mixer = (() => {
       volume: opts.volume == null ? 0.85 : opts.volume,
       pan: 0, muted: false, soloed: false,
       reverb: opts.reverb || 0, delay: opts.delay || 0,
-      gain, duck, panner: pan, revSend, delSend
+      gain, duck, panner: pan, revSend, delSend,
+      chain: null, charId: 'none', charAmt: 0
     };
     gain.gain.value = t.volume;
     tracks.set(id, t);
@@ -113,9 +114,33 @@ const Mixer = (() => {
     const t = tracks.get(id);
     if (!t) return;
     [t.duck, t.gain, t.panner, t.revSend, t.delSend].forEach(n => { if (n) n.disconnect(); });
+    if (t.chain) t.chain.dispose();
     tracks.delete(id);
     applyGains();
     emit();
+  }
+
+  /**
+   * The track's Character (character.js) between the pump and the fader.
+   * Changing only the amount retunes the chain in place; a different flavour
+   * rebuilds it.
+   */
+  function setCharacter(id, preset, amount) {
+    const t = tracks.get(id);
+    if (!t || typeof Character === 'undefined') return;
+    const pid = preset || 'none';
+    const amt = amount == null ? 0.6 : amount;
+    if (pid === t.charId) {
+      if (t.chain && amt !== t.charAmt) t.chain.set(amt);
+      t.charAmt = amt;
+      return;
+    }
+    t.duck.disconnect();
+    if (t.chain) t.chain.dispose();
+    t.chain = Character.build(ctx, pid, amt);
+    if (t.chain) { t.duck.connect(t.chain.input); t.chain.output.connect(t.gain); }
+    else t.duck.connect(t.gain);
+    t.charId = pid; t.charAmt = amt;
   }
 
   function setLabel(id, label) {
@@ -244,7 +269,7 @@ const Mixer = (() => {
   }
 
   return {
-    init, addTrack, removeTrack, setLabel, setOrder, input, masterNode,
+    init, addTrack, removeTrack, setLabel, setCharacter, setOrder, input, masterNode,
     setVolume, setPan, setSend, setMuted, setSoloed, clearSolo,
     setMasterVolume, getMasterVolume,
     isAudible, onChange, serialize, restore,

@@ -77,11 +77,11 @@ const Instruments = (() => {
 
   const PRESETS = [
     {
-      id: '808', label: '808 Bass', group: 'Bass', mono: true, slide: true, range: [24, 60],
+      id: '808', label: '808 Bass', group: 'Synth bass', mono: true, slide: true, range: [24, 60],
       knobs: KNOBS_808, defaults: null   // filled from Synth808.DEFAULTS
     },
     {
-      id: 'piano', label: 'Grand Piano', group: 'Keys', range: [36, 84],
+      id: 'piano', label: 'Synth Piano', group: 'Synth keys', range: [36, 84],
       knobs: [K.tone, K.release], defaults: { tone: 0.55, release: 0.35, gain: 0.5 },
       build(ac, t, f, p, vel) {
         // Partials sit slightly sharp of whole multiples (string stiffness) and
@@ -112,7 +112,7 @@ const Instruments = (() => {
       }
     },
     {
-      id: 'epiano', label: 'Electric Piano', group: 'Keys', range: [36, 84],
+      id: 'epiano', label: 'FM E-Piano', group: 'Synth keys', range: [36, 84],
       knobs: [K.tone, K.release, K.vibrato], defaults: { tone: 0.5, release: 0.4, vibrato: 0, gain: 0.55 },
       build(ac, t, f, p, vel) {
         const car = osc(ac, 'sine', f, t), mod = osc(ac, 'sine', f, t), idx = ac.createGain();
@@ -131,7 +131,7 @@ const Instruments = (() => {
       }
     },
     {
-      id: 'organ', label: 'Organ', group: 'Keys', range: [36, 84],
+      id: 'organ', label: 'Organ', group: 'Synth keys', range: [36, 84],
       knobs: [K.tone, K.vibrato, K.release], defaults: { tone: 0.55, vibrato: 0.35, release: 0.08, gain: 0.32 },
       build(ac, t, f, p) {
         const bars = [[0.5, 0.7], [1, 1], [1.5, 0.35], [2, 0.7], [3, 0.4 * p.tone], [4, 0.45 * p.tone], [6, 0.25 * p.tone], [8, 0.2 * p.tone]];
@@ -146,7 +146,7 @@ const Instruments = (() => {
       }
     },
     {
-      id: 'strings', label: 'Strings', group: 'Orchestral', range: [36, 88],
+      id: 'strings', label: 'Synth Strings', group: 'Synth orchestra', range: [36, 88],
       knobs: [K.tone, K.attack, K.release, K.vibrato], defaults: { tone: 0.5, attack: 0.28, release: 0.6, vibrato: 0.35, gain: 0.32 },
       build(ac, t, f, p) {
         const out = lowpass(ac, 900 + p.tone * 5500, 0.4), sources = [], freqs = [];
@@ -205,7 +205,7 @@ const Instruments = (() => {
       }
     },
     {
-      id: 'bell', label: 'Bell', group: 'Keys', range: [48, 96],
+      id: 'bell', label: 'Bell', group: 'Synth keys', range: [48, 96],
       knobs: [K.tone, K.release], defaults: { tone: 0.5, release: 1.2, gain: 0.35 },
       build(ac, t, f, p, vel) {
         const car = osc(ac, 'sine', f, t), mod = osc(ac, 'sine', f * 3.5, t), idx = gain(ac, 0);
@@ -217,7 +217,7 @@ const Instruments = (() => {
       }
     },
     {
-      id: 'synthbass', label: 'Synth Bass', group: 'Bass', range: [24, 60],
+      id: 'synthbass', label: 'Synth Bass', group: 'Synth bass', range: [24, 60],
       knobs: [K.tone, K.release, K.width], defaults: { tone: 0.4, release: 0.1, width: 0.2, gain: 0.32 },
       build(ac, t, f, p, vel) {
         const lp = lowpass(ac, 400, 6);
@@ -233,7 +233,7 @@ const Instruments = (() => {
       }
     },
     {
-      id: 'brass', label: 'Brass', group: 'Orchestral', range: [40, 84],
+      id: 'brass', label: 'Synth Brass', group: 'Synth orchestra', range: [40, 84],
       knobs: [K.tone, K.attack, K.release, K.vibrato], defaults: { tone: 0.55, attack: 0.05, release: 0.18, vibrato: 0.2, gain: 0.32 },
       build(ac, t, f, p) {
         const lp = lowpass(ac, f, 1.2);
@@ -247,7 +247,7 @@ const Instruments = (() => {
       }
     },
     {
-      id: 'flute', label: 'Flute', group: 'Orchestral', range: [60, 96],
+      id: 'flute', label: 'Synth Flute', group: 'Synth orchestra', range: [60, 96],
       knobs: [K.tone, K.attack, K.release, K.vibrato], defaults: { tone: 0.4, attack: 0.06, release: 0.12, vibrato: 0.45, gain: 0.45 },
       build(ac, t, f, p) {
         const out = gain(ac, 1);
@@ -264,6 +264,42 @@ const Instruments = (() => {
     }
   ];
 
+  // ── recorded instruments (samples.js) ──
+  // Real recordings, with a synth stand-in that plays until the files load.
+  // Listed first in every picker: they're what most songs should reach for.
+  const REC = (id, label, group, fallback, defaults, knobs) => ({
+    id, label, group, fallback, sampled: true, knobs: knobs || [K.tone, K.release], defaults
+  });
+  const SAMPLED = [
+    REC('real-piano', 'Grand Piano', 'Keys (recorded)', 'piano', { tone: 0.8, release: 0.5, gain: 0.75 }),
+    REC('real-epiano', 'Electric Piano (Rhodes)', 'Keys (recorded)', 'epiano', { tone: 0.7, release: 0.35, gain: 0.8 }),
+    REC('real-vibes', 'Vibraphone', 'Keys (recorded)', 'bell', { tone: 0.75, release: 0.8, gain: 0.7 }),
+    REC('real-marimba', 'Marimba', 'Keys (recorded)', 'pluck', { tone: 0.8, release: 0.3, gain: 0.75 }),
+    REC('real-kalimba', 'Kalimba', 'Keys (recorded)', 'pluck', { tone: 0.8, release: 0.4, gain: 0.75 }),
+    REC('real-strings', 'Strings', 'Strings (recorded)', 'strings', { tone: 0.7, attack: 0.12, release: 0.5, gain: 0.65 }, [K.tone, K.attack, K.release]),
+    REC('real-violin', 'Violin', 'Strings (recorded)', 'strings', { tone: 0.75, attack: 0.05, release: 0.35, gain: 0.65 }, [K.tone, K.attack, K.release]),
+    REC('real-cello', 'Cello', 'Strings (recorded)', 'strings', { tone: 0.7, attack: 0.06, release: 0.4, gain: 0.7 }, [K.tone, K.attack, K.release]),
+    REC('real-harp', 'Harp', 'Strings (recorded)', 'pluck', { tone: 0.8, release: 0.8, gain: 0.75 }),
+    REC('real-trumpet', 'Trumpet', 'Brass & wind (recorded)', 'brass', { tone: 0.75, attack: 0.02, release: 0.2, gain: 0.6 }, [K.tone, K.attack, K.release]),
+    REC('real-trombone', 'Trombone', 'Brass & wind (recorded)', 'brass', { tone: 0.75, attack: 0.02, release: 0.2, gain: 0.65 }, [K.tone, K.attack, K.release]),
+    REC('real-horn', 'French Horn', 'Brass & wind (recorded)', 'brass', { tone: 0.7, attack: 0.04, release: 0.3, gain: 0.65 }, [K.tone, K.attack, K.release]),
+    REC('real-sax', 'Saxophone', 'Brass & wind (recorded)', 'lead', { tone: 0.75, attack: 0.01, release: 0.2, gain: 0.6 }, [K.tone, K.attack, K.release]),
+    REC('real-flute', 'Flute', 'Brass & wind (recorded)', 'flute', { tone: 0.75, attack: 0.03, release: 0.25, gain: 0.6 }, [K.tone, K.attack, K.release]),
+    REC('real-guitar', 'Acoustic Guitar', 'Guitar & bass (recorded)', 'pluck', { tone: 0.8, release: 0.4, gain: 0.75 }),
+    REC('real-nylon', 'Nylon Guitar', 'Guitar & bass (recorded)', 'pluck', { tone: 0.8, release: 0.4, gain: 0.75 }),
+    REC('real-ebass', 'Electric Bass', 'Guitar & bass (recorded)', 'synthbass', { tone: 0.7, release: 0.15, gain: 0.8 }),
+    REC('real-upright', 'Upright Bass', 'Guitar & bass (recorded)', 'synthbass', { tone: 0.7, release: 0.2, gain: 0.85 })
+  ];
+  SAMPLED.forEach(p => {
+    const notes = typeof SAMPLE_MANIFEST !== 'undefined' && SAMPLE_MANIFEST.instruments[p.id];
+    let lo = notes ? Math.max(24, notes[0] - 5) : 36, hi = notes ? Math.min(100, notes[notes.length - 1] + 5) : 84;
+    // The piano roll shows the whole range, so keep it to four octaves around the useful middle.
+    if (hi - lo > 48) { lo = Math.max(lo, 36); hi = Math.min(hi, lo + 48); }
+    p.range = [lo, hi];
+  });
+  // 808 stays first (it's the default bass); recordings next; synths after.
+  PRESETS.splice(1, 0, ...SAMPLED);
+
   const byId = (id) => PRESETS.find(p => p.id === id) || PRESETS[0];
 
   function defaults(id) {
@@ -279,8 +315,17 @@ const Instruments = (() => {
   function noteOn(ac, dest, id, midi, velocity, when, params) {
     if (!ac || !dest) return null;
     const vel = velocity == null ? 0.85 : Math.max(0, Math.min(1, velocity));
-    const preset = byId(id);
-    const p = Object.assign(defaults(preset.id), params || {});
+    let preset = byId(id);
+    let p = Object.assign(defaults(preset.id), params || {});
+
+    if (preset.sampled) {
+      const h = typeof Samples !== 'undefined' ? Samples.noteOn(ac, dest, preset.id, midi, vel, when, p) : null;
+      if (h) return h;
+      // Not downloaded yet: fetch it, and play the synth stand-in meanwhile.
+      if (typeof Samples !== 'undefined') Samples.loadInstrument(preset.id);
+      preset = byId(preset.fallback);
+      p = Object.assign(defaults(preset.id), { tone: p.tone });
+    }
 
     if (preset.id === '808') {
       // Same velocity curve the old 808 keyboard used: squared, with a floor,
@@ -366,6 +411,7 @@ const Instruments = (() => {
     knobs: (id) => byId(id).knobs,
     range: (id) => byId(id).range,
     isMono: (id) => !!byId(id).mono,
+    isSampled: (id) => !!byId(id).sampled,
     hasSlide: (id) => !!byId(id).slide,
     defaults, noteOn, mtof
   };

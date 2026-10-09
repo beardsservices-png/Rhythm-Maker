@@ -5,9 +5,11 @@
 // can also borrow a sound from another kit (a Boom Bap snare over a Trap kick),
 // because a lane stores { kit, role } rather than a fixed voice.
 //
-// All synthesis, no samples — same rule as the rest of the studio. Every voice
-// renders into a stated context + destination, so the exact same code serves
-// live playback (into a mixer strip) and the offline .wav export.
+// Two kinds of kit: SYNTH kits (Trap 808, Boom Bap …) build every hit from
+// oscillators and noise; RECORDED kits play real drum recordings (samples.js)
+// and fall back to the Live kit's synth voice until a file has loaded. Every
+// voice renders into a stated context + destination, so the exact same code
+// serves live playback (into a mixer strip) and the offline .wav export.
 
 const DrumKits = (() => {
   const ROLES = [
@@ -18,7 +20,14 @@ const DrumKits = (() => {
     { id: 'openhat', label: 'Open hat' },
     { id: 'perc',    label: 'Perc' },
     { id: 'tom',     label: 'Tom' },
-    { id: 'rim',     label: 'Rim' }
+    { id: 'rim',     label: 'Rim' },
+    { id: 'crash',   label: 'Crash' },
+    { id: 'snap',    label: 'Snap' },
+    { id: 'shaker',  label: 'Shaker' },
+    { id: 'tamb',    label: 'Tambourine' },
+    { id: 'cowbell', label: 'Cowbell' },
+    { id: 'conga',   label: 'Conga' },
+    { id: 'bongo',   label: 'Bongo' }
   ];
 
   // The 808's cymbal oscillators — six detuned squares. Run through a
@@ -97,7 +106,69 @@ const DrumKits = (() => {
     }
   };
 
-  const KIT_ORDER = ['trap', 'boombap', 'house', 'lofi', 'live', 'classic'];
+  // The extra hand percussion every synth kit gets, so a lane can be a crash or
+  // a shaker whatever kit is picked.
+  const SYNTH_EXTRAS = {
+    crash:   { metal: true, tone: 6200, dur: 1.4, gain: 0.22, mixNoise: true },
+    snap:    { freq: 2300, bursts: 1, spread: 0, tail: 0.07, gain: 0.6 },
+    shaker:  { type: 'shaker' },
+    tamb:    { type: 'tamb' },
+    cowbell: { type: 'cowbell' },
+    conga:   { type: 'conga' },
+    bongo:   { f0: 430, f1: 350, decay: 0.12, gain: 0.7 }
+  };
+  Object.values(KITS).forEach(k => Object.keys(SYNTH_EXTRAS).forEach(r => { if (!k[r]) k[r] = Object.assign({}, SYNTH_EXTRAS[r], k.kick && k.kick.lp ? { lp: k.kick.lp + 1500 } : {}); }));
+
+  // Recorded kits: { sample, gain, decay (cut the tail, s), pitch (semitones) }.
+  const HAND = { crash: { sample: 'crash', gain: 0.55 }, snap: { sample: 'snap', gain: 0.8 }, shaker: { sample: 'shaker', gain: 0.6 },
+                 tamb: { sample: 'tamb', gain: 0.6 }, cowbell: { sample: 'cowbell', gain: 0.55 }, conga: { sample: 'conga', gain: 0.8 },
+                 bongo: { sample: 'bongo', gain: 0.75 } };
+  KITS.acoustic = Object.assign({
+    label: 'Acoustic Kit (recorded)', recorded: true,
+    kick:    { sample: 'kick-acoustic', gain: 1 },
+    snare:   { sample: 'snare-acoustic', gain: 0.85 },
+    clap:    { sample: 'clap-group', gain: 0.7 },
+    hat:     { sample: 'hat-closed', gain: 0.5 },
+    openhat: { sample: 'hat-open', gain: 0.45, decay: 0.9 },
+    perc:    { sample: 'shaker', gain: 0.55 },
+    tom:     { sample: 'tom-mid', gain: 0.8 },
+    rim:     { sample: 'rim-claves', gain: 0.55 }
+  }, HAND);
+  KITS.studio = Object.assign({
+    label: 'Hip-Hop Studio (recorded)', recorded: true,
+    kick:    { sample: 'kick-heavy', gain: 1 },
+    snare:   { sample: 'snare-dub', gain: 0.85 },
+    clap:    { sample: 'clap-solo', gain: 0.8 },
+    hat:     { sample: 'hat-pi', gain: 0.5 },
+    openhat: { sample: 'hat-open-pi', gain: 0.45, decay: 0.7 },
+    perc:    { sample: 'snap', gain: 0.75 },
+    tom:     { sample: 'tom-lo', gain: 0.8 },
+    rim:     { sample: 'rim-wood', gain: 0.6 }
+  }, HAND);
+  KITS.electro = Object.assign({
+    label: 'Electronic (recorded)', recorded: true,
+    kick:    { sample: 'kick-house', gain: 1 },
+    snare:   { sample: 'snare-electro', gain: 0.8 },
+    clap:    { sample: 'clap-group', gain: 0.7 },
+    hat:     { sample: 'hat-pedal', gain: 0.5 },
+    openhat: { sample: 'hat-electro', gain: 0.45 },
+    perc:    { sample: 'tamb', gain: 0.55 },
+    tom:     { sample: 'tom-electro', gain: 0.75 },
+    rim:     { sample: 'rim-wood', gain: 0.6 }
+  }, HAND, { crash: { sample: 'crash-big', gain: 0.5, decay: 2.2 } });
+  KITS.boom808 = Object.assign({
+    label: 'Trap (recorded hits)', recorded: true,
+    kick:    { sample: 'kick-808', gain: 1 },
+    snare:   { sample: 'snare-hi', gain: 0.8 },
+    clap:    { sample: 'clap-solo', gain: 0.8 },
+    hat:     { sample: 'hat-pi', gain: 0.45 },
+    openhat: { sample: 'hat-open-pi', gain: 0.4, decay: 0.5 },
+    perc:    { sample: 'snap', gain: 0.75 },
+    tom:     { sample: 'tom-electro', gain: 0.75 },
+    rim:     { sample: 'rim-wood', gain: 0.6 }
+  }, HAND);
+
+  const KIT_ORDER = ['trap', 'boombap', 'house', 'lofi', 'acoustic', 'studio', 'electro', 'boom808', 'live', 'classic'];
 
   // ── shared bits, cached per context (offline renders get their own) ──
   const noiseCache = new WeakMap();
@@ -261,7 +332,8 @@ const DrumKits = (() => {
     n.start(t); n.stop(t + 0.2);
   }
 
-  const VOICES = { kick, snare, clap, hat, openhat: hat, perc, tom, rim };
+  const VOICES = { kick, snare, clap, hat, openhat: hat, perc, tom, rim,
+                   crash: hat, snap: clap, shaker: perc, tamb: perc, cowbell: perc, conga: perc, bongo: tom };
 
   /**
    * Play one drum. `sound` is { kit, role }. Velocity 0–1 (sequenced hits
@@ -270,11 +342,25 @@ const DrumKits = (() => {
   function hit(ac, dest, sound, when, velocity) {
     if (!ac || !dest || !sound) return;
     const kit = KITS[sound.kit] || KITS.trap;
-    const p = kit[sound.role];
+    let p = kit[sound.role];
     const fn = VOICES[sound.role];
     if (!p || !fn) return;
-    const v = velocity == null ? 1 : Math.max(0.05, Math.min(1.3, velocity));   // 1.3 = accent
-    fn(ac, dest, Math.max(ac.currentTime, when == null ? ac.currentTime : when), p, v);
+    const v = velocity == null ? 1 : Math.max(0.03, Math.min(1.3, velocity));   // 1.3 = accent
+    const t = Math.max(ac.currentTime, when == null ? ac.currentTime : when);
+    if (p.sample) {
+      if (typeof Samples !== 'undefined' && Samples.oneShot(ac, dest, p.sample, t, v, p)) return;
+      // Still downloading: ask for it, and use the Live kit's synth hit this once.
+      if (typeof Samples !== 'undefined') Samples.loadDrum(p.sample);
+      p = KITS.live[sound.role];
+    }
+    fn(ac, dest, t, p, v);
+  }
+
+  /** The recording a lane plays, or null for a synth hit. */
+  function sampleOf(sound) {
+    const kit = sound && KITS[sound.kit];
+    const p = kit && kit[sound.role];
+    return p && p.sample ? p.sample : null;
   }
 
   function roleLabel(role) {
@@ -283,7 +369,7 @@ const DrumKits = (() => {
   }
 
   return {
-    ROLES, KITS, KIT_ORDER, hit, roleLabel,
+    ROLES, KITS, KIT_ORDER, hit, roleLabel, sampleOf,
     kits: () => KIT_ORDER.map(id => ({ id, label: KITS[id].label }))
   };
 })();

@@ -536,3 +536,61 @@ body.studio { --bar: 34px; --tlhead: 260px; }
 @media (max-width: 640px) { body.studio { --tlhead: 130px; } .tl-head .editbtn, .tl-head .more { display: none; } .h2sub { display: none; } }
 .ss-manual { display: inline-block; margin: -8px 0 16px; font-size: 13px; color: var(--amber); text-decoration: none; }
 .ss-manual:hover { color: var(--paper); }
+
+/* ── character (one-knob tone) ── */
+.charfield { display: inline-flex; align-items: center; gap: 6px; }
+.charsel { max-width: 190px; }
+.charamt { width: 90px; }
+.charval { font-size: 11px; color: var(--amber); font-weight: normal; min-width: 30px; }
+.stripchar { width: 100%; font-size: 10px; padding: 2px; background: var(--bg2); color: var(--paper); border: 1px solid var(--line); border-radius: 2px; }
+.voicehead { border-top: 1px dashed var(--line); padding-top: 8px; }
+.voicehead .hint { margin: 0; }
+
+/* ── hit / note volume + left-right lanes ── */
+.vrow { margin-top: 6px; padding-top: 6px; border-top: 1px dashed rgba(233,225,204,.12); }
+.vrow .dname.vlabel { background: transparent; color: var(--amber); border-left-color: var(--amber); cursor: default; }
+.vswitch { display: flex; align-items: center; }
+.mixmode .dbrush { font-size: 10px; padding: 3px 6px; }
+.vcells { height: 46px; align-items: stretch; }
+.vcell {
+  position: relative; flex: 1 0 16px; border-radius: 2px; background: rgba(0,0,0,.25);
+  border: 1px solid rgba(233,225,204,.05); cursor: ns-resize; touch-action: none;
+}
+.vcell.beat { border-left: 2px solid var(--dim); }
+.vcell.bar { margin-left: 5px; }
+.vcell:not(.has) { cursor: default; opacity: .45; }
+.vcell i { position: absolute; left: 1px; right: 1px; bottom: 0; background: var(--amber); border-radius: 1px; display: none; pointer-events: none; }
+.vcells.pan .vcell::before, .rmix-lane.pan::before {
+  content: ''; position: absolute; left: 0; right: 0; top: 50%; border-top: 1px dashed rgba(233,225,204,.25); pointer-events: none;
+}
+.vcells.pan .vcell i, .rmix-lane.pan .vcell i { background: var(--teal); }
+.vhint { margin-top: 2px; }
+.rmix { position: absolute; left: 0; height: 58px; border-top: 1px solid rgba(233,225,204,.15); }
+.rmix-label { position: sticky; left: 0; z-index: 2; width: 48px; height: 100%; display: flex; align-items: center; justify-content: center;
+  font-size: 10px; color: var(--amber); background: var(--bg2); border-right: 1px solid var(--line); }
+.rmix-lane { position: absolute; top: 4px; bottom: 4px; cursor: ns-resize; touch-action: none;
+  background-image: linear-gradient(90deg, rgba(233,225,204,.10) 1px, transparent 1px); background-size: calc(var(--cw) * 4) 100%; }
+.rstem { position: absolute; top: 0; bottom: 0; flex: none; }
+.mixrow { margin-top: 6px; }
+.mixrow .hint { margin: 0; }
+
+/* ── guided tour ── */
+.tb-tour { padding: 6px 9px !important; font-size: 12px !important; border-color: var(--amber) !important; color: var(--amber) !important; }
+.tb-tour:hover { background: var(--amber) !important; color: var(--bg2) !important; }
+.ss-tourbtn { display: block; width: 100%; margin: 0 0 12px; padding: 12px !important; font-size: 14px !important; }
+.tour-shade { position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 900; }
+.tour-ring {
+  position: fixed; z-index: 901; border: 2px solid var(--amber); border-radius: 6px; pointer-events: none;
+  box-shadow: 0 0 0 9999px rgba(0,0,0,.55), 0 0 22px rgba(217,154,58,.7);
+  transition: top .2s, left .2s, width .2s, height .2s;
+}
+.tour-card {
+  position: fixed; z-index: 902; background: var(--bg); border: 1px solid var(--amber); border-radius: 6px;
+  padding: 14px 16px; box-shadow: 0 10px 40px rgba(0,0,0,.6); max-width: calc(100vw - 24px);
+}
+.tour-card h3 { font-family: Georgia, serif; font-weight: normal; font-size: 19px; margin: 2px 0 6px; color: var(--amber); }
+.tour-card p { font-size: 13.5px; line-height: 1.6; margin: 0 0 12px; }
+.tour-card b { color: var(--paper); }
+.tour-step { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--dim); }
+.tour-btns { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.tour-skip { margin-right: auto; }

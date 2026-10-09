@@ -13,7 +13,7 @@
 
 const History = (() => {
   const $ = (id) => document.getElementById(id);
-  const MUTATING = new Set(['tracks', 'pattern', 'sections', 'cells', 'sound', 'param', 'bpm', 'swing', 'key', 'pump']);
+  const MUTATING = new Set(['tracks', 'pattern', 'sections', 'cells', 'sound', 'param', 'bpm', 'swing', 'key', 'pump', 'character', 'tune']);
   const LIMIT = 100;
   const KEY = 'bhs.studio.autosave';
 

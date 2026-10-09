@@ -70,6 +70,84 @@
     if (h) h.release(ac.currentTime + 0.3);
   }
 
+  // ════════════════ character (one-knob tone) ════════════════
+  /** "Character [Warm ▾] Amount ──●──" for any track. Vocal flavours first on audio tracks. */
+  function characterField(t, label) {
+    const wrap = el('span', 'charfield');
+    const ch = t.character || { id: 'none', amount: 0.6 };
+    const sel = el('select', 'tb-sel charsel');
+    const list = Character.list(t.kind === 'audio');
+    list.forEach(c => { const o = el('option', null, c.label); o.value = c.id; o.title = c.hint; if (c.id === ch.id) o.selected = true; sel.appendChild(o); });
+    sel.title = Character.hint(ch.id);
+    const amt = el('input');
+    amt.type = 'range'; amt.min = '0'; amt.max = '1'; amt.step = '0.05'; amt.value = String(ch.amount);
+    amt.className = 'charamt';
+    amt.title = 'How much of it — 0 is the sound untouched';
+    amt.disabled = ch.id === 'none';
+    const val = el('b', 'charval', ch.id === 'none' ? '' : Math.round(ch.amount * 100) + '%');
+    sel.addEventListener('change', () => {
+      ownChar = true;
+      try { Project.setCharacter(t.id, sel.value, parseFloat(amt.value)); } finally { ownChar = false; }
+      render();
+      App.msg(sel.value === 'none' ? `${t.name}: Character off.` : `${t.name}: ${Character.label(sel.value)} — ${Character.hint(sel.value)} Turn Amount up or down to taste.`);
+    });
+    amt.addEventListener('input', () => {
+      val.textContent = Math.round(parseFloat(amt.value) * 100) + '%';
+      ownChar = true;    // don't rebuild the editor under the slider being dragged
+      try { Project.setCharacter(t.id, sel.value, parseFloat(amt.value)); } finally { ownChar = false; }
+    });
+    const l = el('label', 'field inline', (label || 'Character') + ' ');
+    l.title = 'One-knob tone shaping: pick a flavour, then turn Amount up until it sounds right.';
+    l.appendChild(sel);
+    wrap.appendChild(l);
+    wrap.appendChild(amt);
+    wrap.appendChild(val);
+    return wrap;
+  }
+
+  let ownChar = false;     // a Character change made by the editor's own controls
+
+  // ════════════════ hit / note volume and left-right lanes ════════════════
+  // Under the drum machine (for the selected lane) and under the piano roll:
+  // one bar per hit or note. Drag up/down to set it; drag across to do many.
+  let mixMode = 'vel';               // 'vel' | 'pan'
+  function mixToggle() {
+    const w = el('div', 'letters mixmode');
+    [['vel', 'Volume', 'How loud each hit or note is'], ['pan', 'Left / right', 'Where each hit or note sits, left to right']].forEach(([m, lab, title]) => {
+      w.appendChild(btn('dbrush' + (mixMode === m ? ' on' : ''), lab, title, () => { mixMode = m; render(); }));
+    });
+    return w;
+  }
+  /** Value from a pointer's height in a lane cell: volume 0.05–1.3, or pan −1 (top, left) … +1 (bottom, right). */
+  function laneValue(e, cell) {
+    const r = cell.getBoundingClientRect();
+    const k = 1 - Math.max(0, Math.min(1, (e.clientY - r.top) / r.height));
+    if (mixMode === 'vel') return Math.max(0.05, Math.round(k * 1.3 * 20) / 20);
+    const p = Math.round((1 - k) * 2 * 20 - 20) / 20;
+    return Math.abs(p) < 0.08 ? 0 : p;
+  }
+  function paintMixCell(c, vel, pan, max = 1.3) {
+    const bar = c.firstChild;
+    if (vel == null) { bar.style.display = 'none'; c.title = ''; return; }
+    bar.style.display = 'block';
+    if (mixMode === 'vel') {
+      bar.style.top = ''; bar.style.bottom = '0';
+      bar.style.height = Math.round(vel / max * 100) + '%';
+      c.title = `Volume ${Math.round(vel * 100)}%`;
+    } else {
+      const h = Math.abs(pan) * 50;
+      bar.style.bottom = '';
+      bar.style.top = (pan < 0 ? 50 - h : 50) + '%';
+      bar.style.height = Math.max(2, h) + '%';
+      c.title = pan === 0 ? 'Centre' : pan < 0 ? `${Math.round(-pan * 100)}% left` : `${Math.round(pan * 100)}% right`;
+    }
+  }
+  function mixHint() {
+    return mixMode === 'vel'
+      ? 'Drag a bar up or down to make that hit louder or quieter (100% = a normal hit). Drag across to shape many. Double-click resets.'
+      : 'Drag up for left, down for right (the middle line is centre). Double-click centres it.';
+  }
+
   // ════════════════ drums ════════════════
   function soundSelect(t) {
     const sel = el('select', 'tb-sel lane-sound');
@@ -129,6 +207,7 @@
     const swl = el('label', 'field inline', 'Swing (whole song) ');
     swl.appendChild(sw); swl.appendChild(swv);
     tools.appendChild(swl);
+    tools.appendChild(characterField(sel, sel.name + ' character'));
     root.appendChild(tools);
 
     const gridEl = el('div', 'drumgrid');
@@ -158,7 +237,52 @@
       row.appendChild(cells);
       gridEl.appendChild(row);
     });
+    // Volume / left-right of each hit in the selected lane, lined up under the steps.
+    const vrow = el('div', 'drow vrow');
+    const vlab = el('div', 'dname vlabel', sel.name);
+    vlab.title = 'These bars belong to the selected lane — click another lane\'s name to switch';
+    vrow.appendChild(vlab);
+    const vsw = el('div', 'lane-sound vswitch');
+    vsw.appendChild(mixToggle());
+    vrow.appendChild(vsw);
+    const ghost = letterPicker(sel);
+    ghost.style.visibility = 'hidden';
+    vrow.appendChild(ghost);
+    const vcells = el('div', 'dcells vcells' + (mixMode === 'pan' ? ' pan' : ''));
+    const vpat = sel.patterns[sel.edit];
+    for (let i = 0; i < sel.bars * SPB; i++) {
+      const info = Project.stepInfo(vpat[i]);
+      const c = el('div', 'vcell' + (i % 4 === 0 ? ' beat' : '') + (i % SPB === 0 && i ? ' bar' : '') + (info ? ' has' : ''));
+      c.dataset.step = String(i);
+      c.appendChild(el('i'));
+      paintMixCell(c, info ? info.vel : null, info ? info.pan : 0);
+      vcells.appendChild(c);
+    }
+    vrow.appendChild(vcells);
+    gridEl.appendChild(vrow);
+    const drag = (e) => {
+      const hit = document.elementFromPoint(e.clientX, e.clientY);
+      const c = hit && hit.closest && hit.closest('.vcell');
+      if (!c || !c.classList.contains('has') || !vcells.contains(c)) return;
+      const i = +c.dataset.step, v = laneValue(e, c);
+      Project.setStepMix(sel.id, sel.edit, i, mixMode === 'vel' ? { vel: v } : { pan: v });
+      const info = Project.stepInfo(Project.pattern(sel.id, sel.edit)[i]);
+      paintMixCell(c, info.vel, info.pan);
+    };
+    vcells.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      dragging = true;
+      drag(e);
+      const up = () => { window.removeEventListener('pointermove', drag); window.removeEventListener('pointerup', up); dragging = false; render(); };
+      window.addEventListener('pointermove', drag);
+      window.addEventListener('pointerup', up);
+    });
+    vcells.addEventListener('dblclick', (e) => {
+      const c = e.target.closest('.vcell'); if (!c || !c.classList.contains('has')) return;
+      Project.setStepMix(sel.id, sel.edit, +c.dataset.step, mixMode === 'vel' ? { vel: null } : { pan: 0 });
+    });
     root.appendChild(gridEl);
+    root.appendChild(el('p', 'hint vhint', mixHint()));
     root.appendChild(el('p', 'hint', 'Click or drag across steps to place hits. Each lane has its own A B C D, so the hats can change while the kick stays put. The timeline above decides which letter each lane plays, and when.'));
   }
 
@@ -172,7 +296,7 @@
     [42, 'Roll ×4', 'Four quick hits']
   ];
   let drumBrush = 2;
-  const codeOf = (v) => (v === true ? 2 : (v || 0));
+  const codeOf = (v) => Project.codeOf(v);
   /** Clicking a step that already holds the brush clears it; anything else becomes the brush. */
   function targetFor(cur) { return codeOf(cur) === drumBrush ? false : drumBrush; }
 
@@ -275,6 +399,7 @@
         render();
       }));
     }
+    head.appendChild(characterField(t));
     root.appendChild(head);
 
     const notes = Project.pattern(t.id, t.edit);
@@ -358,7 +483,62 @@
       noteEls.push([n, d]);
     });
     inner.appendChild(body);
+
+    // Note volume / left-right lane, under the notes and scrolling with them.
+    const mixWrap = el('div', 'rmix');
+    mixWrap.style.width = (48 + steps * cw) + 'px';
+    const mlab = el('div', 'rmix-label');
+    mlab.appendChild(el('span', null, mixMode === 'vel' ? 'Vol' : 'L·R'));
+    mixWrap.appendChild(mlab);
+    const mlane = el('div', 'rmix-lane' + (mixMode === 'pan' ? ' pan' : ''));
+    mlane.style.left = '48px';
+    mlane.style.width = steps * cw + 'px';
+    mlane.style.setProperty('--cw', cw + 'px');
+    const stems = new Map();
+    notes.forEach(n => {
+      if (stems.has(n.s)) return;
+      const c = el('div', 'vcell has rstem');
+      c.style.left = n.s * cw + 'px';
+      c.style.width = Math.max(4, cw - 3) + 'px';
+      c.appendChild(el('i'));
+      paintMixCell(c, n.vel == null ? 0.85 : n.vel, n.pan || 0, 1);
+      mlane.appendChild(c);
+      stems.set(n.s, c);
+    });
+    mixWrap.appendChild(mlane);
+    inner.style.height = (topH + rows * RH + 70) + 'px';
+    mixWrap.style.top = (topH + rows * RH + 6) + 'px';
+    inner.appendChild(mixWrap);
+    const mdrag = (e) => {
+      const r = mlane.getBoundingClientRect();
+      const step = Math.floor((e.clientX - r.left) / cw);
+      const c = stems.get(step);
+      if (!c) return;
+      const v = (() => {
+        const k = 1 - Math.max(0, Math.min(1, (e.clientY - r.top) / r.height));
+        if (mixMode === 'vel') return Math.max(0.05, Math.min(1, Math.round(k * 20) / 20));
+        const p = Math.round((1 - k) * 40 - 20) / 20; return Math.abs(p) < 0.08 ? 0 : p;
+      })();
+      Project.pattern(t.id, t.edit).filter(n => n.s === step).forEach(n => Project.setNoteMix(t.id, t.edit, n.s, n.m, mixMode === 'vel' ? { vel: v } : { pan: v }));
+      const n0 = Project.pattern(t.id, t.edit).find(n => n.s === step);
+      paintMixCell(c, n0.vel == null ? 0.85 : n0.vel, n0.pan || 0, 1);
+    };
+    mlane.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      dragging = true;
+      mdrag(e);
+      const up = () => { window.removeEventListener('pointermove', mdrag); window.removeEventListener('pointerup', up); dragging = false; render(); };
+      window.addEventListener('pointermove', mdrag);
+      window.addEventListener('pointerup', up);
+    });
     root.appendChild(scroll);
+    const mrow = el('div', 'ed-head mixrow');
+    mrow.appendChild(el('span', 'dim', 'Lane under the notes:'));
+    mrow.appendChild(mixToggle());
+    mrow.appendChild(el('span', 'hint', mixMode === 'vel'
+      ? 'Drag a bar up or down to make that note louder or quieter (a chord moves together).'
+      : 'Drag up for left, down for right; the middle line is centre.'));
+    root.appendChild(mrow);
     root.appendChild(el('p', 'hint',
       'Click to add a note, drag right while adding to make it longer. Drag a note to move it, drag its right edge to resize, click it to delete.' +
       (slideRow ? ' The S buttons on top make a note slide in from the one before — the 808 glide.' : '')));
@@ -491,12 +671,30 @@
     const vl = el('label', 'field inline', 'Clip gain ');
     vl.appendChild(vol);
     head.appendChild(vl);
-    head.appendChild(btn('', '▶ Hear it', 'Play the clip once', () => {
-      const ac = App.ensureAudio(); if (!ac || !buf) return;
-      const s = ac.createBufferSource(); s.buffer = buf; s.connect(Mixer.input(t.id)); s.start();
-      s.stop(ac.currentTime + Math.min(buf.duration, 30));
+    head.appendChild(btn('', '▶ Hear it', 'Play the clip once (with its polish and tuning)', () => {
+      const ac = App.ensureAudio(); const b = Project.playbackAudio(t); if (!ac || !b) return;
+      const s = ac.createBufferSource(); s.buffer = b; s.connect(Mixer.input(t.id)); s.start();
+      s.stop(ac.currentTime + Math.min(b.duration, 30));
     }));
     root.appendChild(head);
+
+    // Vocal chain: polish (a Character) + Tune (pitch correction).
+    const vhead = el('div', 'ed-head voicehead');
+    vhead.appendChild(characterField(t, 'Polish'));
+    const tune = el('select', 'tb-sel tunesel');
+    [['off', 'Off'], ['natural', 'Natural (gentle)'], ['hard', 'Hard (robot / T-Pain)']].forEach(([v, lab]) => {
+      const o = el('option', null, lab); o.value = v; if ((t.tune || 'off') === v) o.selected = true; tune.appendChild(o);
+    });
+    tune.title = 'Pitch correction: pulls a voice onto the right notes. Natural keeps it human; Hard snaps instantly for the robotic effect.';
+    tune.addEventListener('change', () => Project.setTune(t.id, tune.value));
+    const tl = el('label', 'field inline', 'Tune ');
+    tl.appendChild(tune);
+    vhead.appendChild(tl);
+    const k = Project.key();
+    vhead.appendChild(el('span', 'hint', t.tune
+      ? (k ? `Tuning to ${['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'][k.root]} ${k.scale}.` : 'No key set — tunes to the nearest note. Set a Key in any piano roll to keep it in key.')
+      : 'Polish = a vocal chain (cleanup, "s" control, compression, presence). Tune = pitch correction.'));
+    root.appendChild(vhead);
 
     const wrap = el('div', 'wave');
     const cv = document.createElement('canvas');
@@ -661,7 +859,8 @@
   });
 
   Project.on((reason, d) => {
-    if (['pattern', 'live', 'sound', 'tracks', 'load', 'audio', 'mode', 'swing', 'key'].includes(reason)) render();
+    if (['pattern', 'live', 'sound', 'tracks', 'load', 'audio', 'mode', 'swing', 'key', 'tune'].includes(reason)) render();
+    else if (reason === 'character' && !ownChar) render();
   });
   App.on((k) => { if (k === 'select') render(); });
   let rz = null;

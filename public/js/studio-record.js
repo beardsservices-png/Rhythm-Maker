@@ -45,9 +45,12 @@
       counts[src]++;
       const name = `${NAMES[src]} ${counts[src]}`;
       const t = addAudioTrack(s.take.buffer, s.take.bars, name, { off: src === 'mix' });
+      // A voice gets the vocal chain straight away — switch it off in the editor if you want it raw.
+      if (src === 'mic') Project.setCharacter(t.id, 'vocal', 0.6);
       App.msg(src === 'mix'
         ? `Bounced ${s.take.bars} bars to "${t.name}". It starts switched OFF so it doesn't double up — turn it on where you want it, and mute the parts it replaces.`
-        : `Recorded ${s.take.bars} bar${s.take.bars === 1 ? '' : 's'} to "${t.name}". It's on in every section — drag, stretch or delete its blocks on the timeline to choose where it plays.`);
+        : `Recorded ${s.take.bars} bar${s.take.bars === 1 ? '' : 's'} to "${t.name}". It's on in every section — drag, stretch or delete its blocks on the timeline to choose where it plays.` +
+          (src === 'mic' ? ' Vocal polish is on; Tune (pitch correction) is in the editor below.' : ''));
     }
   });
 

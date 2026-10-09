@@ -98,7 +98,7 @@ function sineWav(file) {
     return {
       timelineRows: document.querySelectorAll('.tl-row.track').length,
       timelineNoVScroll: sc.scrollHeight <= sc.clientHeight + 2,
-      drumRows: document.querySelectorAll('.drow').length,
+      drumRows: document.querySelectorAll('.drow:not(.vrow)').length,
       drumNoVScroll: dg.scrollHeight <= dg.clientHeight + 2,
       dock: inView('#keyboard') && inView('#knobs') && inView('#playBtn')
     };
@@ -245,7 +245,7 @@ function sineWav(file) {
   });
   ok('all ' + Object.keys(instPeaks).length + ' instruments make sound', Object.values(instPeaks).every(p => p > 0.02), JSON.stringify(instPeaks));
   await page.click('#addTrackBtn');
-  await page.click('#addMenu .menuitem:has-text("Strings")');
+  await page.click('#addMenu .menuitem:has-text("Synth Strings")');
   await page.waitForTimeout(100);
   ok('Strings track added and selected', await page.evaluate(() => { const t = Project.track(App.selected()); return t && t.instrument === 'strings'; }));
   ok('…it has a mixer strip', await page.evaluate(() => !!Mixer.get(App.selected())));
@@ -642,7 +642,7 @@ function sineWav(file) {
   console.log('\n13g. Autosave — close the tab, come back, carry on');
   await page.setInputFiles('#audioUpload', path.join(os.tmpdir(), 'bhs-sine.wav'));
   await page.waitForFunction(() => Project.tracks().some(t => t.name === 'bhs-sine'), null, { timeout: 5000 }).catch(() => {});
-  await page.evaluate(() => { Project.renameTrack(window.__track('Pluck').id, 'Lead line'); Project.setSwing(0.21); });
+  await page.evaluate(() => { Project.renameTrack(window.__track('Piano').id, 'Lead line'); Project.setSwing(0.21); });
   await page.waitForTimeout(1800);
   await page.reload({ waitUntil: 'load' });
   await page.waitForTimeout(500);
@@ -654,6 +654,210 @@ function sineWav(file) {
   ok('the song comes back exactly — renamed track, swing, template', await page.evaluate(() =>
     !!window.__track('Lead line') && Math.abs(Project.swing() - 0.21) < 1e-9 && Project.bpm() === 140));
   ok('…including the uploaded audio', await page.evaluate(() => { const t = window.__track('bhs-sine'); return !!t && !!Project.getAudio(t.audioId); }));
+
+  console.log('\n13h. Recorded instruments and drums');
+  const rec = await page.evaluate(async () => {
+    const ids = Instruments.list().filter(i => Instruments.isSampled(i.id)).map(i => i.id);
+    await Promise.all(ids.map(id => Samples.loadInstrument(id)));
+    const peaks = {};
+    for (const id of ids) {
+      const ac = new OfflineAudioContext(1, 44100, 44100);
+      const range = Instruments.range(id);
+      const h = Instruments.noteOn(ac, ac.destination, id, Math.round((range[0] + range[1]) / 2), 0.9, 0.01);
+      h.release(0.6);
+      const b = await ac.startRendering();
+      let p = 0; b.getChannelData(0).forEach(v => { p = Math.max(p, Math.abs(v)); });
+      peaks[id] = +p.toFixed(3);
+    }
+    const drums = Samples.drums();
+    const loaded = await Promise.all(drums.map(d => Samples.loadDrum(d)));
+    return { peaks, count: ids.length, drums: drums.length, drumsOk: loaded.every(Boolean) };
+  });
+  ok(`all ${rec.count} recorded instruments load and sound`, rec.count >= 15 && Object.values(rec.peaks).every(p => p > 0.02), JSON.stringify(rec.peaks));
+  ok(`all ${rec.drums} recorded drum hits load`, rec.drumsOk && rec.drums >= 30);
+  const recKit = await page.evaluate(async () => {
+    // a recorded hit is the file, not the synth stand-in: render the same lane on both kits and compare
+    const one = async (kit) => {
+      const ac = new OfflineAudioContext(1, 22050, 44100);
+      DrumKits.hit(ac, ac.destination, { kit, role: 'snare' }, 0.01, 1);
+      const b = await ac.startRendering();
+      return Array.from(b.getChannelData(0).slice(500, 4500));
+    };
+    const a = await one('acoustic'), l = await one('live');
+    let diff = 0; a.forEach((v, i) => { diff += Math.abs(v - l[i]); });
+    return { diff, kits: DrumKits.kits().filter(k => DrumKits.KITS[k.id].recorded).map(k => k.id) };
+  });
+  ok('recorded kits play their recordings', recKit.diff > 1 && recKit.kits.length === 4, JSON.stringify(recKit));
+  ok('templates use recorded instruments', await page.evaluate(() => {
+    const b = Templates.build('boombap');
+    return b.kit === 'studio' && b.tracks.some(t => t.instrument === 'real-epiano') && b.tracks.some(t => t.character);
+  }));
+
+  console.log('\n13i. Each hit and note: its own volume and left/right');
+  await page.evaluate(() => StartScreen.choose('blank'));
+  await page.waitForTimeout(200);
+  const hitMix = await page.evaluate(async () => {
+    const snare = Project.tracks().find(t => t.name === 'Snare');
+    Project.setPatternSteps(snare.id, 0, Array.from({ length: 16 }, (_, i) => (i % 4 === 0 ? 2 : false)));
+    Project.setMode('pattern');
+    Project.tracks().forEach(t => { if (t.id !== snare.id) Mixer.setMuted(t.id, true); });
+    const energy = async () => {
+      const r = await window.__bhsRender(1, { master: false });
+      const L = r.rendered.getChannelData(0), R = r.rendered.getChannelData(1);
+      let l = 0, rr = 0; for (let i = 0; i < L.length; i++) { l += L[i] * L[i]; rr += R[i] * R[i]; }
+      return { l, r: rr };
+    };
+    // raw buffer (not normalised) for honest level comparisons
+    const raw = async () => {
+      const st = Transport.getState();
+      const oac = new OfflineAudioContext(2, Math.ceil(st.secondsPerStep * 16 * 44100) + 44100, 44100);
+      const player = Sequencer.createPlayer({ ac: oac, out: () => oac.destination });
+      for (let s = 0; s < 16; s++) player.step({ time: s * st.secondsPerStep, bar: 0, stepInBar: s, stepDur: st.secondsPerStep, songMode: false });
+      const b = await oac.startRendering();
+      const L = b.getChannelData(0), R = b.getChannelData(1);
+      let l = 0, r = 0; for (let i = 0; i < L.length; i++) { l += L[i] * L[i]; r += R[i] * R[i]; }
+      return { l, r };
+    };
+    const before = await raw();
+    [0, 4, 8, 12].forEach(i => Project.setStepMix(snare.id, 0, i, { vel: 0.3 }));
+    const quiet = await raw();
+    [0, 4, 8, 12].forEach(i => Project.setStepMix(snare.id, 0, i, { vel: null, pan: -1 }));
+    const left = await raw();
+    const info = Project.stepInfo(Project.pattern(snare.id, 0)[0]);
+    Project.tracks().forEach(t => Mixer.setMuted(t.id, false));
+    await energy();
+    return { before, quiet, left, info };
+  });
+  ok('turning a hit down makes it quieter', hitMix.quiet.l < hitMix.before.l * 0.3, JSON.stringify([hitMix.before.l, hitMix.quiet.l]));
+  ok('panning a hit left puts it in the left speaker', hitMix.left.l > hitMix.left.r * 5 && hitMix.info.pan === -1, JSON.stringify(hitMix.left));
+  await page.evaluate(() => App.select(Project.tracks().find(t => t.name === 'Snare').id));
+  await page.waitForTimeout(100);
+  const vlane = await page.evaluate(() => {
+    const cells = document.querySelectorAll('#editor .vrow .vcell.has');
+    return { n: cells.length, box: (() => { const r = cells[1].getBoundingClientRect(); return { x: r.left + r.width / 2, top: r.top, h: r.height }; })() };
+  });
+  ok('the volume lane shows a bar for every hit of the selected drum', vlane.n === 4, JSON.stringify(vlane));
+  await page.evaluate(() => document.querySelector('#editor .vrow').scrollIntoView({ block: 'center' }));
+  const vl2 = await page.evaluate(() => { const r = document.querySelectorAll('#editor .vrow .vcell.has')[1].getBoundingClientRect(); return { x: r.left + r.width / 2, top: r.top, h: r.height }; });
+  await page.mouse.move(vl2.x, vl2.top + vl2.h * 0.8);
+  await page.mouse.down(); await page.mouse.up();
+  await page.waitForTimeout(100);
+  ok('dragging a bar down there makes that hit softer', await page.evaluate(() => {
+    const s = Project.tracks().find(t => t.name === 'Snare');
+    const i = Project.stepInfo(Project.pattern(s.id, 0)[4]);
+    return i.vel < 0.5 && i.pan === -1;
+  }));
+  const noteMix = await page.evaluate(async () => {
+    const t = Project.addTrack({ kind: 'synth', name: 'Keys test', instrument: 'organ', bars: 1 });
+    Project.setNotes(t.id, 0, [{ s: 0, m: 60, l: 4 }, { s: 0, m: 64, l: 4 }, { s: 8, m: 67, l: 4 }]);
+    Project.setNoteMix(t.id, 0, 0, 60, { vel: 0.2, pan: 0.8 });
+    const n = Project.pattern(t.id, 0);
+    App.select(t.id);
+    await new Promise(r => setTimeout(r, 50));
+    return { a: n[0], b: n[1], stems: document.querySelectorAll('#editor .rmix .rstem').length };
+  });
+  ok('a note keeps its own volume and left/right', noteMix.a.vel === 0.2 && noteMix.a.pan === 0.8 && noteMix.b.vel == null, JSON.stringify(noteMix));
+  ok('the piano roll shows one volume bar per note start', noteMix.stems === 2);
+
+  console.log('\n13j. Character — one-knob tone on any track');
+  const ch = await page.evaluate(async () => {
+    const t = Project.tracks().find(x => x.name === 'Keys test');
+    const before = Mixer.get(t.id).charId;
+    Project.setCharacter(t.id, 'heavy', 0.8);
+    const live = { id: Mixer.get(t.id).charId, amt: Mixer.get(t.id).charAmt };
+    const sel = document.querySelector('#editor .charsel');
+    const settings = Character.settings('heavy', 0.8);
+    const off = Character.settings('heavy', 0);
+    const ac = new OfflineAudioContext(1, 4410, 44100);
+    const chain = Character.build(ac, 'vocal', 0.6);
+    return { before, live, ui: sel ? sel.value : null, flatAtZero: off.low.g === 0 && off.comp.ratio === 1 && off.sat === 0,
+             full: settings.low.g > 3, deEsser: !!chain && !!Character.settings('vocal', 0.6).deess, presets: Character.PRESETS.length };
+  });
+  ok('picking a Character puts it in the track\'s mixer strip', ch.before === 'none' && ch.live.id === 'heavy' && ch.live.amt === 0.8, JSON.stringify(ch));
+  ok('…and shows in the editor', ch.ui === 'heavy');
+  ok('Amount 0 is the sound untouched; vocal chains include a de-esser', ch.flatAtZero && ch.full && ch.deEsser && ch.presets >= 12);
+  const chRender = await page.evaluate(async () => {
+    const t = Project.tracks().find(x => x.name === 'Keys test');
+    Project.tracks().forEach(x => Mixer.setMuted(x.id, x.id !== t.id));
+    const rms = async () => { const r = await window.__bhsRender(1, { master: false }); return r.rendered; };
+    Project.setCharacter(t.id, 'none');
+    const a = (await rms()).getChannelData(0);
+    Project.setCharacter(t.id, 'radio', 1);
+    const b = (await rms()).getChannelData(0);
+    Project.tracks().forEach(x => Mixer.setMuted(x.id, false));
+    let d = 0; for (let i = 0; i < Math.min(a.length, b.length); i++) d += Math.abs(a[i] - b[i]);
+    return d / a.length;
+  });
+  ok('the export goes through the Character too', chRender > 0.005, String(chRender));
+
+  console.log('\n13k. Vocals — polish and Tune (pitch correction)');
+  const tune = await page.evaluate(() => {
+    // a voice-like tone (fundamental + harmonics, with vibrato) sung 40 cents flat of A4
+    const ac = Sequencer.context();
+    const rate = 44100, n = rate * 2;
+    const buf = ac.createBuffer(1, n, rate);
+    const d = buf.getChannelData(0);
+    let ph = 0;
+    for (let i = 0; i < n; i++) {
+      const f = 440 * Math.pow(2, -0.4 / 12) * (1 + 0.004 * Math.sin(2 * Math.PI * 5 * i / rate));
+      ph += 2 * Math.PI * f / rate;
+      d[i] = 0.4 * Math.sin(ph) + 0.2 * Math.sin(2 * ph) + 0.1 * Math.sin(3 * ph);
+    }
+    const pitch = (b) => {
+      const x = b.getChannelData(0).slice(rate / 2, rate / 2 + 2048);
+      const r = PitchDetector.detectPitch(x, rate, 20, 600);
+      return 69 + 12 * Math.log2(r.freq / 440);
+    };
+    const hard = Tune.process(ac, buf, { mode: 'hard' });
+    const nat = Tune.process(ac, buf, { mode: 'natural' });
+    const keyed = Tune.process(ac, buf, { mode: 'hard', key: { root: 0, scale: 'major' } });
+    return { before: pitch(buf), hard: pitch(hard.buffer), natural: pitch(nat.buffer), keyed: pitch(keyed.buffer), voiced: hard.voicedShare,
+             len: hard.buffer.length === buf.length };
+  });
+  ok('Tune pulls a flat note onto pitch (hard)', Math.abs(tune.before - 69) > 0.3 && Math.abs(tune.hard - 69) < 0.1, JSON.stringify(tune));
+  ok('…natural pulls most of the way, keeping it human', Math.abs(tune.natural - 69) < 0.2 && Math.abs(tune.natural - 69) < Math.abs(tune.before - 69));
+  ok('…in C major an A stays an A; timing untouched', Math.abs(tune.keyed - 69) < 0.1 && tune.len && tune.voiced > 0.8);
+  const vt = await page.evaluate(async () => {
+    const t = Project.tracks().find(x => x.kind === 'audio') || (() => {
+      const ac = Sequencer.context(); const b = ac.createBuffer(1, 44100, 44100);
+      const id = Project.newAudioId(); Project.setAudio(id, b);
+      return Project.addTrack({ kind: 'audio', name: 'Vox', audioId: id, bars: 1 });
+    })();
+    App.select(t.id);
+    await new Promise(r => setTimeout(r, 50));
+    const ui = { polish: !!document.querySelector('#editor .voicehead .charsel'), tune: !!document.querySelector('#editor .tunesel'),
+                 vocalFirst: document.querySelector('#editor .voicehead .charsel option:nth-child(2)').value };
+    Project.setTune(t.id, 'hard');
+    for (let i = 0; i < 60 && !Project.hasProcessed(t.id); i++) await new Promise(r => setTimeout(r, 100));
+    const tuned = Project.playbackAudio(t) !== Project.getAudio(t.audioId);
+    Project.setTune(t.id, 'off');
+    const raw = Project.playbackAudio(t) === Project.getAudio(t.audioId);
+    return { ui, tuned, raw };
+  });
+  ok('an audio track has Polish (vocal chains first) and Tune', vt.ui.polish && vt.ui.tune && vt.ui.vocalFirst === 'vocal', JSON.stringify(vt.ui));
+  ok('Tune on plays a tuned copy; off gives the original back', vt.tuned && vt.raw, JSON.stringify(vt));
+
+  console.log('\n13l. Guided tour');
+  const tour = await page.evaluate(async () => {
+    StartScreen.hide();
+    if (Transport.isPlaying) Transport.stop();
+    Tour.start();
+    const first = document.querySelector('.tour-card h3').textContent;
+    Tour.next();
+    const second = Tour.step();
+    document.getElementById('playBtn').click();
+    await new Promise(r => setTimeout(r, 1200));
+    const advanced = Tour.step();
+    const ringShown = getComputedStyle(document.querySelector('.tour-ring')).display !== 'none';
+    document.getElementById('playBtn').click();
+    let n = 0; while (Tour.step() >= 0 && Tour.step() < Tour.count - 1 && n++ < 30) Tour.next();
+    const last = document.querySelector('.tour-card h3').textContent;
+    document.querySelector('.tour-next').click();
+    return { first, second, advanced, ringShown, last, closed: !document.querySelector('.tour-card'), count: Tour.count };
+  });
+  ok('the tour starts, and moves on by itself when you press Play', tour.second === 1 && tour.advanced === 2 && tour.ringShown, JSON.stringify(tour));
+  ok('…walks every step to the end and closes', tour.count >= 12 && /whole loop/.test(tour.last) && tour.closed);
+  ok('start screen and top bar both offer the tour', await page.evaluate(() => !!document.getElementById('ssTour') && !!document.getElementById('tourBtn')));
 
   console.log('\n14. Other pages, and browsers without MIDI');
   const p2 = await browser.newPage();

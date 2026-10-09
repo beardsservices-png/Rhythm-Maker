@@ -107,17 +107,28 @@ fs.mkdirSync(OUT, { recursive: true });
   await page.evaluate(() => App.select(Project.tracks().find(t => t.name === 'Hi-hat').id));
   await page.evaluate(() => Project.setEdit(Project.tracks().find(t => t.name === 'Hi-hat').id, 1));
   await page.waitForTimeout(150);
+  // a few hits with their own volume / left-right, so the lane has something to show
+  await page.evaluate(() => {
+    const h = Project.tracks().find(t => t.name === 'Hi-hat');
+    Project.pattern(h.id, 1).forEach((v, i) => { if (v) Project.setStepMix(h.id, 1, i, { vel: 0.35 + 0.6 * ((i % 4) / 3) }); });
+  });
+  await page.waitForTimeout(150);
   await shot('drums', '#editorPanel', [
     ['#editorTitle select', 1], ['.ed-head select', 2], ['.dbrushes', 3], ['.drumtools .field', 4],
     ['.drow.sel .lane-sound', 5], ['.drow.sel .letters', 6], ['.drow.sel .dcells', 7], ['.drow .dname', 8]
   ]);
 
+  await shot('mixlane', '#editor .drumgrid', [['.vrow .vlabel', 1], ['.vrow .mixmode', 2], ['.vrow .vcell.has', 3]]);
+  await page.evaluate(() => Project.setCharacter(Project.tracks().find(t => t.name === 'Hi-hat').id, 'punchy', 0.6));
+  await page.waitForTimeout(150);
+  await shot('character', '#editor .drumtools', [['#editor .drumtools .charsel', 1], ['#editor .drumtools .charamt', 2]], { pad: 4 });
+
   // ── piano roll
-  await page.evaluate(() => App.select(Project.tracks().find(t => t.name === 'Pluck').id));
+  await page.evaluate(() => App.select(Project.tracks().find(t => t.name === 'Piano').id));
   await page.waitForTimeout(150);
   await shot('roll', '#editorPanel', [
     ['.ed-head select', 1], ['.ed-head .letters', 2], ['.ed-head .field:nth-of-type(2) select', 3], ['.ed-head .field:nth-of-type(3) select', 4],
-    ['.chordbtn', 5], ['.rnote', 6], ['.rrow.keyroot .rkey', 7], ['.roll-lane', 8]
+    ['.chordbtn', 5], ['.rnote', 6], ['.rrow.keyroot .rkey', 7], ['.roll-lane', 8], ['.rmix-lane', 9], ['.mixrow .mixmode', 10], ['#editor .ed-head .charfield', 11]
   ]);
   await page.evaluate(() => App.select(Project.tracks().find(t => t.name === '808').id));
   await page.waitForTimeout(150);
@@ -127,7 +138,7 @@ fs.mkdirSync(OUT, { recursive: true });
   await page.evaluate(() => App.showTab('mix'));
   await page.waitForTimeout(100);
   await shot('mixer', '#editorPanel', [
-    ['.strip .fader', 1], ['.strip .panknob', 2], ['.strip .sendrow', 3], ['.strip .pumprow', 4], ['.strip .stripbtns', 5], ['#masterVol', 6]
+    ['.strip .fader', 1], ['.strip .panknob', 2], ['.strip .sendrow', 3], ['.strip .pumprow', 4], ['.strip .stripbtns', 5], ['#masterVol', 6], ['.strip .stripchar', 7]
   ]);
   await page.evaluate(() => App.showTab('edit'));
   await collapseDock(false);
@@ -157,7 +168,9 @@ fs.mkdirSync(OUT, { recursive: true });
   await page.setInputFiles('#audioUpload', wav);
   await page.waitForTimeout(800);
   await collapseDock(true);
-  await shot('audio', '#editorPanel', [['.wave', 1], ['.ed-head .sbars', 2], ['.ed-head input[type=range]', 3]]);
+  await page.evaluate(() => { const t = Project.tracks().find(x => x.kind === 'audio'); Project.setCharacter(t.id, 'vocal', 0.6); });
+  await page.waitForTimeout(150);
+  await shot('audio', '#editorPanel', [['.wave', 1], ['.ed-head .sbars', 2], ['.ed-head input[type=range]', 3], ['.voicehead .charsel', 4], ['.voicehead .tunesel', 5]]);
   await collapseDock(false);
 
   // ── export + mastering
@@ -172,6 +185,12 @@ fs.mkdirSync(OUT, { recursive: true });
   await page.waitForTimeout(300);
   await shot('open', '#openMenu', [['#projList', 1], ['#newProjBtn', 2]], { pad: 6 });
   await page.keyboard.press('Escape');
+
+  // ── the guided tour, on its "press Play" step
+  await page.evaluate(() => { window.scrollTo(0, 0); Tour.start(); Tour.next(); document.getElementById('status').classList.remove('show'); });
+  await page.waitForTimeout(500);
+  await shot('tour', 'viewport', [['.tour-card', 1], ['.tour-ring', 2]], { pad: 0 });
+  await page.evaluate(() => Tour.stop());
 
   // ── Ask Claude
   await page.click('#claudeBtn');
