@@ -181,6 +181,27 @@ for depth. What changed:
   each, how-to tables, shortcuts and troubleshooting. `tools/make-manual.js`
   re-shoots it so it never goes stale.
 
+## Round 5 — "will it sound great for a beginner?"
+
+Honest review after round 4: the layout was fine, the *sound* wasn't — every
+piano, string and drum was synthesised. Built:
+
+- **Recorded instruments and kits.** 18 real instruments and 34 drum/percussion
+  hits from free libraries (Splendid Grand Piano, jRhodes3d, VCSL, Sonic Pi,
+  tonejs-instruments), trimmed, pitch-checked and encoded by
+  `tools/build-samples.js` (~11 MB). Lazy-loaded with a synth stand-in, cached
+  offline. Templates rebuilt on them.
+- **Per-hit and per-note volume and left/right** — a lane under the drum machine
+  (selected lane) and under the piano roll. Brian asked for this for claps and
+  hats, which don't change pitch but need dynamics.
+- **Character** — one dropdown + Amount per track (Warm, Punchy, Bright, Big &
+  heavy, Soft, Far away, Lo-fi, Radio, three vocal chains). EQ + compressor +
+  saturation (+ de-esser for vocals) behind one knob; Amount 0 is untouched.
+- **Vocals** — mic takes get "Vocal: clean & present" automatically; **Tune**
+  (Natural / Hard) is offline PSOLA pitch correction to the song's key.
+- **Guided tour** — "Make your first song", 15 steps that spotlight the real
+  controls and advance when you do the thing.
+
 ## Still not built
 
 - Time-stretching recorded loops when the BPM changes. A take keeps its original

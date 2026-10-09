@@ -59,6 +59,7 @@
     <button id="exportBtn" title="Download a .wav">Export</button>
     <button id="midiBtn" title="Connect a MIDI keyboard">MIDI</button>
     <button id="claudeBtn" title="Ask Claude to change the song">Claude</button>
+    <button id="tourBtn" class="tb-tour" title="A guided walk through making a song, pointing at each button">Tour</button>
     <a class="tb-help" href="manual.html" target="_blank" title="The user manual — how to use everything">? Manual</a>
   </div>
 </header>
@@ -220,7 +221,8 @@
     <div class="ss-head">
       <h1 id="ssTitle">BHS Studio</h1>
       <p class="ss-tag">Make the beat. Lay out the song. Press record.</p>
-      <a class="ss-manual" href="manual.html" target="_blank">New here? <u>Read the manual</u> — pictures, arrows, every button explained.</a>
+      <button id="ssTour" class="primary ss-tourbtn">New here? Make your first song with a guide (5 min)</button>
+      <a class="ss-manual" href="manual.html" target="_blank">Or <u>read the manual</u> — pictures, arrows, every button explained.</a>
     </div>
     <button id="ssContinue" class="primary ss-continue" hidden></button>
     <h3>Start from a template</h3>
@@ -234,20 +236,26 @@
 <script src="js/engine/transport.js"></script>
 <script src="js/engine/effects.js"></script>
 <script src="js/engine/master.js"></script>
+<script src="js/engine/character.js"></script>
 <script src="js/engine/mixer.js"></script>
 <script src="js/engine/midi.js"></script>
 <script src="js/engine/wav.js"></script>
+<script src="js/engine/sample-manifest.js"></script>
+<script src="js/engine/samples.js"></script>
 <script src="js/engine/drumkits.js"></script>
 <script src="js/engine/instruments.js"></script>
 <script src="js/engine/project-model.js"></script>
 <script src="js/engine/sequencer.js"></script>
 <script src="js/engine/recorder.js"></script>
 <script src="js/engine/templates.js"></script>
+<script src="js/practice/pitch-detector.js"></script>
+<script src="js/engine/tune.js"></script>
 <script src="js/studio-app.js"></script>
 <script src="js/studio-arrange.js"></script>
 <script src="js/studio-editor.js"></script>
 <script src="js/studio-keys.js"></script>
 <script src="js/studio-record.js"></script>
+<script src="js/studio-voice.js"></script>
 <script src="js/studio-mixer.js"></script>
 <script src="js/studio-effects.js"></script>
 <script src="js/studio-midi.js"></script>
@@ -256,6 +264,7 @@
 <script src="js/studio-claude.js"></script>
 <script src="js/studio-history.js"></script>
 <script src="js/studio-start.js"></script>
+<script src="js/studio-tour.js"></script>
 <script src="js/pwa.js"></script>
 </body>
 </html>

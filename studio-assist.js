@@ -19,9 +19,12 @@ const Anthropic = require('@anthropic-ai/sdk');
 const MODEL = process.env.ANTHROPIC_MODEL || 'claude-opus-5-5';
 
 const VARIATIONS = ['A', 'B', 'C', 'D'];
-const INSTRUMENTS = ['808', 'piano', 'epiano', 'organ', 'strings', 'pad', 'lead', 'pluck', 'bell', 'synthbass', 'brass', 'flute'];
-const ROLES = ['kick', 'snare', 'clap', 'hat', 'openhat', 'perc', 'tom', 'rim'];
-const KITS = ['trap', 'boombap', 'house', 'lofi', 'live', 'classic'];
+const RECORDED = ['real-piano', 'real-epiano', 'real-vibes', 'real-marimba', 'real-kalimba', 'real-strings', 'real-violin', 'real-cello',
+  'real-harp', 'real-trumpet', 'real-trombone', 'real-horn', 'real-sax', 'real-flute', 'real-guitar', 'real-nylon', 'real-ebass', 'real-upright'];
+const INSTRUMENTS = ['808', ...RECORDED, 'piano', 'epiano', 'organ', 'strings', 'pad', 'lead', 'pluck', 'bell', 'synthbass', 'brass', 'flute'];
+const ROLES = ['kick', 'snare', 'clap', 'hat', 'openhat', 'perc', 'tom', 'rim', 'crash', 'snap', 'shaker', 'tamb', 'cowbell', 'conga', 'bongo'];
+const KITS = ['trap', 'boombap', 'house', 'lofi', 'acoustic', 'studio', 'electro', 'boom808', 'live', 'classic'];
+const CHARACTERS = ['none', 'warm', 'punchy', 'bright', 'heavy', 'soft', 'far', 'lofi', 'radio', 'vocal', 'vocal-rap', 'vocal-smooth'];
 
 const obj = (properties, required) => ({
   type: 'object', properties, required: required || Object.keys(properties), additionalProperties: false
@@ -62,15 +65,17 @@ const TOOLS = [
   {
     name: 'add_instrument',
     description:
-      'Add a new melodic track. Instruments: 808 (bass), piano, epiano (electric piano), organ, strings, pad, lead, ' +
-      'pluck, bell, synthbass, brass, flute. bars is its pattern length: 1, 2 or 4. It starts empty — follow with set_notes, ' +
+      'Add a new melodic track. RECORDED (real, best sounding — prefer these): real-piano (grand piano), real-epiano (Rhodes), ' +
+      'real-vibes, real-marimba, real-kalimba, real-strings (section), real-violin, real-cello, real-harp, real-trumpet, real-trombone, ' +
+      'real-horn, real-sax, real-flute, real-guitar (acoustic), real-nylon, real-ebass (electric bass), real-upright (upright bass). ' +
+      'SYNTH: 808 (bass), piano, epiano, organ, strings, pad, lead, pluck, bell, synthbass, brass, flute. bars is its pattern length: 1, 2 or 4. It starts empty — follow with set_notes, ' +
       'and include it in set_arrangement if the song structure should use it.',
     strict: true,
     input_schema: obj({ instrument: { type: 'string', enum: INSTRUMENTS }, name: { type: 'string' }, bars: { type: 'integer', enum: [1, 2, 4] } })
   },
   {
     name: 'add_drum_lane',
-    description: 'Add a drum track playing one drum sound (kick, snare, clap, hat, openhat, perc, tom, rim) from the current kit.',
+    description: 'Add a drum track playing one drum sound from the current kit: kick, snare, clap, hat, openhat, perc, tom, rim, crash, snap, shaker, tamb (tambourine), cowbell, conga, bongo.',
     strict: true,
     input_schema: obj({ role: { type: 'string', enum: ROLES }, name: { type: 'string' } })
   },
@@ -82,7 +87,8 @@ const TOOLS = [
   },
   {
     name: 'set_drum_kit',
-    description: 'Switch every drum track to a kit: trap (Trap 808), boombap, house (909), lofi, live (acoustic-ish), classic.',
+    description: 'Switch every drum track to a kit. Synth: trap (Trap 808), boombap, house (909), lofi, live, classic. ' +
+      'Recorded (real drums): acoustic (acoustic kit), studio (hip-hop studio), electro (electronic), boom808 (trap with recorded hits).',
     strict: true,
     input_schema: obj({ kit: { type: 'string', enum: KITS } })
   },
@@ -149,6 +155,13 @@ const TOOLS = [
     input_schema: obj({ track: trackField, amount: { type: 'number' } })
   },
   {
+    name: 'set_character',
+    description: 'One-knob tone flavour for a track, amount 0–1 (0.4–0.7 is typical): warm, punchy (drums/bass), bright, heavy (bigger, gritty), ' +
+      'soft, far (distant), lofi (dusty), radio (telephone effect), vocal / vocal-rap / vocal-smooth (vocal chains for recorded voice), none (off).',
+    strict: true,
+    input_schema: obj({ track: trackField, character: { type: 'string', enum: CHARACTERS }, amount: { type: 'number' } })
+  },
+  {
     name: 'mute_track',
     description: 'Mute or unmute a track everywhere (its mixer mute).',
     strict: true,
@@ -168,7 +181,8 @@ You have real control: your tool calls change their song directly. Use them rath
 
 How the studio works:
 - Tracks: each drum sound is its own track (Kick, Snare, Hi-hat …); melodic tracks play an instrument (808, piano,
-  strings …); audio tracks are recorded or uploaded clips you can't edit, only arrange.
+  strings …) — the real-* ones are recordings of real instruments and sound best for piano, keys, strings, brass,
+  guitar and bass; audio tracks are recorded or uploaded clips you can't edit, only arrange (set_character works on them).
 - Every drum/melodic track has four patterns, A–D, each 1, 2 or 4 bars long.
 - Sections: the song is a list of sections. For each track, a section says which pattern it plays (or silent),
   can silence it for particular bars, and can solo tracks. So a hook can be Kick B + Clap C + Hat B while the 808
@@ -194,6 +208,7 @@ const L = (v) => (v >= 0 ? VARIATIONS[v] : 'off');
 function stepChar(v) {
   if (!v) return '.';
   if (v === true) return 'x';
+  if (typeof v === 'object') v = v.c || 2;
   const roll = Math.floor(v / 10), level = v % 10;
   if (roll > 1) return String(roll);
   return level === 3 ? 'X' : level === 1 ? 'o' : 'x';
@@ -222,7 +237,7 @@ function describeState(state) {
     } else if (t.kind === 'synth') {
       const knobs = Object.entries(t.params || {}).filter(([k]) => k !== 'gain')
         .map(([k, v]) => `${k}=${typeof v === 'number' ? +v.toFixed(3) : v}`).join(', ');
-      lines.push(`- "${t.name}": ${t.instrument}, ${t.bars}-bar patterns, ${mixNote}${t.pump ? ', pump ' + t.pump : ''}, loop plays ${L(t.live)}; knobs: ${knobs}`);
+      lines.push(`- "${t.name}": ${t.instrument}, ${t.bars}-bar patterns, ${mixNote}${t.pump ? ', pump ' + t.pump : ''}${t.character ? ', character ' + t.character.id + ' ' + t.character.amount : ''}, loop plays ${L(t.live)}; knobs: ${knobs}`);
       (t.patterns || []).forEach((p, v) => {
         const notes = (p || []).slice().sort((a, b) => a.s - b.s || a.m - b.m)
           .map(n => `${n.s}:${n.m}x${n.l}${n.sl ? 's' : ''}`).join(' ');

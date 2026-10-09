@@ -9,7 +9,7 @@
 // The /api/ routes (saving, loading, Ask Claude) and other sites (the
 // MediaPipe CDN) are never cached — they go straight to the network.
 
-const CACHE = 'rhythm-shop-v2';
+const CACHE = 'rhythm-shop-v3';
 const SHELL = ['/', '/index.html', '/studio.html', '/practice.html', '/manual.html', '/manifest.webmanifest',
                '/css/base.css', '/css/studio.css', '/css/practice.css', '/icons/icon-192.png'];
 
@@ -27,6 +27,15 @@ self.addEventListener('fetch', (e) => {
   const req = e.request;
   const url = new URL(req.url);
   if (req.method !== 'GET' || url.origin !== self.location.origin || url.pathname.startsWith('/api/')) return;
+  // Instrument recordings are big and never change: cache first, so a song
+  // opens instantly (and offline) once its instruments have been heard once.
+  if (url.pathname.startsWith('/samples/')) {
+    e.respondWith(caches.match(req).then(hit => hit || fetch(req).then(res => {
+      if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
+      return res;
+    })));
+    return;
+  }
   e.respondWith(
     fetch(req).then(res => {
       if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }

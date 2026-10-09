@@ -14,7 +14,7 @@ if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 const MIME = {
   '.html': 'text/html', '.css': 'text/css', '.js': 'application/javascript',
   '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml',
-  '.wav': 'audio/wav', '.webmanifest': 'application/manifest+json'
+  '.wav': 'audio/wav', '.mp3': 'audio/mpeg', '.webmanifest': 'application/manifest+json'
 };
 
 // Binary-safe. The text reader below concatenates chunks onto a string, which
@@ -347,7 +347,10 @@ const server = http.createServer((req, res) => {
       return;
     }
     const ext = path.extname(filePath);
-    res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream' });
+    const headers = { 'Content-Type': MIME[ext] || 'application/octet-stream' };
+    // Instrument recordings never change under the same name — let browsers keep them.
+    if (reqPath.startsWith('/samples/')) headers['Cache-Control'] = 'public, max-age=2592000';
+    res.writeHead(200, headers);
     res.end(data);
   });
 });

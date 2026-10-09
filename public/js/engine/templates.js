@@ -9,16 +9,17 @@
 // Melodic patterns are [step, midi, length, slide?] lists.
 // A section says what each track plays: 'A' for every bar, or one character
 // per bar ('AAAB', with '-' for silent). Tracks not mentioned sit out.
+// A track can name a Character ([flavour, amount]) and a drum lane its own kit.
 
 const Templates = (() => {
   const LIST = [
     {
-      id: 'trap', label: 'Trap', blurb: '140 BPM · 808 slides, rolling hats, pluck melody',
+      id: 'trap', label: 'Trap', blurb: '140 BPM · 808 slides, rolling hats, piano + strings',
       bpm: 140, kit: 'trap', swing: 0, key: { root: 5, scale: 'minor' },
       drums: [
-        { name: 'Kick', role: 'kick', A: 'x......x..x.....', B: 'x......x..x...x.' },
+        { name: 'Kick', role: 'kick', A: 'x......x..x.....', B: 'x......x..x...x.', character: ['punchy', 0.5] },
         { name: 'Snare', role: 'snare', A: '........x.......', B: '........x.....o.' },
-        { name: 'Clap', role: 'clap', A: '........x.......' },
+        { name: 'Clap', role: 'clap', kit: 'studio', A: '........x.......' },
         { name: 'Hi-hat', role: 'hat', A: 'x.x.x.x.x.x.x.x.', B: 'X.x.x.x.X.x.3x44' },
         { name: 'Open hat', role: 'openhat', A: '..............x.' },
         { name: 'Rim', role: 'rim', A: '.....x.......x..' }
@@ -27,60 +28,60 @@ const Templates = (() => {
         { name: '808', instrument: '808', bars: 1, params: { drive: 9, decay: 0.6, sustain: 0.7 },
           A: [[0, 29, 6], [7, 29, 3], [10, 32, 3], [13, 36, 3, 1]],
           B: [[0, 29, 3], [3, 29, 3], [6, 41, 2, 1], [8, 29, 4], [12, 27, 4]] },
-        { name: 'Pluck', instrument: 'pluck', bars: 2,
+        { name: 'Piano', instrument: 'real-piano', bars: 2, character: ['bright', 0.4],
           A: [[0, 72, 2], [3, 75, 2], [6, 77, 2], [8, 75, 4], [14, 72, 2], [16, 68, 2], [19, 72, 2], [22, 70, 4], [28, 67, 4]] },
-        { name: 'Pad', instrument: 'pad', bars: 2, pump: 0.5,
+        { name: 'Strings', instrument: 'real-strings', bars: 2, pump: 0.35,
           A: [[0, 65, 16], [0, 68, 16], [0, 72, 16], [16, 61, 16], [16, 65, 16], [16, 68, 16]] }
       ],
       sections: [
-        { name: 'Intro', bars: 4, play: { Pad: 'A', Pluck: 'A', 'Hi-hat': '--AA' } },
-        { name: 'Hook', bars: 8, play: { Kick: 'B', Snare: 'A', Clap: 'A', 'Hi-hat': 'B', 'Open hat': 'A', '808': 'BBBBBBB-', Pluck: 'A', Pad: 'A' } },
-        { name: 'Verse', bars: 8, play: { Kick: 'A', Snare: 'A', 'Hi-hat': 'A', Rim: 'A', '808': 'A', Pad: 'A' } },
-        { name: 'Hook 2', bars: 8, play: { Kick: 'B', Snare: 'B', Clap: 'A', 'Hi-hat': 'B', 'Open hat': 'A', '808': 'B', Pluck: 'A', Pad: 'A' } },
-        { name: 'Outro', bars: 4, play: { Pad: 'A', Pluck: 'A', '808': 'AA--' } }
+        { name: 'Intro', bars: 4, play: { Strings: 'A', Piano: 'A', 'Hi-hat': '--AA' } },
+        { name: 'Hook', bars: 8, play: { Kick: 'B', Snare: 'A', Clap: 'A', 'Hi-hat': 'B', 'Open hat': 'A', '808': 'BBBBBBB-', Piano: 'A', Strings: 'A' } },
+        { name: 'Verse', bars: 8, play: { Kick: 'A', Snare: 'A', 'Hi-hat': 'A', Rim: 'A', '808': 'A', Strings: 'A' } },
+        { name: 'Hook 2', bars: 8, play: { Kick: 'B', Snare: 'B', Clap: 'A', 'Hi-hat': 'B', 'Open hat': 'A', '808': 'B', Piano: 'A', Strings: 'A' } },
+        { name: 'Outro', bars: 4, play: { Strings: 'A', Piano: 'A', '808': 'AA--' } }
       ]
     },
     {
-      id: 'boombap', label: 'Boom Bap', blurb: '90 BPM · dusty swing, Rhodes chords, walking bass',
-      bpm: 90, kit: 'boombap', swing: 0.18, key: { root: 2, scale: 'minor' },
+      id: 'boombap', label: 'Boom Bap', blurb: '90 BPM · real drums, Rhodes chords, upright bass',
+      bpm: 90, kit: 'studio', swing: 0.18, key: { root: 2, scale: 'minor' },
       drums: [
-        { name: 'Kick', role: 'kick', A: 'x.....x...x.....', B: 'x.....x.x.....x.' },
-        { name: 'Snare', role: 'snare', A: '....x.......x...', B: '....x.......x..o' },
+        { name: 'Kick', role: 'kick', A: 'x.....x...x.....', B: 'x.....x.x.....x.', character: ['punchy', 0.6] },
+        { name: 'Snare', role: 'snare', A: '....x.......x...', B: '....x.......x..o', character: ['warm', 0.4] },
         { name: 'Hi-hat', role: 'hat', A: 'x.o.x.o.x.o.x.o.', B: 'xoxoxoxoxoxoxoxo' },
         { name: 'Open hat', role: 'openhat', A: '..........x.....' },
-        { name: 'Perc', role: 'perc', A: '..x...x...x...x.' }
+        { name: 'Shaker', role: 'shaker', A: '..x...x...x...x.' }
       ],
       synths: [
-        { name: 'Keys', instrument: 'epiano', bars: 2,
+        { name: 'Keys', instrument: 'real-epiano', bars: 2, character: ['warm', 0.5],
           A: [[0, 62, 7], [0, 65, 7], [0, 69, 7], [0, 72, 7], [10, 62, 4], [10, 65, 4], [10, 69, 4], [10, 72, 4],
               [16, 55, 7], [16, 58, 7], [16, 62, 7], [16, 65, 7], [26, 55, 4], [26, 58, 4], [26, 62, 4], [26, 65, 4]] },
-        { name: 'Bass', instrument: 'synthbass', bars: 2,
+        { name: 'Bass', instrument: 'real-upright', bars: 2,
           A: [[0, 38, 3], [6, 38, 2], [10, 41, 2], [16, 43, 3], [22, 43, 2], [26, 46, 2], [30, 45, 2]] }
       ],
       sections: [
         { name: 'Intro', bars: 4, play: { Keys: 'A', 'Hi-hat': '--AA' } },
         { name: 'Verse', bars: 8, play: { Kick: 'A', Snare: 'A', 'Hi-hat': 'A', Keys: 'A', Bass: 'A' } },
-        { name: 'Chorus', bars: 8, play: { Kick: 'B', Snare: 'B', 'Hi-hat': 'B', 'Open hat': 'A', Perc: 'A', Keys: 'A', Bass: 'A' } },
+        { name: 'Chorus', bars: 8, play: { Kick: 'B', Snare: 'B', 'Hi-hat': 'B', 'Open hat': 'A', Shaker: 'A', Keys: 'A', Bass: 'A' } },
         { name: 'Verse 2', bars: 8, play: { Kick: 'A', Snare: 'A', 'Hi-hat': 'A', Keys: 'A', Bass: 'AAAAAA--' } },
-        { name: 'Chorus 2', bars: 8, play: { Kick: 'B', Snare: 'B', 'Hi-hat': 'B', 'Open hat': 'A', Perc: 'A', Keys: 'A', Bass: 'A' } },
+        { name: 'Chorus 2', bars: 8, play: { Kick: 'B', Snare: 'B', 'Hi-hat': 'B', 'Open hat': 'A', Shaker: 'A', Keys: 'A', Bass: 'A' } },
         { name: 'Outro', bars: 4, play: { Keys: 'A' } }
       ]
     },
     {
-      id: 'lofi', label: 'Lo-Fi', blurb: '78 BPM · lazy swing, soft piano, warm pad',
-      bpm: 78, kit: 'lofi', swing: 0.3, key: { root: 9, scale: 'minor' },
+      id: 'lofi', label: 'Lo-Fi', blurb: '78 BPM · dusty real drums, soft piano, upright bass',
+      bpm: 78, kit: 'acoustic', swing: 0.3, key: { root: 9, scale: 'minor' },
       drums: [
-        { name: 'Kick', role: 'kick', A: 'x......x..x.....' },
-        { name: 'Snare', role: 'snare', A: '....x.......x...' },
-        { name: 'Hi-hat', role: 'hat', A: 'o.o.o.o.o.o.o.o.', B: 'o.oxo.o.o.oxo.oo' },
-        { name: 'Shaker', role: 'perc', A: '..o...o...o...o.' }
+        { name: 'Kick', role: 'kick', A: 'x......x..x.....', character: ['lofi', 0.6] },
+        { name: 'Snare', role: 'snare', A: '....x.......x...', character: ['lofi', 0.6] },
+        { name: 'Hi-hat', role: 'hat', A: 'o.o.o.o.o.o.o.o.', B: 'o.oxo.o.o.oxo.oo', character: ['lofi', 0.5] },
+        { name: 'Shaker', role: 'shaker', A: '..o...o...o...o.' }
       ],
       synths: [
-        { name: 'Piano', instrument: 'piano', bars: 2, params: { tone: 0.35 },
+        { name: 'Piano', instrument: 'real-piano', bars: 2, params: { tone: 0.55 }, character: ['lofi', 0.5],
           A: [[0, 53, 14], [0, 57, 14], [0, 60, 14], [0, 64, 14], [16, 52, 14], [16, 55, 14], [16, 59, 14], [16, 62, 14]] },
         { name: 'Pad', instrument: 'pad', bars: 2, params: { tone: 0.3 },
           A: [[0, 65, 16], [0, 69, 16], [16, 64, 16], [16, 67, 16]] },
-        { name: 'Bass', instrument: 'synthbass', bars: 2, params: { tone: 0.2 },
+        { name: 'Bass', instrument: 'real-upright', bars: 2, character: ['warm', 0.4],
           A: [[0, 41, 6], [8, 41, 4], [16, 40, 6], [24, 43, 4]] }
       ],
       sections: [
@@ -124,20 +125,21 @@ const Templates = (() => {
         { name: 'Kick', role: 'kick', A: 'x.......x.x.....' },
         { name: 'Snare', role: 'snare', A: '....x.......x...' },
         { name: 'Hi-hat', role: 'hat', A: 'x.x.x.x.x.x.x.x.', B: 'x.x.x.3.x.x.x.4.' },
+        { name: 'Snap', role: 'snap', kit: 'studio', A: '....x.......x...' },
         { name: 'Rim', role: 'rim', A: '..o.....o.....o.' }
       ],
       synths: [
         { name: '808', instrument: '808', bars: 2, params: { decay: 0.8, sustain: 0.75 },
           A: [[0, 39, 8], [10, 39, 3], [13, 43, 3, 1], [16, 36, 8], [26, 34, 6]] },
-        { name: 'Keys', instrument: 'epiano', bars: 2, params: { vibrato: 0.3 },
+        { name: 'Keys', instrument: 'real-epiano', bars: 2, character: ['warm', 0.4],
           A: [[0, 63, 14], [0, 67, 14], [0, 70, 14], [0, 74, 14], [16, 60, 14], [16, 63, 14], [16, 67, 14], [16, 70, 14]] },
-        { name: 'Strings', instrument: 'strings', bars: 2,
+        { name: 'Strings', instrument: 'real-strings', bars: 2,
           A: [[0, 75, 16], [16, 72, 16]] }
       ],
       sections: [
         { name: 'Intro', bars: 4, play: { Keys: 'A', Strings: 'A' } },
         { name: 'Verse', bars: 8, play: { Kick: 'A', Snare: 'A', 'Hi-hat': 'A', Rim: 'A', '808': 'A', Keys: 'A' } },
-        { name: 'Hook', bars: 8, play: { Kick: 'A', Snare: 'A', 'Hi-hat': 'B', '808': 'A', Keys: 'A', Strings: 'A' } },
+        { name: 'Hook', bars: 8, play: { Kick: 'A', Snare: 'A', Snap: 'A', 'Hi-hat': 'B', '808': 'A', Keys: 'A', Strings: 'A' } },
         { name: 'Outro', bars: 4, play: { Keys: 'A', Strings: 'A' } }
       ]
     },
@@ -178,8 +180,9 @@ const Templates = (() => {
     spec.drums.forEach(d => {
       const bars = d.bars || 1;
       const t = { id: 't' + next++, kind: 'drum', name: d.name, bars, live: 0, pending: null, edit: 0,
-                  sound: { kit: spec.kit, role: d.role }, pump: 0,
+                  sound: { kit: d.kit || spec.kit, role: d.role }, pump: 0,
                   patterns: ['A', 'B', 'C', 'D'].map(L => drumSteps(d[L], bars)) };
+      if (d.character) t.character = { id: d.character[0], amount: d.character[1] };
       tracks.push(t); byName[d.name] = t;
     });
     spec.synths.forEach(x => {
@@ -188,6 +191,7 @@ const Templates = (() => {
                   instrument: x.instrument, params: Object.assign(Instruments.defaults(x.instrument), x.params || {}),
                   pump: x.pump || 0,
                   patterns: ['A', 'B', 'C', 'D'].map(L => (x[L] || []).map(([s, m, l, sl]) => ({ s, m, l: l || 1, sl: !!sl }))) };
+      if (x.character) t.character = { id: x.character[0], amount: x.character[1] };
       tracks.push(t); byName[x.name] = t;
     });
     const sections = spec.sections.map(sec => {

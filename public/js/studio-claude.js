@@ -153,6 +153,12 @@
       Project.setPump(t.id, clamp(a.amount, 0, 0.9));
       return `${t.name} pump`;
     },
+    set_character(a) {
+      const t = findTrack(a.track);
+      if (!t || !Character.PRESETS.some(c => c.id === a.character)) return null;
+      Project.setCharacter(t.id, a.character, clamp(a.amount == null ? 0.6 : a.amount, 0, 1));
+      return `${t.name}: ${Character.label(a.character)}`;
+    },
     mute_track(a) {
       const t = findTrack(a.track);
       if (!t) return null;

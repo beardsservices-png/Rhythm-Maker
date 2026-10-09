@@ -78,6 +78,20 @@
       pr.appendChild(pl); pr.appendChild(ps);
       el.appendChild(pr);
 
+      // Character: one-knob tone flavour (the amount lives in the editor).
+      const cs = document.createElement('select');
+      cs.className = 'stripchar';
+      cs.dataset.role = 'char';
+      cs.title = 'Character — pick a flavour (Warm, Punchy, Vocal …). Fine-tune its Amount in the editor.';
+      Character.list(kindOf(t.id) === 'audio').forEach(c => {
+        const o = document.createElement('option'); o.value = c.id; o.textContent = c.id === 'none' ? 'character…' : c.label; o.title = c.hint; cs.appendChild(o);
+      });
+      cs.addEventListener('change', () => {
+        const pt = Project.track(t.id);
+        Project.setCharacter(t.id, cs.value, pt && pt.character ? pt.character.amount : 0.6);
+      });
+      el.appendChild(cs);
+
       const btns = document.createElement('div');
       btns.className = 'stripbtns';
       const m = document.createElement('button');
@@ -104,6 +118,7 @@
       set('vol', t.volume); set('pan', t.pan); set('reverb', t.reverb); set('delay', t.delay);
       const pt = Project.track(t.id);
       set('pump', pt && pt.pump ? pt.pump : 0);
+      set('char', pt && pt.character ? pt.character.id : 'none');
       el.querySelector('[data-role="pct"]').textContent = Math.round(t.volume * 100) + '%';
       el.querySelector('[data-role="m"]').className = t.muted ? 'on-mute' : '';
       el.querySelector('[data-role="s"]').className = t.soloed ? 'on-solo' : '';
@@ -124,7 +139,7 @@
   document.getElementById('clearSolo').addEventListener('click', () => Mixer.clearSolo());
 
   Mixer.onChange(render);
-  Project.on((r) => { if (r === 'pump' || r === 'load' || r === 'tracks') update(Mixer.snapshot()); });
+  Project.on((r) => { if (r === 'pump' || r === 'load' || r === 'tracks' || r === 'character') update(Mixer.snapshot()); });
   render(Mixer.snapshot());
 
   window.addEventListener('bhs:mixer-restored', () => {
