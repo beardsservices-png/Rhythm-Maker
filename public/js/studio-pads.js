@@ -124,7 +124,7 @@ const PadRoom = (() => {
   }
 
   function refresh() {
-    const s = drums().map(t => t.id + ':' + t.name + ':' + t.sound.kit + ':' + t.sound.role).join('|') + '|' + (Keys.target() === 'drums');
+    const s = drums().map(t => t.id + ':' + t.name + ':' + t.sound.kit + ':' + t.sound.role).join('|') + '|' + (Keys.target() === 'drums') + Keys.layout();
     if (s !== sig) { sig = s; build(); }
     paintKit();
   }
@@ -159,6 +159,7 @@ const PadRoom = (() => {
   Mixer.onChange(paintMutes);
   Project.on((r) => { if (['tracks', 'load', 'sound'].includes(r)) refresh(); });
   $('keysTarget').addEventListener('change', () => setTimeout(refresh, 0));
+  window.addEventListener('bhs:keys-layout', () => { sig = ''; refresh(); });
 
   refresh();
   paintWrite();

@@ -9,7 +9,7 @@
 // The /api/ routes (saving, loading, Ask Claude) and other sites (the
 // MediaPipe CDN) are never cached — they go straight to the network.
 
-const CACHE = 'rhythm-shop-v5';
+const CACHE = 'rhythm-shop-v6';
 const SHELL = ['/', '/index.html', '/studio.html', '/practice.html', '/manual.html', '/manifest.webmanifest',
                '/css/base.css', '/css/studio.css', '/css/practice.css', '/icons/icon-192.png'];
 

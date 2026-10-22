@@ -62,6 +62,9 @@ and **BHS Studio** (`public/studio.html`). See `README.md` for the file map.
   Under each pad: sound select (any kit × role) and M. Kit box = `Project.setKit`.
   "Write hits" just clicks the dock's `#recNotes` (one switch). Glows from
   `Sequencer.onHit`. Handspace itself lives in the `vrlike` repo.
+- **Computer keys** (`studio-keys.js`): default is the **home row** — A S D F / J K L ;
+  play the 8 notes of `Project.key()` root→octave (C major if no key), or the first 8
+  pads. "Keys: full piano" (localStorage `bhs.studio.keysLayout`) is the old Z–M/Q–U map.
 - **Hearing less:** "Hear only this" on the editor (solo the selected track), ⟲ on a
   section = `Sequencer.loopSection(id)` (not saved with the song), and top-bar chips
   that name whatever is muted / soloed / looping with the button that undoes it.
