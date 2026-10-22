@@ -866,8 +866,8 @@ function sineWav(file) {
     return { x: r.left, y: r.top + scrollY, w: r.width, h: r.height, shown: !e.hidden && r.height > 0 }; }, id);
   const st = () => page.evaluate(() => Windows.state());
   let s0 = await st();
-  ok('standard layout: timeline, editor and pinned keyboard open; mixer, effects, Claude closed',
-     s0.timeline.open && s0.editor.open && s0.keys.open && s0.keys.pinned && !s0.mixer.open && !s0.fx.open && !s0.claude.open, JSON.stringify(s0));
+  ok('standard layout: timeline, pads, editor and pinned keyboard open; mixer, effects, Claude closed',
+     s0.timeline.open && s0.pads.open && s0.editor.open && s0.keys.open && s0.keys.pinned && !s0.mixer.open && !s0.fx.open && !s0.claude.open, JSON.stringify(s0));
   await page.click('#winBtn');
   await page.check('#winList input[data-win="mixer"]');
   await page.waitForTimeout(300);
@@ -993,6 +993,50 @@ function sineWav(file) {
   s0 = await st();
   ok('a saved layout comes back from the Windows menu', s0.mixer.open && s0.timeline.open && s0.editor.w === 6 && s0.mixer.x === 6, JSON.stringify(s0));
 
+  console.log('\n13m2. Pads — every drum as a big pad, the Handspace layout');
+  await page.evaluate(() => { document.getElementById('layoutReset').click(); window.scrollTo(0, 0); });
+  await page.waitForTimeout(400);
+  const pd = await page.evaluate(() => ({ pads: [...document.querySelectorAll('#padRoom .padcell')].map(c => c.dataset.id),
+    drums: Project.tracks().filter(t => t.kind === 'drum').map(t => t.id) }));
+  ok('one pad for every drum track', pd.pads.length > 0 && pd.pads.join() === pd.drums.join(), JSON.stringify(pd));
+  await page.evaluate(() => { window.__hits = []; const h = DrumKits.hit; window.__realHit = h;
+    DrumKits.hit = (a, d, sound, when, vel) => { window.__hits.push({ role: sound.role, kit: sound.kit, vel }); return h(a, d, sound, when, vel); }; });
+  const padXY = (i, fx, fy) => page.evaluate(([i, fx, fy]) => { const f = document.querySelectorAll('#padRoom .padface')[i]; f.scrollIntoView({ block: 'center' });
+    const r = f.getBoundingClientRect(); return { x: r.left + r.width * fx, y: r.top + r.height * fy }; }, [i, fx, fy]);
+  let xy = await padXY(0, 0.5, 0.5);
+  await page.mouse.click(xy.x, xy.y);
+  xy = await padXY(0, 0.06, 0.5);
+  await page.mouse.click(xy.x, xy.y);
+  await page.waitForTimeout(100);
+  const hits = await page.evaluate(() => window.__hits.slice());
+  const first = await page.evaluate(() => Project.track(document.querySelector('#padRoom .padcell').dataset.id).sound);
+  ok('hitting a pad plays its drum', hits.length === 2 && hits[0].role === first.role, JSON.stringify(hits));
+  ok('the middle of a pad is a full hit, the edge is softer', hits[0].vel > 0.9 && hits[1].vel < hits[0].vel - 0.2, JSON.stringify(hits));
+  await page.evaluate(() => { const c = document.querySelector('#padRoom .padcell'); Sequencer.flash(c.dataset.id); });
+  await page.waitForFunction(() => document.querySelector('#padRoom .padcell').classList.contains('hit'), null, { timeout: 2000 }).catch(() => {});
+  ok('a pad lights up when its drum sounds', await page.evaluate(() => document.querySelector('#padRoom .padcell').classList.contains('hit')));
+  await page.selectOption('#padRoom .padcell:first-child .pad-sound', 'boombap|snap');
+  await page.waitForTimeout(100);
+  ok('a pad\'s sound box borrows any drum from any kit', await page.evaluate(() => { const t = Project.track(document.querySelector('#padRoom .padcell').dataset.id); return t.sound.kit === 'boombap' && t.sound.role === 'snap'; }));
+  await page.selectOption('#padKit', 'house');
+  await page.waitForTimeout(100);
+  ok('the Kit box puts every pad on one kit', await page.evaluate(() => Project.tracks().filter(t => t.kind === 'drum').every(t => t.sound.kit === 'house')));
+  await page.click('#padRoom .padcell:nth-child(2) .pad-m');
+  await page.waitForTimeout(100);
+  const pm = await page.evaluate(() => { const c = document.querySelectorAll('#padRoom .padcell')[1]; return { muted: Mixer.get(c.dataset.id).muted, dim: c.classList.contains('muted'), chip: document.getElementById('muteChip').textContent }; });
+  ok('M under a pad mutes that drum, the pad greys out and the top bar says so', pm.muted && pm.dim && /Muted/.test(pm.chip), JSON.stringify(pm));
+  await page.click('#padRoom .padcell:nth-child(2) .pad-m');
+  const nPads = await page.evaluate(() => document.querySelectorAll('#padRoom .padcell').length);
+  await page.click('#padAdd');
+  await page.click('#addMenu .menuitem:has-text("Cowbell")');
+  await page.waitForTimeout(200);
+  ok('+ Pad adds a drum (a new lane in the song too)', await page.evaluate((n) => document.querySelectorAll('#padRoom .padcell').length === n + 1 &&
+     Project.tracks().some(t => t.kind === 'drum' && t.sound.role === 'cowbell'), nPads));
+  await page.click('#padWrite');
+  ok('Write hits is the same switch as the keyboard\'s Write notes', await page.evaluate(() => document.getElementById('recNotes').getAttribute('aria-pressed') === 'true' && document.getElementById('padWrite').classList.contains('on')));
+  await page.click('#padWrite');
+  await page.evaluate(() => { DrumKits.hit = window.__realHit; Project.setKit('trap'); });
+
   console.log('\n13n. Hear less of it — solo the one you are editing, unmute all, loop one section');
   await page.evaluate(() => App.select(window.__track('Snare').id));
   await page.click('#hearOnlyBtn');
@@ -1056,7 +1100,7 @@ function sineWav(file) {
     return { n: r.length, full: r.every(b => b.width > innerWidth - 40 && b.left >= 0 && b.right <= innerWidth + 1),
              stacked: r.sort((a, b) => a.top - b.top).every((b, i, a) => i === 0 || b.top >= a[i - 1].bottom - 1), sw: document.documentElement.scrollWidth <= innerWidth + 1 };
   });
-  ok('on a phone every window is full width and they stack, side-by-side layouts included', ph.n === 6 && ph.full && ph.stacked && ph.sw, JSON.stringify(ph));
+  ok('on a phone every window is full width and they stack, side-by-side layouts included', ph.n === 7 && ph.full && ph.stacked && ph.sw, JSON.stringify(ph));
   await p5.close();
   const p6 = await browser.newPage();
   const errs6 = [];

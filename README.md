@@ -75,7 +75,8 @@ public/
                          record, mixer, effects, midi, project, export, claude,
                          history (undo + autosave), start (start screen),
                          voice (keeps tuned takes current), tour (guided first song),
-                         windows (every panel is a window: show/hide, move, resize, layouts)
+                         windows (every panel is a window: show/hide, move, resize, layouts),
+                         pads (every drum as a big pad — the Handspace layout, no camera)
     samples/             the recordings (mono MP3s, ~11 MB) — tools/build-samples.js
   manual.html + manual/ the user manual and its screenshots/callouts
 tools/make-manual.js    re-takes the manual's screenshots from the running app
