@@ -26,11 +26,16 @@ fs.mkdirSync(OUT, { recursive: true });
   const callouts = {};
 
   async function shot(id, region, marks, opts = {}) {
-    const data = await page.evaluate(([region, marks, pad]) => {
+    const data = await page.evaluate(([region, marks, pad, union]) => {
       const pageBox = (el) => { const r = el.getBoundingClientRect(); return { x: r.left + scrollX, y: r.top + scrollY, w: r.width, h: r.height }; };
       let clip;
       if (region === 'viewport') clip = { x: scrollX, y: scrollY, w: innerWidth, h: innerHeight };
       else { const el = document.querySelector(region); clip = pageBox(el); }
+      if (union) {   // also take in another element (e.g. the button a menu hangs from)
+        const u = pageBox(document.querySelector(union));
+        const x = Math.min(clip.x, u.x), y = Math.min(clip.y, u.y);
+        clip = { x, y, w: Math.max(clip.x + clip.w, u.x + u.w) - x, h: Math.max(clip.y + clip.h, u.y + u.h) - y };
+      }
       clip = { x: Math.max(0, clip.x - pad), y: Math.max(0, clip.y - pad), w: clip.w + pad * 2, h: clip.h + pad * 2 };
       const out = [];
       marks.forEach(([sel, n]) => {
@@ -40,7 +45,7 @@ fs.mkdirSync(OUT, { recursive: true });
         out.push({ n, x: (b.x - clip.x) / clip.w * 100, y: (b.y - clip.y) / clip.h * 100, w: b.w / clip.w * 100, h: b.h / clip.h * 100 });
       });
       return { clip, out };
-    }, [region, marks, opts.pad == null ? 8 : opts.pad]);
+    }, [region, marks, opts.pad == null ? 8 : opts.pad, opts.union || null]);
     const c = data.clip;
     await page.screenshot({ path: path.join(OUT, id + '.png'), clip: { x: c.x, y: c.y, width: c.w, height: c.h }, fullPage: region !== 'viewport' });
     callouts[id] = data.out;
@@ -49,6 +54,7 @@ fs.mkdirSync(OUT, { recursive: true });
 
   // The dock is pinned to the window, so in a full-page capture it lands mid-picture; hide it for those.
   const collapseDock = (on) => page.evaluate((on) => { document.getElementById('dock').style.display = on ? 'none' : ''; }, on);
+  await page.addInitScript(() => { try { localStorage.removeItem('bhs.studio.layout'); localStorage.removeItem('bhs.studio.layouts'); } catch (e) {} });
 
   await page.goto(BASE + '/studio.html', { waitUntil: 'load' });
   await page.waitForTimeout(500);
@@ -135,18 +141,18 @@ fs.mkdirSync(OUT, { recursive: true });
   await shot('roll808', '#editorPanel', [['.slidebtn.on', 1], ['.rnote.slide', 2]]);
 
   // ── mixer
-  await page.evaluate(() => App.showTab('mix'));
+  await page.evaluate(() => { App.showTab('mix'); document.getElementById('mixerPanel').scrollIntoView(); });
   await page.waitForTimeout(100);
-  await shot('mixer', '#editorPanel', [
+  await shot('mixer', '#mixerPanel', [
     ['.strip .fader', 1], ['.strip .panknob', 2], ['.strip .sendrow', 3], ['.strip .pumprow', 4], ['.strip .stripbtns', 5], ['#masterVol', 6], ['.strip .stripchar', 7]
   ]);
-  await page.evaluate(() => App.showTab('edit'));
+  await page.evaluate(() => Windows.hide('mixer'));
   await collapseDock(false);
 
   // ── dock
   await page.evaluate(() => window.scrollTo(0, 0));
   await shot('dock', '#dock', [
-    ['#keysTarget', 1], ['#keysSound', 2], ['#octDown', 3], ['#slideBtn', 4], ['#recNotes', 5], ['#keyboard', 6], ['#knobs', 7], ['#dockToggle', 8]
+    ['#keysTarget', 1], ['#keysSound', 2], ['#octDown', 3], ['#slideBtn', 4], ['#recNotes', 5], ['#keyboard', 6], ['#knobs', 7], ['#dock .win-ctl', 8]
   ], { pad: 0 });
 
   // ── top bar: recording, click, undo
@@ -194,8 +200,22 @@ fs.mkdirSync(OUT, { recursive: true });
 
   // ── Ask Claude
   await page.click('#claudeBtn');
-  await page.waitForTimeout(150);
+  await page.waitForTimeout(300);
   await shot('claude', '#claudeDrawer', [['#claudeLog', 1], ['#claudeInput', 2]], { pad: 0 });
+  await page.evaluate(() => Windows.hide('claude'));
+
+  // ── windows: the menu, and one window's controls
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.click('#winBtn');
+  await page.waitForTimeout(200);
+  await shot('windows', '#winMenu', [['#winBtn', 1], ['#winList', 2], ['#layoutList', 3], ['#layoutSave', 4]], { pad: 6, union: '#winBtn' });
+  await page.keyboard.press('Escape');
+  await page.evaluate(() => { Windows.useLayout({ timeline: { open: false }, editor: { open: true, x: 0, w: 7, y: 0 }, fx: { open: true, x: 7, w: 5, y: 0 }, keys: { open: true, pinned: true } }); });
+  await page.waitForTimeout(400);
+  await collapseDock(true);
+  await shot('wincontrols', '#fxWin', [['#fxWin .win-grip', 1], ['#fxWin .win-ctl', 2], ['#fxWin .win-rzr', 3], ['#fxWin .win-rz:not(.win-rzr)', 4]]);
+  await collapseDock(false);
+  await page.evaluate(() => document.getElementById('layoutReset').click());
 
   fs.writeFileSync(path.join(OUT, 'callouts.json'), JSON.stringify(callouts, null, 1));
   await browser.close();

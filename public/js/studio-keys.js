@@ -338,15 +338,8 @@ const Keys = (() => {
       : 'Write notes is off.');
   });
 
-  const dock = $('dock');
-  $('dockToggle').addEventListener('click', () => {
-    dock.classList.toggle('collapsed');
-    $('dockToggle').innerHTML = dock.classList.contains('collapsed') ? '&#9652;' : '&#9662;';
-  });
-  // Keep the page's bottom padding equal to the dock, so nothing hides under it.
-  const sizeBody = () => document.body.style.setProperty('--dockH', dock.offsetHeight + 'px');
-  if (window.ResizeObserver) new ResizeObserver(sizeBody).observe(dock);
-  sizeBody();
+  // Folding, closing, pinning and the page's bottom padding under the dock are
+  // the window manager's (studio-windows.js).
 
   // ── computer keyboard ──
   const held = new Set();

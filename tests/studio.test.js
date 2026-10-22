@@ -859,6 +859,173 @@ function sineWav(file) {
   ok('…walks every step to the end and closes', tour.count >= 12 && /whole loop/.test(tour.last) && tour.closed);
   ok('start screen and top bar both offer the tour', await page.evaluate(() => !!document.getElementById('ssTour') && !!document.getElementById('tourBtn')));
 
+  console.log('\n13m. Windows — pick what is on screen, move it, size it, fold it, close it');
+  await page.evaluate(() => { localStorage.removeItem('bhs.studio.layouts'); document.getElementById('layoutReset').click(); window.scrollTo(0, 0); });
+  await page.waitForTimeout(400);
+  const box = (id) => page.evaluate((i) => { const e = document.querySelector(`.win[data-win="${i}"]`); const r = e.getBoundingClientRect();
+    return { x: r.left, y: r.top + scrollY, w: r.width, h: r.height, shown: !e.hidden && r.height > 0 }; }, id);
+  const st = () => page.evaluate(() => Windows.state());
+  let s0 = await st();
+  ok('standard layout: timeline, editor and pinned keyboard open; mixer, effects, Claude closed',
+     s0.timeline.open && s0.editor.open && s0.keys.open && s0.keys.pinned && !s0.mixer.open && !s0.fx.open && !s0.claude.open, JSON.stringify(s0));
+  await page.click('#winBtn');
+  await page.check('#winList input[data-win="mixer"]');
+  await page.waitForTimeout(300);
+  ok('ticking Mixer in the Windows menu opens it, strips and all', (await box('mixer')).shown && await page.evaluate(() => document.querySelectorAll('#mixerStrips .strip').length > 3));
+  await page.uncheck('#winList input[data-win="mixer"]');
+  await page.waitForTimeout(200);
+  ok('unticking it closes it', !(await box('mixer')).shown);
+  await page.keyboard.press('Escape');
+  await page.evaluate(() => App.showTab('mix'));
+  await page.waitForTimeout(300);
+  ok('anything that asked for the old Mixer tab gets the Mixer window', (await box('mixer')).shown);
+
+  const ed0 = await box('editor');
+  await page.click('.win[data-win="timeline"] .win-x');
+  await page.waitForTimeout(400);
+  const ed1 = await box('editor');
+  ok('× closes the timeline and the editor moves up into its place', !(await box('timeline')).shown && ed1.y < ed0.y - 100, `${ed0.y} -> ${ed1.y}`);
+  await page.click('#winBtn'); await page.check('#winList input[data-win="timeline"]'); await page.keyboard.press('Escape');
+  await page.waitForTimeout(400);
+  ok('…and the Windows menu brings it back (at the bottom)', (await box('timeline')).shown && (await box('timeline')).y > (await box('editor')).y);
+
+  // Drag the editor by its title bar to the very top.
+  await page.evaluate(() => window.scrollTo(0, 0));
+  const dragTo = async (id, toX, toY) => {
+    await page.evaluate((i) => document.querySelector(`.win[data-win="${i}"]`).scrollIntoView({ block: 'start' }), id);
+    await page.waitForTimeout(100);
+    const h = await page.evaluate((i) => { const r = document.querySelector(`.win[data-win="${i}"] .win-grip`).getBoundingClientRect(); return { x: r.left + 4, y: r.top + 4 }; }, id);
+    await page.mouse.move(h.x, h.y); await page.mouse.down();
+    const sy = await page.evaluate(() => scrollY);
+    const ty = toY - sy;
+    for (let k = 1; k <= 8; k++) await page.mouse.move(h.x + (toX - h.x) * k / 8, h.y + (ty - h.y) * k / 8);
+    await page.mouse.up();
+    await page.waitForTimeout(350);
+  };
+  const ws0 = await page.evaluate(() => { const r = document.querySelector('.workspace').getBoundingClientRect(); return { x: r.left, y: r.top + scrollY, w: r.width }; });
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await dragTo('editor', ws0.x + 30, ws0.y + 4);
+  const order = await page.evaluate(() => ['editor', 'timeline', 'mixer'].map(i => document.querySelector(`.win[data-win="${i}"]`).getBoundingClientRect().top + scrollY));
+  ok('dragging the editor by its title bar to the top puts it first', order[0] < order[1] && order[0] < order[2], JSON.stringify(order));
+
+  // Resize the editor to half the width, then drop the mixer beside it.
+  await page.evaluate(() => window.scrollTo(0, 0));
+  const rz = await page.evaluate(() => { const r = document.querySelector('.win[data-win="editor"] .win-rzr').getBoundingClientRect(); return { x: r.left + 3, y: Math.min(r.top + 200, innerHeight - 300) }; });
+  await page.mouse.move(rz.x, rz.y); await page.mouse.down();
+  await page.mouse.move(rz.x - ws0.w * 0.25, rz.y + 1); await page.mouse.move(rz.x - ws0.w * 0.5, rz.y + 1);
+  await page.mouse.up();
+  await page.waitForTimeout(350);
+  s0 = await st();
+  ok('dragging its right edge makes the editor half the width', s0.editor.w === 6, JSON.stringify(s0.editor));
+  ok('…without fixing its height (the edge only changes the width)', !s0.editor.h);
+  const edB = await box('editor');
+  // Carry the mixer up past the top of the screen: the page scrolls while it's held there.
+  await page.evaluate(() => document.querySelector('.win[data-win="mixer"]').scrollIntoView({ block: 'start' }));
+  await page.waitForTimeout(100);
+  const mg = await page.evaluate(() => { const r = document.querySelector('.win[data-win="mixer"] .win-grip').getBoundingClientRect(); return { x: r.left + 4, y: r.top + 4 }; });
+  await page.mouse.move(mg.x, mg.y); await page.mouse.down();
+  await page.mouse.move(mg.x + 20, mg.y - 20); await page.mouse.move(ws0.x + ws0.w * 0.55, 30);
+  await page.waitForFunction(() => scrollY === 0, null, { timeout: 5000 }).catch(() => {});
+  ok('holding a dragged window at the top edge scrolls the page up', await page.evaluate(() => scrollY === 0));
+  await page.mouse.move(ws0.x + ws0.w * 0.55, edB.y + 4);
+  await page.mouse.up();
+  await page.waitForTimeout(350);
+  const mxB = await box('mixer');
+  s0 = await st();
+  ok('the mixer dropped beside it sits side by side', Math.abs(mxB.y - edB.y) < 4 && mxB.x > edB.x + edB.w - 2 && s0.mixer.x === 6, JSON.stringify([edB, mxB, s0.mixer]));
+  const overlap = await page.evaluate(() => {
+    const r = [...document.querySelectorAll('.win.ingrid')].filter(e => !e.hidden).map(e => e.getBoundingClientRect());
+    for (let a = 0; a < r.length; a++) for (let b = a + 1; b < r.length; b++) {
+      const A = r[a], B = r[b];
+      if (A.left < B.right - 1 && B.left < A.right - 1 && A.top < B.bottom - 1 && B.top < A.bottom - 1) return true;
+    }
+    return false;
+  });
+  ok('windows never overlap', !overlap);
+
+  // Taller by hand, then fit again.
+  await page.evaluate(() => document.querySelector('.win[data-win="mixer"] .win-rz').scrollIntoView({ block: 'center' }));
+  await page.waitForTimeout(100);
+  const rz2 = await page.evaluate(() => { const r = document.querySelector('.win[data-win="mixer"] .win-rz:not(.win-rzr)').getBoundingClientRect(); return { x: r.left + 8, y: r.top + 8 }; });
+  await page.mouse.move(rz2.x, rz2.y); await page.mouse.down(); await page.mouse.move(rz2.x, rz2.y - 200); await page.mouse.up();
+  await page.waitForTimeout(300);
+  ok('dragging the corner up gives it a set height (it scrolls inside)', (await st()).mixer.h > 0 && await page.evaluate(() => document.getElementById('mixerPanel').classList.contains('fixedh')));
+  await page.click('.win[data-win="mixer"] .win-fit');
+  await page.waitForTimeout(300);
+  ok('↕ fits it back to what is inside', !(await st()).mixer.h);
+
+  await page.click('.win[data-win="editor"] .win-min');
+  await page.waitForTimeout(300);
+  ok('− folds a window up to its title bar', (await box('editor')).h < 80 && (await st()).editor.min);
+  await page.evaluate(() => window.__bhsTimeline && App.select(Project.tracks()[0].id));
+  await page.evaluate(() => document.querySelector('.tl-row.track .editbtn') && document.querySelector('.tl-row.track .editbtn').click());
+  await page.waitForTimeout(300);
+  ok('opening an instrument to edit unfolds the editor', !(await st()).editor.min);
+
+  await page.click('.win[data-win="keys"] .win-pin');
+  await page.waitForTimeout(350);
+  const kb = await page.evaluate(() => ({ cls: document.getElementById('dock').className, pad: getComputedStyle(document.body).getPropertyValue('--dockH').trim(), pos: getComputedStyle(document.getElementById('dock')).position }));
+  ok('📌 lets the keyboard go into the layout like any window', /ingrid/.test(kb.cls) && kb.pos === 'absolute' && kb.pad === '0px', JSON.stringify(kb));
+  await page.click('.win[data-win="keys"] .win-pin');
+  await page.waitForTimeout(300);
+  ok('…and pins it back to the bottom', await page.evaluate(() => getComputedStyle(document.getElementById('dock')).position === 'fixed'));
+
+  const layBefore = await st();
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForTimeout(500);
+  await page.evaluate(() => StartScreen.isOpen() && document.getElementById('ssContinue').click());
+  await page.waitForTimeout(500);
+  await helpers();
+  const layAfter = await st();
+  const same = ['timeline', 'editor', 'mixer', 'fx', 'keys', 'claude'].every(k => layAfter[k].open === layBefore[k].open && layAfter[k].x === layBefore[k].x && layAfter[k].w === layBefore[k].w && layAfter[k].pinned === layBefore[k].pinned);
+  ok('the layout is remembered after a reload', same, JSON.stringify({ layBefore, layAfter }));
+
+  page.once('dialog', d => d.accept('Drums + mixer'));
+  await page.click('#winBtn'); await page.click('#layoutSave');
+  await page.waitForTimeout(200);
+  await page.click('[data-layout="Make a beat"]');
+  await page.waitForTimeout(400);
+  s0 = await st();
+  ok('"Make a beat" layout: just the editor and the keyboard', s0.editor.open && s0.keys.open && !s0.timeline.open && !s0.mixer.open);
+  await page.click('#winBtn');
+  await page.click('[data-layout="Drums + mixer"]');
+  await page.waitForTimeout(400);
+  s0 = await st();
+  ok('a saved layout comes back from the Windows menu', s0.mixer.open && s0.timeline.open && s0.editor.w === 6 && s0.mixer.x === 6, JSON.stringify(s0));
+
+  console.log('\n13n. Hear less of it — solo the one you are editing, unmute all, loop one section');
+  await page.evaluate(() => App.select(window.__track('Snare').id));
+  await page.click('#hearOnlyBtn');
+  await page.waitForTimeout(150);
+  const solo = await page.evaluate(() => ({ only: Project.tracks().filter(t => Mixer.get(t.id).soloed).map(t => t.name), chip: document.getElementById('muteChip').textContent, bar: !document.getElementById('hearBar').hidden }));
+  ok('"Hear only this" solos just the instrument you are editing', solo.only.join() === 'Snare' && /Hearing only Snare/.test(solo.chip) && solo.bar, JSON.stringify(solo));
+  await page.click('#muteChip button');
+  await page.waitForTimeout(150);
+  ok('the top bar chip\'s "Hear all" turns it off', await page.evaluate(() => Project.tracks().every(t => !Mixer.get(t.id).soloed) && document.getElementById('hearBar').hidden));
+  await page.evaluate(() => { Mixer.setMuted(window.__track('Kick').id, true); Mixer.setMuted(window.__track('Clap').id, true); });
+  await page.waitForTimeout(100);
+  ok('muted instruments are named in the top bar', /Muted: Kick \+ Clap/.test(await page.textContent('#muteChip')));
+  await page.click('#muteChip button');
+  await page.waitForTimeout(100);
+  ok('"Unmute all" brings everything back', await page.evaluate(() => Project.tracks().every(t => !Mixer.get(t.id).muted)));
+
+  await page.evaluate(() => { Project.setMode('song'); });
+  await page.waitForTimeout(150);
+  await page.evaluate(() => { if (Project.sections().length < 2) Project.addSection(null); });
+  await page.waitForTimeout(150);
+  await page.evaluate(() => document.querySelector('.tl-sec[data-sec="1"] .secloop').click());
+  await page.waitForTimeout(250);
+  const lp = await page.evaluate(() => { const s = Transport.getState(); const v = Project.sections()[1];
+    return { start: s.loopStart, len: s.loopLength, want: [Project.sectionStart(1) * 16, v.bars * 16], chip: document.getElementById('loopChip').textContent,
+             marked: document.querySelector('.tl-sec[data-sec="1"]').classList.contains('looped'), playing: Transport.isPlaying }; });
+  ok('⟲ on a section loops just that section', lp.start === lp.want[0] && lp.len === lp.want[1] && lp.marked && /Looping/.test(lp.chip), JSON.stringify(lp));
+  await page.click('#loopChip button');
+  await page.waitForTimeout(200);
+  ok('"Whole song" in the top bar plays the whole song again', await page.evaluate(() => { const s = Transport.getState(); return s.loopStart === 0 && s.loopLength === Project.songBars() * 16 && !Sequencer.loopedSection(); }));
+  await page.evaluate(() => { Transport.stop(); Project.setMode('pattern'); localStorage.removeItem('bhs.studio.layouts'); document.getElementById('layoutReset').click(); });
+  await page.waitForTimeout(300);
+
+  // ────────────────────────────────────────────────────────────────
   console.log('\n14. Other pages, and browsers without MIDI');
   const p2 = await browser.newPage();
   const errs2 = [];
@@ -881,6 +1048,15 @@ function sineWav(file) {
   await p5.waitForTimeout(300);
   ok('phone width loads without errors or sideways page scroll',
      errs5.length === 0 && await p5.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), errs5.join('; '));
+  await p5.evaluate(() => { StartScreen.isOpen() && StartScreen.choose('demo'); Windows.useLayout({ timeline: { open: true, y: 0 }, editor: { open: true, x: 0, w: 6, y: 1 },
+    mixer: { open: true, x: 6, w: 6, y: 1 }, fx: { open: true, y: 2 }, claude: { open: true, y: 3 }, keys: { open: true, pinned: false, y: 4 } }); });
+  await p5.waitForTimeout(500);
+  const ph = await p5.evaluate(() => {
+    const r = [...document.querySelectorAll('.win.ingrid')].filter(e => !e.hidden).map(e => e.getBoundingClientRect());
+    return { n: r.length, full: r.every(b => b.width > innerWidth - 40 && b.left >= 0 && b.right <= innerWidth + 1),
+             stacked: r.sort((a, b) => a.top - b.top).every((b, i, a) => i === 0 || b.top >= a[i - 1].bottom - 1), sw: document.documentElement.scrollWidth <= innerWidth + 1 };
+  });
+  ok('on a phone every window is full width and they stack, side-by-side layouts included', ph.n === 6 && ph.full && ph.stacked && ph.sw, JSON.stringify(ph));
   await p5.close();
   const p6 = await browser.newPage();
   const errs6 = [];

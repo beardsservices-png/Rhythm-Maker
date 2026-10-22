@@ -28,7 +28,7 @@ const Tour = (() => {
       text: 'This is the <b>timeline</b>: the whole song from left to right. Each <b>row is one instrument</b> and each <b>block is when it plays</b>. The <b>light at the start of a row blinks when that instrument makes sound</b> — watch the Kick row.',
       target: () => $('arrangePanel') },
     { title: 'Open what a block plays',
-      text: 'Click one of the <b>Kick</b> row\'s blocks. The bottom half of the screen jumps to exactly what that block plays.',
+      text: 'Click one of the <b>Kick</b> row\'s blocks. The <b>Editor</b> window shows exactly what that block plays.',
       target: () => { const id = kickId(); return id && document.querySelector(`.tl-row.track[data-id="${CSS.escape(id)}"] .clip`); },
       done: (k) => k === 'select' && App.selected() === kickId() },
     { title: 'The drum machine',
@@ -64,8 +64,12 @@ const Tour = (() => {
       text: 'Set the box next to <b>● Rec</b> to <b>microphone</b>, put headphones on, press <b>● Rec</b>. Your take gets <b>vocal polish</b> straight away, and <b>Tune</b> (pitch correction) is one click in its editor.',
       target: () => $('recSource') || $('recBtn') },
     { title: 'Balance it',
-      text: 'The <b>Mixer</b> tab: a fader per instrument for volume, the small slider for left/right, <b>rev</b> and <b>dly</b> for space. If something is too loud, turn it down here.',
-      target: () => document.querySelector('.tabs [data-tab="mix"]') },
+      text: 'The <b>Mixer</b> window: a fader per instrument for volume, the small slider for left/right, <b>rev</b> and <b>dly</b> for space. If something is too loud, turn it down here. Want to hear just one instrument? <b>Hear only this</b> on the Editor does it in one click.',
+      before: () => Windows.show('mixer'),
+      target: () => $('mixerPanel') },
+    { title: 'Your screen, your way',
+      text: '<b>▦ Windows</b> picks what\'s on screen — tick a window on, untick it off. Drag a window by its <b>title bar</b> to move it (drop it beside another to sit side by side), drag its <b>corner</b> to resize, <b>−</b> folds it up, <b>×</b> closes it. Ready-made layouts are in there too, and you can save your own.',
+      target: () => $('winBtn') },
     { title: 'Finish it',
       text: '<b>Export</b> → leave mastering on <b>Deep &amp; warm</b> → <b>Hear it mastered</b> → <b>Download .wav</b>. That\'s a finished song file you can send anywhere.',
       target: () => $('exportBtn') },
@@ -120,9 +124,12 @@ const Tour = (() => {
     card.querySelector('.tour-next').onclick = () => (last ? stop(true) : show(i + 1));
     const back = card.querySelector('.tour-back');
     if (back) back.onclick = () => show(i - 1);
-    // Bring the target into view (the page scrolls; the dock is always there).
+    // Bring the target into view (the page scrolls; a pinned dock is always there).
+    // If it's in a window that's closed or folded up, open that window first.
     const t = st.target && st.target();
-    if (t && t.scrollIntoView && t.id !== 'dock' && !t.closest('.topbar')) t.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    const w = t && t.closest && t.closest('.win');
+    if (w && (w.hidden || w.classList.contains('min'))) Windows.show(w.dataset.win, { noScroll: true });
+    if (t && t.scrollIntoView && !t.closest('.pinned') && !t.closest('.topbar')) t.scrollIntoView({ block: 'center', behavior: 'smooth' });
     if (st.done) {
       const go = (k, d) => { if (i === n && st.done(k, d)) setTimeout(() => { if (i === n) show(n + 1); }, 700); };
       waitOff.push(Project.on((r, d) => go(r, d)));

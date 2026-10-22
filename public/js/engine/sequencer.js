@@ -210,9 +210,31 @@ const Sequencer = (() => {
     Mixer.setOrder(Project.tracks().map(t => t.id));
   }
 
+  // "Loop just this section": in song mode, play one section round and round
+  // instead of the whole song. Not saved with the song — it's how you listen.
+  let loopSec = null;
+  const loopFns = new Set();
+  function loopedIndex() {
+    if (!loopSec) return -1;
+    return Project.sections().findIndex(s => s.id === loopSec);
+  }
   function syncLoop() {
-    if (Project.mode() === 'song') Transport.setLoop(0, Math.max(1, Project.songBars()) * SPB, true);
+    const i = loopedIndex();
+    if (loopSec && i < 0) { loopSec = null; loopFns.forEach(fn => fn(null)); }
+    if (Project.mode() === 'song' && i >= 0) {
+      Transport.setLoop(Project.sectionStart(i) * SPB, Project.sections()[i].bars * SPB, true);
+    } else if (Project.mode() === 'song') Transport.setLoop(0, Math.max(1, Project.songBars()) * SPB, true);
     else Transport.setLoop(0, SPB, false);
+  }
+  function loopSection(id) {
+    loopSec = id || null;
+    syncLoop();
+    const i = loopedIndex();
+    const from = i >= 0 ? Project.sectionStart(i) * SPB : 0;
+    // Jump there now rather than finishing the bar you're in somewhere else.
+    if (Transport.isPlaying && i >= 0) { Transport.stop(); Transport.seekTo(from); Transport.play(); }
+    else if (!Transport.isPlaying) Transport.seekTo(from);
+    loopFns.forEach(fn => fn(loopSec));
   }
 
   // ── "what's making sound": hits surface on screen when they're heard ──
@@ -332,6 +354,9 @@ const Sequencer = (() => {
     /** Light a track up right now (something played by hand). */
     flash: (id) => { hitQueue.push({ id, time: 0 }); },
     metronome: () => metronome,
+    loopSection,
+    loopedSection: () => (loopedIndex() >= 0 ? loopSec : null),
+    onLoopSection: (fn) => { loopFns.add(fn); return () => loopFns.delete(fn); },
     liveBus: () => liveBus,
     context: () => ctx
   };
