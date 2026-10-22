@@ -1,5 +1,5 @@
 // studio-app.js — the frame around everything: top bar, play/stop, tempo,
-// loop-vs-song mode, tabs, popovers, and which track is selected.
+// loop-vs-song mode, popovers, and which track is selected.
 //
 // Other modules talk to each other through Project (the song) and through the
 // small App object here (selection, status line, popovers) rather than
@@ -149,22 +149,16 @@ const App = (() => {
     }
   });
 
-  // ── tabs ──
-  document.querySelectorAll('.tabs [data-tab]').forEach(b => {
-    b.addEventListener('click', () => showTab(b.dataset.tab));
-  });
-  function showTab(name) {
-    document.querySelectorAll('.tabs [data-tab]').forEach(b => b.classList.toggle('on', b.dataset.tab === name));
-    document.querySelectorAll('.tabpane').forEach(p => { p.hidden = p.id !== 'tab-' + name; });
-  }
+  // The editor, mixer and effects used to be tabs; they're windows now. The old
+  // names still work for anything that asks for a "tab".
+  const TAB_WIN = { edit: 'editor', mix: 'mixer', fx: 'fx' };
+  function showTab(name) { Windows.show(TAB_WIN[name] || name); }
 
-  // ── Claude drawer ──
+  // ── Ask Claude: a window like the rest ──
   $('claudeBtn').addEventListener('click', () => {
-    const d = $('claudeDrawer');
-    d.hidden = !d.hidden;
-    if (!d.hidden) $('claudeInput').focus();
+    Windows.toggle('claude');
+    if (Windows.isOpen('claude')) $('claudeInput').focus({ preventScroll: true });
   });
-  $('claudeClose').addEventListener('click', () => { $('claudeDrawer').hidden = true; });
 
   // Mark the buttons that open popovers so a click on them doesn't count as
   // "clicked outside" and close what it just opened.

@@ -58,7 +58,8 @@
   function editTrack(id) {
     App.select(id);
     const ed = document.getElementById('editorPanel');
-    if (ed) {
+    if (!Windows.visible('editor')) Windows.show('editor');
+    else if (ed) {
       const r = ed.getBoundingClientRect();
       if (r.top > window.innerHeight - 160 || r.bottom < 80) ed.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
@@ -139,8 +140,13 @@
       sb.style.left = g * BAR + 'px';
       sb.style.width = s.bars * BAR - 2 + 'px';
       sb.dataset.sec = String(i);
+      if (Sequencer.loopedSection() === s.id) sb.classList.add('looped');
+      const lp = btn('mini secloop' + (Sequencer.loopedSection() === s.id ? ' on' : ''), '⟲',
+        Sequencer.loopedSection() === s.id ? 'Looping this section — click to play the whole song again' : 'Loop just this section (play it over and over)',
+        () => loopSection(s));
       const nm = btn('sname', s.name, 'Play the song from here · double-click to rename', () => playFrom(Project.sectionStart(i)));
       nm.addEventListener('dblclick', (e) => { e.stopPropagation(); const v = prompt('Section name', s.name); if (v) Project.renameSection(s.id, v); });
+      sb.appendChild(lp);
       sb.appendChild(nm);
       sb.appendChild(btn('mini more', '⋯', 'Rename, length, duplicate, move, delete', (e, b) => sectionMenu(s, i, b)));
       const handle = el('span', 'sec-handle');
@@ -300,9 +306,20 @@
     Transport.play();
   }
 
+  /** Loop one section (or back to the whole song if it's already the one looping). */
+  function loopSection(s) {
+    if (Sequencer.loopedSection() === s.id) { Sequencer.loopSection(null); return; }
+    if (!App.ensureAudio()) return;
+    if (Project.mode() !== 'song') Project.setMode('song');
+    Sequencer.loopSection(s.id);
+    if (!Transport.isPlaying) Transport.play();
+  }
+
   function sectionMenu(s, i, anchor) {
+    const looping = Sequencer.loopedSection() === s.id;
     App.menu(anchor, [
       { label: '▶ Play from here', act: () => playFrom(Project.sectionStart(i)) },
+      { label: looping ? '⟲ Stop looping it (play the whole song)' : '⟲ Loop just this section', act: () => loopSection(s) },
       { label: 'Rename…', act: () => { const v = prompt('Section name', s.name); if (v) Project.renameSection(s.id, v); } },
       { label: 'Length…', act: () => { const v = parseInt(prompt('How many bars?', String(s.bars)), 10); if (v > 0) Project.setSectionBars(s.id, v); } },
       { label: 'Duplicate (copy everything in it)', act: () => Project.duplicateSection(i) },
@@ -505,6 +522,7 @@
     }
   });
   App.on((k) => { if (k === 'select') render(); });
+  Sequencer.onLoopSection(() => render());
   let rz = null;
   window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(render, 150); });
   render();

@@ -53,7 +53,13 @@
     <button id="modeSong" title="Play the sections in order, start to finish">Play song</button>
   </div>
 
+  <div class="tb-group tb-hear" id="hearBar">
+    <span id="loopChip" class="tb-chip" hidden></span>
+    <span id="muteChip" class="tb-chip" hidden></span>
+  </div>
+
   <div class="tb-group tb-right">
+    <button id="winBtn" class="tb-win" title="Choose which windows are on screen, and pick or save a layout">&#9638; Windows</button>
     <button id="openBtn" title="Open a saved track">Open</button>
     <button id="saveBtn" class="primary" title="Save to the server">Save</button>
     <button id="exportBtn" title="Download a .wav">Export</button>
@@ -70,9 +76,9 @@
 <main class="workspace">
 
   <!-- ── 1. the song timeline: WHEN each instrument plays ── -->
-  <section class="panel arrange" id="arrangePanel">
+  <section class="panel arrange win" data-win="timeline" id="arrangePanel">
     <div class="panel-head">
-      <h2><span class="stepnum">1</span> Song timeline <span class="h2sub">— WHEN each instrument plays</span></h2>
+      <h2>Song timeline <span class="h2sub">— WHEN each instrument plays</span></h2>
       <a class="help" href="manual.html#timeline" target="_blank" title="How the timeline works">?</a>
       <div class="panel-tools">
         <button id="addSectionBtn" title="Add a section at the end">+ Section</button>
@@ -86,63 +92,96 @@
   </section>
 
   <!-- ── 2. the editor: WHAT the selected instrument plays ── -->
-  <section class="panel lower" id="editorPanel">
+  <section class="panel win" data-win="editor" id="editorPanel">
     <div class="panel-head">
-      <h2><span class="stepnum">2</span> <span id="editorTitle">Editor</span> <span class="h2sub" id="editorSub">— WHAT it plays</span></h2>
+      <h2><span id="editorTitle">Editor</span> <span class="h2sub" id="editorSub">— WHAT it plays</span></h2>
       <a class="help" href="manual.html#editor" target="_blank" title="How the editor works">?</a>
-    </div>
-    <nav class="tabs" role="tablist">
-      <button role="tab" data-tab="edit" class="on">Edit</button>
-      <button role="tab" data-tab="mix">Mixer</button>
-      <button role="tab" data-tab="fx">Reverb &amp; delay</button>
-    </nav>
-    <div class="tabpane" id="tab-edit">
-      <div id="editor"></div>
-    </div>
-    <div class="tabpane" id="tab-mix" hidden>
-      <div class="mixbar">
-        <button id="clearSolo">Clear solo</button>
-        <label class="field">Master <span id="masterVolVal">90%</span>
-          <input type="range" id="masterVol" min="0" max="1.5" step="0.01" value="0.9"></label>
+      <div class="panel-tools">
+        <button id="hearOnlyBtn" title="Hear only this instrument (solo it). Click again to hear everything.">Hear only this</button>
       </div>
-      <div class="mixer" id="mixerStrips"></div>
     </div>
-    <div class="tabpane" id="tab-fx" hidden>
-      <div class="controls" id="fxPanel"></div>
-      <p class="hint">One reverb and one delay shared by everything; the <b>rev</b> and <b>dly</b> sliders on each
-        mixer strip decide how much of that track goes in. The delay follows the tempo.</p>
+    <div id="editor"></div>
+  </section>
+
+  <!-- ── 3. the mixer ── -->
+  <section class="panel win" data-win="mixer" id="mixerPanel">
+    <div class="panel-head">
+      <h2>Mixer <span class="h2sub">— how loud, where, how much room</span></h2>
+      <a class="help" href="manual.html#mixer" target="_blank" title="How the mixer works">?</a>
+    </div>
+    <div class="mixbar">
+      <button id="clearSolo">Clear solo</button>
+      <label class="field">Master <span id="masterVolVal">90%</span>
+        <input type="range" id="masterVol" min="0" max="1.5" step="0.01" value="0.9"></label>
+    </div>
+    <div class="mixer" id="mixerStrips"></div>
+  </section>
+
+  <!-- ── 4. reverb & delay ── -->
+  <section class="panel win" data-win="fx" id="fxWin">
+    <div class="panel-head">
+      <h2>Reverb &amp; delay</h2>
+    </div>
+    <div class="controls" id="fxPanel"></div>
+    <p class="hint">One reverb and one delay shared by everything; the <b>rev</b> and <b>dly</b> sliders on each
+      mixer strip decide how much of that track goes in. The delay follows the tempo.</p>
+  </section>
+
+  <!-- ── 5. Ask Claude ── -->
+  <section class="panel win" data-win="claude" id="claudeDrawer">
+    <div class="panel-head"><h2>Ask Claude</h2></div>
+    <div id="claudeLog" class="claudelog">
+      <div class="cmsg claude meta">Tell me what to change &mdash; "make the hats busier in the hook", "add strings playing
+        the chords", "drop the 808 for the last 2 bars of the verse", "give me a trap beat at 140". I change the song itself.</div>
+    </div>
+    <form id="claudeForm" class="clauderow">
+      <input type="text" id="claudeInput" placeholder="What should I change?" autocomplete="off">
+      <button type="submit" class="primary">Send</button>
+    </form>
+  </section>
+
+  <!-- ── the dock: keyboard + the sound's knobs, always visible under everything ── -->
+  <section class="dock win pinned" data-win="keys" id="dock">
+    <div class="dock-head">
+      <label class="dock-field">Play
+        <select id="keysTarget" class="tb-sel" aria-label="What the keyboard plays"></select></label>
+      <label class="dock-field" id="soundField">Sound
+        <select id="keysSound" class="tb-sel" aria-label="Instrument sound"></select></label>
+      <label class="dock-field" id="kitField" hidden>Kit
+        <select id="keysKit" class="tb-sel" aria-label="Drum kit"></select></label>
+      <div class="dock-btns">
+        <button id="octDown" title="Lower octave (←)">Oct &minus;</button>
+        <span id="octLabel" class="dim">C2</span>
+        <button id="octUp" title="Higher octave (→)">Oct +</button>
+        <button id="slideBtn" aria-pressed="false" title="Glide into the next note instead of restarting (or hold Shift)">Slide</button>
+        <button id="recNotes" aria-pressed="false" title="While playing, what you play is written into the pattern">&#9679; Write notes</button>
+      </div>
+      <div class="dock-now" id="nowNote">&mdash;</div>
+    </div>
+    <div class="dock-body">
+      <div class="keyboard" id="keyboard"></div>
+      <div class="knobs" id="knobs"></div>
     </div>
   </section>
 </main>
 
-<!-- ── the dock: keyboard + the sound's knobs, always visible under everything ── -->
-<footer class="dock" id="dock">
-  <div class="dock-head">
-    <label class="dock-field">Play
-      <select id="keysTarget" class="tb-sel" aria-label="What the keyboard plays"></select></label>
-    <label class="dock-field" id="soundField">Sound
-      <select id="keysSound" class="tb-sel" aria-label="Instrument sound"></select></label>
-    <label class="dock-field" id="kitField" hidden>Kit
-      <select id="keysKit" class="tb-sel" aria-label="Drum kit"></select></label>
-    <div class="dock-btns">
-      <button id="octDown" title="Lower octave (←)">Oct &minus;</button>
-      <span id="octLabel" class="dim">C2</span>
-      <button id="octUp" title="Higher octave (→)">Oct +</button>
-      <button id="slideBtn" aria-pressed="false" title="Glide into the next note instead of restarting (or hold Shift)">Slide</button>
-      <button id="recNotes" aria-pressed="false" title="While playing, what you play is written into the pattern">&#9679; Write notes</button>
-    </div>
-    <div class="dock-now" id="nowNote">&mdash;</div>
-    <button id="dockToggle" class="dock-toggle" title="Hide / show the keyboard">&#9662;</button>
-  </div>
-  <div class="dock-body">
-    <div class="keyboard" id="keyboard"></div>
-    <div class="knobs" id="knobs"></div>
-  </div>
-</footer>
 
 <!-- ── popovers ── -->
 <div class="pop" id="addMenu" hidden></div>
 <div class="pop" id="trackMenu" hidden></div>
+<div class="pop" id="winMenu" hidden>
+  <div class="pop-title">On screen</div>
+  <div id="winList" class="poplist"></div>
+  <div class="pop-title">Layouts</div>
+  <div id="layoutList" class="poplist"></div>
+  <div class="row">
+    <button id="layoutSave" title="Keep this arrangement under a name">Save this layout&hellip;</button>
+    <button id="layoutReset" title="Back to how the Studio first looked">Reset</button>
+  </div>
+  <p class="hint">Drag a window by its title bar to move it &mdash; drop it beside another to sit side by side.
+    Drag its bottom-right corner to resize; double-click the corner to fit it to what's inside.
+    <b>&minus;</b> folds it up, <b>&times;</b> closes it. Your layout is remembered.</p>
+</div>
 <div class="pop" id="openMenu" hidden>
   <div class="pop-title">Open a saved track</div>
   <div id="projList" class="poplist"></div>
@@ -200,17 +239,6 @@
   <p class="hint">Use headphones — on speakers the mic records the beat too. If your takes land late, nudge this.</p>
 </div>
 
-<aside class="drawer" id="claudeDrawer" hidden>
-  <div class="drawer-head"><h2>Ask Claude</h2><button id="claudeClose" title="Close">&times;</button></div>
-  <div id="claudeLog" class="claudelog">
-    <div class="cmsg claude meta">Tell me what to change &mdash; "make the hats busier in the hook", "add strings playing
-      the chords", "drop the 808 for the last 2 bars of the verse", "give me a trap beat at 140". I change the song itself.</div>
-  </div>
-  <form id="claudeForm" class="clauderow">
-    <input type="text" id="claudeInput" placeholder="What should I change?" autocomplete="off">
-    <button type="submit" class="primary">Send</button>
-  </form>
-</aside>
 
 <input type="file" id="audioUpload" accept="audio/*" multiple hidden>
 
@@ -262,6 +290,7 @@
 <script src="js/studio-project.js"></script>
 <script src="js/studio-export.js"></script>
 <script src="js/studio-claude.js"></script>
+<script src="js/studio-windows.js"></script>
 <script src="js/studio-history.js"></script>
 <script src="js/studio-start.js"></script>
 <script src="js/studio-tour.js"></script>

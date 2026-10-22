@@ -39,10 +39,26 @@ and **BHS Studio** (`public/studio.html`). See `README.md` for the file map.
   ones digit = level (1 soft, 2 normal, 3 accent), tens digit = roll (2/3/4).
   Always read them through `Project.stepInfo()`. Swing, key and per-track `pump`
   live on the project; undo snapshots exclude live letters and play mode.
-- **Layout rule:** the dock (keyboard + current sound's knobs) stays pinned at the
-  bottom. **No panel scrolls up/down inside itself** — every drum lane and every
-  timeline row is always visible; the *page* scrolls instead. The song timeline
-  scrolls sideways only. Brian hated hunting inside boxes; don't regress it.
+- **Windows** (`studio-windows.js`, Oct 2026 — Brian: "pick and choose whichever
+  modules I want open… resize it and change the entire dashboard layout"). Every
+  panel is a `.win`: timeline, editor, mixer, reverb & delay, keyboard (`#dock`),
+  Ask Claude. Windows menu = tick on/off + preset layouts + saved layouts
+  (localStorage `bhs.studio.layout` / `bhs.studio.layouts`). 12-column grid,
+  windows never overlap and fall upward (dashboard compaction); drag by the title
+  bar, drop beside another to share a row, right edge = width, corner = width +
+  height, − folds, × closes. Phones: full width, stacked. The old Edit/Mixer/FX
+  tabs are gone — `App.showTab('mix')` now opens the Mixer window. A new panel =
+  a `<section class="panel win" data-win=…>` with a `.panel-head` + a line in
+  `WINS` and the presets. **There is no "one page" or retro-look rule** — Brian
+  wants whatever works best.
+- **Layout rule:** the keyboard dock starts pinned at the bottom (📌 unpins it into
+  the grid). **A window is as tall as its contents by default** — every drum lane
+  and every timeline row is visible; the *page* scrolls instead. Only a window he
+  has dragged shorter scrolls inside (↕ fits it back). The song timeline scrolls
+  sideways only. Brian hated hunting inside boxes; don't regress it.
+- **Hearing less:** "Hear only this" on the editor (solo the selected track), ⟲ on a
+  section = `Sequencer.loopSection(id)` (not saved with the song), and top-bar chips
+  that name whatever is muted / soloed / looping with the button that undoes it.
 - **Timeline** (`studio-arrange.js`) is drawn from `Project.runs()` — the blocks
   are just runs of equal cells, and edits go through `Project.setCells()` (which
   grows the song). Clicking a block selects that track AND that pattern letter.

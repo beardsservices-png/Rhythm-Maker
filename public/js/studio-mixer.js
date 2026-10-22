@@ -147,3 +147,70 @@
     masterVal.textContent = Math.round(Mixer.getMasterVolume() * 100) + '%';
   });
 })();
+
+// ── "what am I hearing": one-tap solo for the instrument you're editing, and
+// chips in the top bar for anything muted, soloed or looping — each with the
+// button that puts it back. Nothing stays silent without saying so on screen.
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const hearBtn = $('hearOnlyBtn'), muteChip = $('muteChip'), loopChip = $('loopChip');
+
+  const tracks = () => Project.tracks().map(t => ({ t, m: Mixer.get(t.id) })).filter(x => x.m);
+  function unmuteAll() {
+    Mixer.clearSolo();
+    tracks().forEach(x => { if (x.m.muted) Mixer.setMuted(x.t.id, false); });
+  }
+  function onlyThis(id) {
+    const all = tracks();
+    return !!id && all.some(x => x.t.id === id && x.m.soloed) && all.every(x => x.t.id === id || !x.m.soloed);
+  }
+  function chip(el, text, btnText, btnTitle, fn) {
+    el.innerHTML = '';
+    el.appendChild(document.createTextNode(text));
+    const b = document.createElement('button');
+    b.textContent = btnText; b.title = btnTitle;
+    b.addEventListener('click', fn);
+    el.appendChild(b);
+    el.hidden = false;
+  }
+
+  function paint() {
+    const all = tracks();
+    const soloed = all.filter(x => x.m.soloed), muted = all.filter(x => x.m.muted);
+    const names = (xs) => xs.length <= 2 ? xs.map(x => x.t.name).join(' + ') : xs.length + ' instruments';
+    if (soloed.length) {
+      muteChip.className = 'tb-chip';
+      chip(muteChip, 'Hearing only ' + names(soloed), 'Hear all', 'Turn solo off (and unmute everything)', unmuteAll);
+    } else if (muted.length) {
+      muteChip.className = 'tb-chip mute';
+      chip(muteChip, 'Muted: ' + names(muted), 'Unmute all', 'Turn every instrument back on', unmuteAll);
+    } else muteChip.hidden = true;
+
+    const id = App.selected();
+    const on = onlyThis(id);
+    hearBtn.classList.toggle('on', on);
+    hearBtn.textContent = on ? 'Hearing only this ✕' : 'Hear only this';
+    hearBtn.disabled = !id;
+
+    const ls = Sequencer.loopedSection();
+    const sec = ls && Project.sections().find(s => s.id === ls);
+    if (sec) chip(loopChip, '⟲ Looping ' + sec.name, 'Whole song', 'Play the whole song again', () => Sequencer.loopSection(null));
+    else loopChip.hidden = true;
+    $('hearBar').hidden = muteChip.hidden && loopChip.hidden;
+  }
+
+  hearBtn.addEventListener('click', () => {
+    const id = App.selected();
+    if (!id) return;
+    if (onlyThis(id)) { Mixer.clearSolo(); return; }
+    Mixer.clearSolo();
+    Mixer.setSoloed(id, true);
+    if (Mixer.get(id) && Mixer.get(id).muted) Mixer.setMuted(id, false);
+  });
+
+  Mixer.onChange(paint);
+  App.on((k) => { if (k === 'select') paint(); });
+  Sequencer.onLoopSection(paint);
+  Project.on((r) => { if (['sections', 'load', 'tracks'].includes(r)) paint(); });
+  paint();
+})();
