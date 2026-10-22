@@ -204,6 +204,18 @@ fs.mkdirSync(OUT, { recursive: true });
   await shot('claude', '#claudeDrawer', [['#claudeLog', 1], ['#claudeInput', 2]], { pad: 0 });
   await page.evaluate(() => Windows.hide('claude'));
 
+  // ── pads
+  await page.evaluate(() => { document.getElementById('layoutReset').click(); window.scrollTo(0, 0); });
+  await page.waitForTimeout(400);
+  await collapseDock(true);
+  await page.evaluate(() => { const c = document.querySelector('#padRoom .padcell'); c.classList.add('hit'); c._t = 1;
+    const m = document.querySelectorAll('#padRoom .padcell')[3]; if (m) Mixer.setMuted(m.dataset.id, true); document.getElementById('status').classList.remove('show'); });
+  await page.waitForTimeout(150);
+  await page.evaluate(() => document.querySelector('#padRoom .padcell').classList.add('hit'));
+  await shot('pads', '#padsPanel', [['#padRoom .padcell .padface', 1], ['#padRoom .padcell .pad-sound', 2], ['#padRoom .padcell.muted .pad-m', 3], ['#padKit', 4], ['#padWrite', 5], ['#padAdd', 6]]);
+  await page.evaluate(() => { document.querySelectorAll('#padRoom .padcell').forEach(c => c.classList.remove('hit')); Project.tracks().forEach(t => Mixer.get(t.id) && Mixer.setMuted(t.id, false)); });
+  await collapseDock(false);
+
   // ── windows: the menu, and one window's controls
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.click('#winBtn');

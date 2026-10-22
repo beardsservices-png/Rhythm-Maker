@@ -403,6 +403,7 @@ const Keys = (() => {
 
   return {
     noteOn, noteOff, allOff, setBend, hitDrum, setTarget,
+    padKey: (i) => PADKEYS[i] || '',
     target: () => target,
     drumTracks, synthTracks
   };

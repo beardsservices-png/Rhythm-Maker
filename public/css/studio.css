@@ -650,3 +650,53 @@ body.studio.nodock { padding-bottom: 12px; }
   .win.ingrid { border-radius: 3px; }
   .win-rz { width: 26px; height: 22px; }
 }
+
+/* ── Pads: the Handspace room — big pads on a floor, lit when they sound ── */
+.padstage {
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(217,154,58,.07), transparent 60%),
+    repeating-linear-gradient(0deg, rgba(233,225,204,.045) 0 1px, transparent 1px 34px), #141511;
+  border: 1px solid var(--line); border-radius: 4px; padding: 22px 16px 12px; overflow: hidden;
+}
+.padroom {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 22px 16px;
+}
+.padcell { --pc: var(--amber); --tilt: rotateX(18deg); display: flex; flex-direction: column; gap: 10px; min-width: 0; perspective: 640px; perspective-origin: 50% -20%; }
+.studio .padface {
+  position: relative; aspect-ratio: 4 / 3; width: 100%; padding: 0; border-radius: 6px; overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--pc) 70%, black);
+  background: linear-gradient(170deg, color-mix(in srgb, var(--pc) 62%, #111) 0%, color-mix(in srgb, var(--pc) 34%, #0c0c0a) 100%);
+  box-shadow: 0 10px 0 color-mix(in srgb, var(--pc) 22%, #090908), 0 18px 28px rgba(0,0,0,.55);
+  display: flex; align-items: flex-end; justify-content: space-between; text-transform: none; letter-spacing: 0;
+  transform: var(--tilt); transform-origin: 50% 100%;
+  transition: transform .06s, box-shadow .06s, filter .12s; touch-action: none; user-select: none; cursor: pointer;
+}
+.padface b { position: relative; z-index: 1; font-family: Georgia, serif; font-weight: normal; font-size: 17px; color: var(--paper);
+  padding: 0 0 9px 12px; text-shadow: 0 1px 3px rgba(0,0,0,.6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.padface kbd { position: relative; z-index: 1; margin: 0 9px 9px 0; font-size: 11px; color: var(--paper); opacity: .75;
+  border: 1px solid rgba(233,225,204,.4); border-radius: 3px; padding: 1px 6px; }
+.padglow { position: absolute; inset: 0; background: radial-gradient(circle at 50% 45%, rgba(255,255,255,.55), color-mix(in srgb, var(--pc) 60%, transparent) 38%, transparent 70%);
+  opacity: 0; transition: opacity .18s; pointer-events: none; }
+.studio .padface:hover { filter: brightness(1.12); }
+.padcell.hit .padglow, .padcell.down .padglow { opacity: 1; transition: none; }
+.padcell.hit .padface { filter: brightness(1.35); }
+.padcell.down .padface { transform: var(--tilt) translateY(6px); box-shadow: 0 4px 0 color-mix(in srgb, var(--pc) 22%, #090908), 0 8px 16px rgba(0,0,0,.5); }
+.padcell.muted .padface { filter: grayscale(.85) brightness(.55); }
+.padunder { display: flex; gap: 6px; align-items: center; min-width: 0; }
+.padunder .pad-sound { flex: 1 1 auto; min-width: 0; font-size: 11.5px; }
+.studio .padunder .pad-m { width: 30px; flex: none; padding: 5px 0; font-size: 11px; }
+.studio .padunder .pad-m.on { background: var(--red); border-color: var(--red); color: var(--paper); }
+.studio #padWrite.on { background: var(--red); border-color: var(--red); color: var(--paper); }
+.pad-empty { margin: 10px 4px; }
+@media (max-width: 640px) {
+  .padroom { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 16px 10px; }
+  .padcell { --tilt: rotateX(12deg); }
+  .padstage { padding: 14px 8px 8px; }
+  .padface b { font-size: 14px; padding: 0 0 7px 8px; }
+}
+.win .panel-tools { flex-wrap: wrap; min-width: 0; }
+@media (max-width: 640px) {
+  #padsPanel .panel-tools { margin-left: 0; width: 100%; }
+  #padsPanel .panel-tools .field.inline { flex: 1 1 100%; }
+  #padKit { flex: 1 1 auto; min-width: 0; }
+}

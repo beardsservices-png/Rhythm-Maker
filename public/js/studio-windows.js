@@ -1,7 +1,7 @@
 // studio-windows.js — the Studio as a desktop of windows you arrange yourself.
 //
-// Every part of the Studio (timeline, editor, mixer, reverb & delay, keyboard,
-// Ask Claude) is a window. Tick it on or off in the Windows menu, drag it by its
+// Every part of the Studio (timeline, pads, editor, mixer, reverb & delay,
+// keyboard, Ask Claude) is a window. Tick it on or off in the Windows menu, drag it by its
 // title bar, drop it beside another to sit side by side, drag the corner to make
 // it wider or taller, fold it up with −, close it with ×. The layout is kept in
 // this browser and comes back next time; named layouts can be saved.
@@ -21,6 +21,7 @@ const Windows = (() => {
 
   const WINS = [
     { id: 'timeline', title: 'Song timeline', el: 'arrangePanel' },
+    { id: 'pads',     title: 'Pads', el: 'padsPanel' },
     { id: 'editor',   title: 'Editor (drums / notes / clip)', el: 'editorPanel' },
     { id: 'mixer',    title: 'Mixer', el: 'mixerPanel' },
     { id: 'fx',       title: 'Reverb & delay', el: 'fxWin' },
@@ -33,6 +34,7 @@ const Windows = (() => {
   const PRESETS = {
     'Standard': {
       timeline: { open: true, x: 0, w: 12, y: 0 },
+      pads:     { open: true, x: 0, w: 12, y: 0.5 },
       editor:   { open: true, x: 0, w: 12, y: 1 },
       mixer:    { open: false, x: 0, w: 8, y: 2 },
       fx:       { open: false, x: 8, w: 4, y: 2 },
@@ -41,7 +43,8 @@ const Windows = (() => {
     },
     'Make a beat': {
       timeline: { open: false, x: 0, w: 12, y: 2 },
-      editor:   { open: true, x: 0, w: 12, y: 0 },
+      pads:     { open: true, x: 0, w: 12, y: 0 },
+      editor:   { open: true, x: 0, w: 12, y: 1 },
       mixer:    { open: false, x: 0, w: 12, y: 3 },
       fx:       { open: false, x: 8, w: 4, y: 4 },
       claude:   { open: false, x: 8, w: 4, y: 5 },
@@ -49,6 +52,7 @@ const Windows = (() => {
     },
     'Lay out the song': {
       timeline: { open: true, x: 0, w: 12, y: 0 },
+      pads:     { open: false, x: 0, w: 12, y: 5 },
       editor:   { open: false, x: 0, w: 12, y: 2 },
       mixer:    { open: true, x: 0, w: 12, y: 1 },
       fx:       { open: false, x: 8, w: 4, y: 3 },
@@ -57,6 +61,7 @@ const Windows = (() => {
     },
     'Mix it': {
       timeline: { open: true, x: 0, w: 12, y: 0 },
+      pads:     { open: false, x: 0, w: 12, y: 5 },
       editor:   { open: false, x: 0, w: 12, y: 3 },
       mixer:    { open: true, x: 0, w: 8, y: 1 },
       fx:       { open: true, x: 8, w: 4, y: 1 },
@@ -65,6 +70,7 @@ const Windows = (() => {
     },
     'Everything': {
       timeline: { open: true, x: 0, w: 12, y: 0 },
+      pads:     { open: true, x: 0, w: 12, y: 0.5 },
       editor:   { open: true, x: 0, w: 8, y: 1 },
       claude:   { open: true, x: 8, w: 4, y: 1 },
       mixer:    { open: true, x: 0, w: 8, y: 2 },

@@ -56,6 +56,12 @@ and **BHS Studio** (`public/studio.html`). See `README.md` for the file map.
   and every timeline row is visible; the *page* scrolls instead. Only a window he
   has dragged shorter scrolls inside (↕ fits it back). The song timeline scrolls
   sideways only. Brian hated hunting inside boxes; don't regress it.
+- **Pads** (`studio-pads.js`, Oct 2026 — Brian loved Handspace's layout, minus the
+  camera): one big tilted pad per drum track, in a window (on in Standard and Make
+  a beat). Hit = `Keys.hitDrum(id, vel)`; velocity from distance to the pad's centre.
+  Under each pad: sound select (any kit × role) and M. Kit box = `Project.setKit`.
+  "Write hits" just clicks the dock's `#recNotes` (one switch). Glows from
+  `Sequencer.onHit`. Handspace itself lives in the `vrlike` repo.
 - **Hearing less:** "Hear only this" on the editor (solo the selected track), ⟲ on a
   section = `Sequencer.loopSection(id)` (not saved with the song), and top-bar chips
   that name whatever is muted / soloed / looping with the button that undoes it.

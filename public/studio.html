@@ -91,6 +91,20 @@
     </div>
   </section>
 
+  <!-- ── pads: every drum as a big pad, the Handspace layout ── -->
+  <section class="panel win" data-win="pads" id="padsPanel">
+    <div class="panel-head">
+      <h2>Pads <span class="h2sub">— hit them</span></h2>
+      <a class="help" href="manual.html#pads" target="_blank" title="How the pads work">?</a>
+      <div class="panel-tools">
+        <label class="field inline">Kit <select id="padKit" class="tb-sel" aria-label="Kit for every pad"></select></label>
+        <button id="padWrite" aria-pressed="false" title="While the song plays, hits are written into the pattern (same switch as the keyboard's Write notes)">&#9679; Write hits</button>
+        <button id="padAdd" title="Add another drum pad">+ Pad</button>
+      </div>
+    </div>
+    <div class="padstage"><div class="padroom" id="padRoom"></div></div>
+  </section>
+
   <!-- ── 2. the editor: WHAT the selected instrument plays ── -->
   <section class="panel win" data-win="editor" id="editorPanel">
     <div class="panel-head">
@@ -282,6 +296,7 @@
 <script src="js/studio-arrange.js"></script>
 <script src="js/studio-editor.js"></script>
 <script src="js/studio-keys.js"></script>
+<script src="js/studio-pads.js"></script>
 <script src="js/studio-record.js"></script>
 <script src="js/studio-voice.js"></script>
 <script src="js/studio-mixer.js"></script>
