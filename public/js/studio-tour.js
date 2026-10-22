@@ -58,7 +58,7 @@ const Tour = (() => {
       text: 'Your new instrument has a row on the timeline. <b>Drag along its row</b> to draw where it plays. Click a block, then <b>Ctrl+C</b> / <b>Ctrl+V</b> to copy it, or <b>Ctrl+D</b> to repeat it right after itself.',
       target: () => { const t = newestSynth(); return t && document.querySelector(`.tl-row.track[data-id="${CSS.escape(t.id)}"]`); } },
     { title: 'Play it yourself',
-      text: 'The keyboard down here plays the instrument picked in <b>Play</b>. Your computer keys work too (<b>Z S X D C</b> …). Turn on <b>Write notes</b> while the song plays and what you play is written into the pattern.',
+      text: 'The keyboard down here plays the instrument picked in <b>Play</b>. Your computer keys work too: rest your fingers on <b>A S D F</b> and <b>J K L ;</b> — those eight play the notes of the song\'s key. Turn on <b>Write notes</b> while the song plays and what you play is written into the pattern.',
       target: () => $('dock') },
     { title: 'Vocals',
       text: 'Set the box next to <b>● Rec</b> to <b>microphone</b>, put headphones on, press <b>● Rec</b>. Your take gets <b>vocal polish</b> straight away, and <b>Tune</b> (pitch correction) is one click in its editor.',

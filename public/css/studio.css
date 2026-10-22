@@ -700,3 +700,9 @@ body.studio.nodock { padding-bottom: 12px; }
   #padsPanel .panel-tools .field.inline { flex: 1 1 100%; }
   #padKit { flex: 1 1 auto; min-width: 0; }
 }
+/* the keys your fingers rest on (home row) — marked so you can see the eight */
+.key.white.mapped { box-shadow: inset 0 -4px 0 var(--amber); }
+.key.black.mapped { box-shadow: inset 0 -4px 0 var(--amber); }
+.key.black .klabel { position: absolute; bottom: 4px; left: 0; right: 0; color: var(--paper); }
+.key.mapped .klabel i { opacity: 1; font-weight: bold; color: #191a17; }
+.key.black.mapped .klabel i { color: var(--amber); }

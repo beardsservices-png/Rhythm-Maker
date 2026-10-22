@@ -31,7 +31,16 @@ const Keys = (() => {
     z: 0, s: 1, x: 2, d: 3, c: 4, v: 5, g: 6, b: 7, h: 8, n: 9, j: 10, m: 11,
     q: 12, 2: 13, w: 14, 3: 15, e: 16, 4: 17, r: 18, 5: 19, t: 20, 6: 21, y: 22, 7: 23, u: 24
   };
-  const PADKEYS = ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';'];
+  const PIANO_PADKEYS = ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';'];
+  // Home row: where your fingers rest — left hand A S D F, right hand J K L ;.
+  // Eight keys play the eight notes of the song's key from the root up (so
+  // every key fits the song), or the first eight drum pads.
+  const HOME = ['a', 's', 'd', 'f', 'j', 'k', 'l', ';'];
+  const SCALE = { major: [0, 2, 4, 5, 7, 9, 11, 12], minor: [0, 2, 3, 5, 7, 8, 10, 12] };
+  const LAYOUT_KEY = 'bhs.studio.keysLayout';
+  let layout = 'home';
+  try { if (localStorage.getItem(LAYOUT_KEY) === 'piano') layout = 'piano'; } catch (_) {}
+  const padKeys = () => (layout === 'home' ? HOME : PIANO_PADKEYS);
 
   let target = null;              // track id, or 'drums'
   const octaveBase = new Map();   // trackId -> lowest midi shown
@@ -45,6 +54,23 @@ const Keys = (() => {
   function synthTracks() { return Project.tracks().filter(t => t.kind === 'synth'); }
   function drumTracks() { return Project.tracks().filter(t => t.kind === 'drum'); }
   function cur() { return target === 'drums' ? null : Project.track(target); }
+
+  /** The eight notes the home row plays for this track: the key's scale from
+   *  its root (C major when the song has no key), starting in the shown octave. */
+  function homeNotes(t) {
+    const k = Project.key() || { root: 0, scale: 'major' };
+    const base = baseFor(t);
+    let start = base;
+    while (((start % 12) + 12) % 12 !== k.root) start++;
+    return SCALE[k.scale].map(i => start + i);
+  }
+  /** midi -> letter, for whichever layout is on. */
+  function letterMap(t) {
+    const m = {};
+    if (layout === 'home') homeNotes(t).forEach((n, i) => { m[n] = HOME[i] === ';' ? ';' : HOME[i].toUpperCase(); });
+    else { const b = baseFor(t); Object.entries(KEYMAP).forEach(([k, v]) => { m[b + v] = k.toUpperCase(); }); }
+    return m;
+  }
 
   function baseFor(t) {
     if (octaveBase.has(t.id)) return octaveBase.get(t.id);
@@ -170,12 +196,12 @@ const Keys = (() => {
     const whites = [];
     for (let i = 0; i <= total; i++) if (!BLACK.includes((base + i) % 12)) whites.push(base + i);
     const ww = 100 / whites.length;
-    const letters = Object.entries(KEYMAP).reduce((m, [k, v]) => { m[v] = k.toUpperCase(); return m; }, {});
+    const letters = letterMap(t);
     for (let i = 0; i <= total; i++) {
       const midi = base + i;
       const black = BLACK.includes(midi % 12);
       const key = document.createElement('div');
-      key.className = 'key ' + (black ? 'black' : 'white');
+      key.className = 'key ' + (black ? 'black' : 'white') + (letters[midi] ? ' mapped' : '');
       key.dataset.midi = String(midi);
       key.setAttribute('role', 'button');
       key.setAttribute('aria-label', noteName(midi));
@@ -183,11 +209,12 @@ const Keys = (() => {
         const wi = whites.findIndex(w => w > midi);
         key.style.left = `calc(${wi * ww}% - ${ww * 0.32}%)`;
         key.style.width = (ww * 0.64) + '%';
+        if (letters[midi]) { const lab = document.createElement('span'); lab.className = 'klabel'; lab.innerHTML = `<i>${letters[midi]}</i>`; key.appendChild(lab); }
       } else {
         key.style.width = ww + '%';
         const lab = document.createElement('span');
         lab.className = 'klabel';
-        lab.innerHTML = (midi % 12 === 0 ? `<b>${noteName(midi)}</b>` : '') + `<i>${letters[i] || ''}</i>`;
+        lab.innerHTML = (midi % 12 === 0 ? `<b>${noteName(midi)}</b>` : '') + `<i>${letters[midi] || ''}</i>`;
         key.appendChild(lab);
       }
       key.addEventListener('pointerdown', (e) => {
@@ -208,7 +235,7 @@ const Keys = (() => {
       const p = document.createElement('button');
       p.className = 'pad k-drum';
       p.dataset.id = t.id;
-      p.innerHTML = `<span>${t.name}</span><i>${(PADKEYS[i] || '').toUpperCase()}</i>`;
+      p.innerHTML = `<span>${t.name}</span><i>${(padKeys()[i] || '').toUpperCase()}</i>`;
       p.addEventListener('pointerdown', (e) => { e.preventDefault(); hitDrum(t.id, 0.9); });
       kbEl.appendChild(p);
     });
@@ -342,7 +369,7 @@ const Keys = (() => {
   // the window manager's (studio-windows.js).
 
   // ── computer keyboard ──
-  const held = new Set();
+  const held = new Map();         // computer key -> midi it started (or true for a pad)
   function typing(e) {
     const tag = (e.target.tagName || '').toLowerCase();
     return tag === 'input' || tag === 'textarea' || tag === 'select' || e.target.isContentEditable;
@@ -356,28 +383,44 @@ const Keys = (() => {
     if (e.repeat || held.has(k)) return;
     const t = cur();
     if (!t) {
-      const i = PADKEYS.indexOf(k);
+      const i = padKeys().indexOf(k);
       const d = drumTracks()[i];
-      if (d) { e.preventDefault(); held.add(k); hitDrum(d.id, 0.9); }
+      if (d) { e.preventDefault(); held.set(k, true); hitDrum(d.id, 0.9); }
       return;
     }
-    if (!(k in KEYMAP)) return;
+    let midi;
+    if (layout === 'home') { const i = HOME.indexOf(k); if (i < 0) return; midi = homeNotes(t)[i]; }
+    else { if (!(k in KEYMAP)) return; midi = baseFor(t) + KEYMAP[k]; }
     e.preventDefault();
-    held.add(k);
-    noteOn(baseFor(t) + KEYMAP[k], 0.85);
+    held.set(k, midi);
+    noteOn(midi, 0.85);
   });
   window.addEventListener('keyup', (e) => {
     const k = e.key.toLowerCase();
     if (k === 'shift') { setSlide(false); return; }
     if (!held.has(k)) return;
+    const midi = held.get(k);
     held.delete(k);
-    const t = cur();
-    if (t && k in KEYMAP) noteOff(baseFor(t) + KEYMAP[k]);
+    if (typeof midi === 'number') noteOff(midi);
   });
   window.addEventListener('blur', () => { held.clear(); allOff(); });
 
+  const layoutSel = $('keysLayout');
+  layoutSel.value = layout;
+  layoutSel.addEventListener('change', () => {
+    layout = layoutSel.value === 'piano' ? 'piano' : 'home';
+    try { localStorage.setItem(LAYOUT_KEY, layout); } catch (_) {}
+    allOff(); held.clear();
+    renderAll();
+    window.dispatchEvent(new CustomEvent('bhs:keys-layout'));
+    App.msg(layout === 'home'
+      ? 'Home row: A S D F (left hand) and J K L ; (right hand) play the 8 notes of the song\'s key — or the first 8 pads. ← → change octave.'
+      : 'Full piano: Z–M and Q–U are the white keys, the row above them the black keys. Pads: A S D F G H J K L ;.');
+  });
+
   // ── follow the rest of the app ──
   Project.on((reason, d) => {
+    if (reason === 'key' && cur()) renderKeyboard();
     if (reason === 'tracks' || reason === 'load') renderAll();
     if (reason === 'sound') {
       if (d && d.track && d.track === target) { octaveBase.delete(target); renderAll(); }
@@ -403,7 +446,8 @@ const Keys = (() => {
 
   return {
     noteOn, noteOff, allOff, setBend, hitDrum, setTarget,
-    padKey: (i) => PADKEYS[i] || '',
+    padKey: (i) => padKeys()[i] || '',
+    layout: () => layout, homeNotes: (id) => { const t = Project.track(id); return t ? homeNotes(t) : []; },
     target: () => target,
     drumTracks, synthTracks
   };

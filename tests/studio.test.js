@@ -252,9 +252,26 @@ function sineWav(file) {
   ok('…and the on-screen keys now play it', await page.evaluate(() => Keys.target() === App.selected()));
   ok('…with its own knobs in the dock', (await page.textContent('#knobs')).includes('Vibrato'));
   await page.evaluate(() => { window.__played = []; const o = Instruments.noteOn; Instruments.noteOn = function (...a) { window.__played.push(a[2] + ':' + a[3]); return o.apply(this, a); }; window.__restore = () => { Instruments.noteOn = o; }; });
+  // Home row (the default): A S D F + J K L ; are the eight notes of the song's key.
+  await page.evaluate(() => { try { localStorage.removeItem('bhs.studio.keysLayout'); } catch (e) {} });
+  ok('the computer keyboard starts on the home row', await page.evaluate(() => Keys.layout() === 'home'));
+  await page.evaluate(() => Project.setKey({ root: 9, scale: 'minor' }));     // A minor
+  for (const k of ['KeyA', 'KeyS', 'KeyD', 'KeyF', 'KeyJ', 'KeyK', 'KeyL', 'Semicolon']) {
+    await page.keyboard.down(k); await page.waitForTimeout(25); await page.keyboard.up(k);
+  }
+  const home = await page.evaluate(() => window.__played.filter(p => p.startsWith('strings:')).map(p => +p.split(':')[1]));
+  const steps = home.slice(1).map((m, i) => m - home[i]);
+  ok('home row plays the 8 notes of the key, root to octave (A minor: A B C D E F G A)',
+     home.length === 8 && home[0] % 12 === 9 && steps.join() === '2,1,2,2,1,2,2', home.join());
+  ok('…and the eight keys are marked on the on-screen keyboard', await page.evaluate(() => document.querySelectorAll('#keyboard .key.mapped').length === 8));
+  await page.evaluate(() => { window.__played = []; });
+  await page.keyboard.down('KeyG'); await page.keyboard.up('KeyG');
+  ok('…keys off the home row stay silent', await page.evaluate(() => window.__played.length === 0));
+  await page.selectOption('#keysLayout', 'piano');
   await page.keyboard.down('KeyQ'); await page.waitForTimeout(40); await page.keyboard.up('KeyQ');
-  ok('computer key Q plays the strings', await page.evaluate(() => window.__played.some(p => p.startsWith('strings:'))), await page.evaluate(() => window.__played.join()));
-  await page.evaluate(() => window.__restore());
+  ok('"Keys: full piano" brings back the old layout (Q plays)', await page.evaluate(() => window.__played.some(p => p.startsWith('strings:'))), await page.evaluate(() => window.__played.join()));
+  await page.selectOption('#keysLayout', 'home');
+  await page.evaluate(() => { Project.setKey(null); window.__restore(); });
   // piano roll: click empty to add, drag to lengthen
   const lane = await page.evaluate(() => { const r = document.querySelector('.roll-lane').getBoundingClientRect(); return { x: r.x, y: r.y }; });
   const cw = await page.evaluate(() => parseFloat(document.querySelector('.roll-inner').style.getPropertyValue('--cw')));
