@@ -90,6 +90,12 @@ and **BHS Studio** (`public/studio.html`). See `README.md` for the file map.
   cache name in `sw.js` (samples are cache-first). Credits/licences are in the
   manifest and the manual — the Rhodes and upright bass are BY-NC samples (music
   made with them is free); swap them if the app is ever sold.
+- **General MIDI + sound library** (Nov 2026, `tools/build-samples.js`): ~110 `gm-*` instruments
+  from FluidR3_GM (CC BY 3.0; names trusted, no pitch check — it fakes octave errors on organs),
+  registered from `SAMPLE_MANIFEST.gm` (label/group/fallback). The **library** (Sonic Pi, CC0) is
+  `samples/lib/<id>.mp3`, played on a drum lane as `sound = {kit:'lib', role:<id>}` via
+  `Samples.libShot`; loops carry `beats` and are rate-stretched to `Project.bpm()`. `setKit` skips
+  lib lanes. + Add instrument is two-level (group ▸ sound). Samples total ~50 MB, lazy-loaded.
 - **Per-hit / per-note mix:** a drum step may be `{c, v, p}` (code, volume, pan) —
   set via `Project.setStepMix`, notes carry `vel`/`pan` via `Project.setNoteMix`.
   The sequencer puts a StereoPanner per hit only when pan ≠ 0.

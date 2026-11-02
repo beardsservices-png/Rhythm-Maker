@@ -40,7 +40,7 @@
     h.appendChild(el('span', 'tcolor k-' + t.kind));
     h.appendChild(el('span', 'led'));
     const name = btn('tname', t.name, 'Edit this instrument in the editor below', () => editTrack(t.id));
-    const sub = t.kind === 'drum' ? DrumKits.roleLabel(t.sound.role) + ' · ' + DrumKits.KITS[t.sound.kit].label
+    const sub = t.kind === 'drum' ? DrumKits.roleLabel(t.sound.role) + ' · ' + (t.sound.kit === 'lib' ? 'sound library' : DrumKits.KITS[t.sound.kit].label)
       : t.kind === 'synth' ? Instruments.label(t.instrument)
       : 'audio · ' + t.bars + ' bar' + (t.bars === 1 ? '' : 's');
     name.appendChild(el('small', null, sub));
@@ -497,11 +497,45 @@
     editTrack(t.id);
     App.msg(`Added a ${DrumKits.roleLabel(role)} lane — click steps in the drum machine below.`);
   }
+  /** A lane that plays a sound-library sound (an effect, a riff, a loop). */
+  function addLib(id) {
+    const info = Samples.library()[id] || {};
+    const t = Project.addTrack({ kind: 'drum', name: uniqueName(info.label || id), sound: { kit: 'lib', role: id } });
+    Samples.loadLib(id).then(() => { const ac = App.ensureAudio(); if (ac) DrumKits.hit(ac, Mixer.input(t.id), t.sound, ac.currentTime, 0.9); });
+    editTrack(t.id);
+    App.msg(info.beats
+      ? `Added "${t.name}" — a ${info.beats / 4 >= 1 ? info.beats / 4 + '-bar' : info.beats + '-beat'} loop that fits your tempo. Put a hit on the first step of a bar and it plays from there.`
+      : `Added "${t.name}" as a lane — click a step to place it, or hit its pad.`);
+  }
+  window.__bhsAddLib = addLib;
+  /** Second-level menus: 130+ instruments in one list is a wall. */
+  function instrumentMenu(anchor, group) {
+    const items = [{ heading: group }];
+    Instruments.list().filter(i => i.group === group).forEach(i => items.push({ label: i.label, act: () => addInstrument(i.id) }));
+    App.menu(anchor, items, 'addMenu');
+  }
+  function libraryMenu(anchor, group) {
+    const g = DrumKits.library().find(x => x.group === group);
+    const items = [{ heading: group }];
+    (g ? g.items : []).forEach(it => items.push({ label: it.label + (it.loop ? '  ⟲' : ''), act: () => addLib(it.id) }));
+    App.menu(anchor, items, 'addMenu');
+  }
   document.getElementById('addTrackBtn').addEventListener('click', (e) => {
+    const anchor = e.currentTarget;
     const items = [{ heading: 'Instruments — play on the keys' }];
-    Instruments.list().forEach(i => items.push({ label: `${i.label}  ·  ${i.group}`, act: () => addInstrument(i.id) }));
+    const groups = [];
+    Instruments.list().forEach(i => { if (!groups.includes(i.group)) groups.push(i.group); });
+    groups.forEach(g => {
+      const n = Instruments.list().filter(i => i.group === g).length;
+      items.push({ label: `${g}  (${n})  ▸`, cls: 'submenu', act: () => setTimeout(() => instrumentMenu(anchor, g), 0) });
+    });
     items.push({ heading: 'Drum lane' });
     DrumKits.ROLES.forEach(r => items.push({ label: r.label, act: () => addDrum(r.id) }));
+    const lib = DrumKits.library();
+    if (lib.length) {
+      items.push({ heading: 'Sound library — effects, riffs, loops' });
+      lib.forEach(g => items.push({ label: `${g.group}  (${g.items.length})  ▸`, cls: 'submenu', act: () => setTimeout(() => libraryMenu(anchor, g.group), 0) }));
+    }
     items.push({ heading: 'Audio' });
     items.push({ label: 'Upload an audio file…', act: () => document.getElementById('audioUpload').click() });
     items.push({ label: 'Record a take…', act: () => App.msg('Pick what to record next to ● Rec at the top — what you play, the whole mix, or the mic — then press ● Rec.') });

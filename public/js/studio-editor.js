@@ -152,17 +152,7 @@
   function soundSelect(t) {
     const sel = el('select', 'tb-sel lane-sound');
     sel.title = 'This lane\'s sound — borrow it from any kit';
-    DrumKits.kits().forEach(k => {
-      const og = document.createElement('optgroup');
-      og.label = k.label;
-      DrumKits.ROLES.forEach(r => {
-        const o = el('option', null, `${r.label} · ${k.label}`);
-        o.value = k.id + '|' + r.id;
-        if (t.sound.kit === k.id && t.sound.role === r.id) o.selected = true;
-        og.appendChild(o);
-      });
-      sel.appendChild(og);
-    });
+    DrumKits.soundOptions(sel, t.sound);
     sel.addEventListener('change', () => {
       const [kit, role] = sel.value.split('|');
       Project.setSound(t.id, { kit, role });

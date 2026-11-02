@@ -252,7 +252,2020 @@ const SAMPLE_MANIFEST = {
    71,
    73,
    78
+  ],
+  "gm-bright-acoustic-piano": [
+   33,
+   37,
+   41,
+   45,
+   49,
+   53,
+   57,
+   61,
+   65,
+   69,
+   73,
+   77,
+   81,
+   85,
+   89,
+   93
+  ],
+  "gm-electric-grand-piano": [
+   33,
+   37,
+   41,
+   45,
+   49,
+   53,
+   57,
+   61,
+   65,
+   69,
+   73,
+   77,
+   81,
+   85,
+   89,
+   93
+  ],
+  "gm-honkytonk-piano": [
+   33,
+   37,
+   41,
+   45,
+   49,
+   53,
+   57,
+   61,
+   65,
+   69,
+   73,
+   77,
+   81,
+   85,
+   89,
+   93
+  ],
+  "gm-electric-piano-2": [
+   36,
+   40,
+   44,
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88,
+   92,
+   96
+  ],
+  "gm-harpsichord": [
+   36,
+   40,
+   44,
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88,
+   92,
+   96
+  ],
+  "gm-clavinet": [
+   36,
+   40,
+   44,
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88,
+   92,
+   96
+  ],
+  "gm-celesta": [
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88,
+   92,
+   96,
+   100,
+   104,
+   108
+  ],
+  "gm-glockenspiel": [
+   72,
+   76,
+   80,
+   84,
+   88,
+   92,
+   96,
+   100,
+   104,
+   108
+  ],
+  "gm-music-box": [
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88,
+   92,
+   96,
+   100
+  ],
+  "gm-xylophone": [
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88,
+   92,
+   96,
+   100
+  ],
+  "gm-tubular-bells": [
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84
+  ],
+  "gm-dulcimer": [
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88
+  ],
+  "gm-drawbar-organ": [
+   36,
+   40,
+   44,
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88,
+   92,
+   96
+  ],
+  "gm-percussive-organ": [
+   36,
+   40,
+   44,
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88,
+   92,
+   96
+  ],
+  "gm-rock-organ": [
+   36,
+   40,
+   44,
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88,
+   92,
+   96
+  ],
+  "gm-church-organ": [
+   24,
+   28,
+   32,
+   36,
+   40,
+   44,
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88,
+   92,
+   96
+  ],
+  "gm-reed-organ": [
+   36,
+   40,
+   44,
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88,
+   92,
+   96
+  ],
+  "gm-accordion": [
+   41,
+   45,
+   49,
+   53,
+   57,
+   61,
+   65,
+   69,
+   73,
+   77,
+   81,
+   85,
+   89
+  ],
+  "gm-harmonica": [
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88
+  ],
+  "gm-tango-accordion": [
+   41,
+   45,
+   49,
+   53,
+   57,
+   61,
+   65,
+   69,
+   73,
+   77,
+   81,
+   85,
+   89
+  ],
+  "gm-electric-guitar-jazz": [
+   40,
+   44,
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84
+  ],
+  "gm-electric-guitar-clean": [
+   40,
+   44,
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84
+  ],
+  "gm-electric-guitar-muted": [
+   40,
+   44,
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84
+  ],
+  "gm-overdriven-guitar": [
+   40,
+   44,
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84
+  ],
+  "gm-distortion-guitar": [
+   40,
+   44,
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84
+  ],
+  "gm-guitar-harmonics": [
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88,
+   92,
+   96
+  ],
+  "gm-electric-bass-pick": [
+   28,
+   32,
+   36,
+   40,
+   44,
+   48,
+   52,
+   56,
+   60,
+   64
+  ],
+  "gm-fretless-bass": [
+   28,
+   32,
+   36,
+   40,
+   44,
+   48,
+   52,
+   56,
+   60,
+   64
+  ],
+  "gm-slap-bass-1": [
+   28,
+   32,
+   36,
+   40,
+   44,
+   48,
+   52,
+   56,
+   60,
+   64
+  ],
+  "gm-slap-bass-2": [
+   28,
+   32,
+   36,
+   40,
+   44,
+   48,
+   52,
+   56,
+   60,
+   64
+  ],
+  "gm-synth-bass-1": [
+   24,
+   28,
+   32,
+   36,
+   40,
+   44,
+   48,
+   52,
+   56,
+   60,
+   64
+  ],
+  "gm-synth-bass-2": [
+   24,
+   28,
+   32,
+   36,
+   40,
+   44,
+   48,
+   52,
+   56,
+   60,
+   64
+  ],
+  "gm-viola": [
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88
+  ],
+  "gm-contrabass": [
+   28,
+   32,
+   36,
+   40,
+   44,
+   48,
+   52,
+   56,
+   60,
+   64
+  ],
+  "gm-tremolo-strings": [
+   40,
+   44,
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88,
+   92,
+   96
+  ],
+  "gm-pizzicato-strings": [
+   36,
+   40,
+   44,
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88,
+   92,
+   96
+  ],
+  "gm-timpani": [
+   36,
+   40,
+   44,
+   48,
+   52,
+   56,
+   60
+  ],
+  "gm-string-ensemble-2": [
+   36,
+   40,
+   44,
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88,
+   92,
+   96
+  ],
+  "gm-synth-strings-1": [
+   36,
+   40,
+   44,
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88,
+   92,
+   96
+  ],
+  "gm-synth-strings-2": [
+   36,
+   40,
+   44,
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88,
+   92,
+   96
+  ],
+  "gm-choir-aahs": [
+   41,
+   45,
+   49,
+   53,
+   57,
+   61,
+   65,
+   69,
+   73,
+   77,
+   81
+  ],
+  "gm-voice-oohs": [
+   41,
+   45,
+   49,
+   53,
+   57,
+   61,
+   65,
+   69,
+   73,
+   77,
+   81
+  ],
+  "gm-synth-choir": [
+   41,
+   45,
+   49,
+   53,
+   57,
+   61,
+   65,
+   69,
+   73,
+   77,
+   81
+  ],
+  "gm-orchestra-hit": [
+   36,
+   40,
+   44,
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84
+  ],
+  "gm-tuba": [
+   28,
+   32,
+   36,
+   40,
+   44,
+   48,
+   52,
+   56,
+   60
+  ],
+  "gm-muted-trumpet": [
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84
+  ],
+  "gm-brass-section": [
+   40,
+   44,
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84
+  ],
+  "gm-synth-brass-1": [
+   36,
+   40,
+   44,
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84
+  ],
+  "gm-synth-brass-2": [
+   36,
+   40,
+   44,
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84
+  ],
+  "gm-soprano-sax": [
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88
+  ],
+  "gm-alto-sax": [
+   49,
+   53,
+   57,
+   61,
+   65,
+   69,
+   73,
+   77,
+   81
+  ],
+  "gm-tenor-sax": [
+   44,
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76
+  ],
+  "gm-baritone-sax": [
+   36,
+   40,
+   44,
+   48,
+   52,
+   56,
+   60,
+   64,
+   68
+  ],
+  "gm-oboe": [
+   58,
+   62,
+   66,
+   70,
+   74,
+   78,
+   82,
+   86,
+   90
+  ],
+  "gm-english-horn": [
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80
+  ],
+  "gm-bassoon": [
+   34,
+   38,
+   42,
+   46,
+   50,
+   54,
+   58,
+   62,
+   66,
+   70
+  ],
+  "gm-clarinet": [
+   50,
+   54,
+   58,
+   62,
+   66,
+   70,
+   74,
+   78,
+   82,
+   86,
+   90
+  ],
+  "gm-piccolo": [
+   74,
+   78,
+   82,
+   86,
+   90,
+   94,
+   98,
+   102,
+   106
+  ],
+  "gm-recorder": [
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88,
+   92,
+   96
+  ],
+  "gm-pan-flute": [
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88,
+   92,
+   96
+  ],
+  "gm-blown-bottle": [
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88,
+   92,
+   96
+  ],
+  "gm-shakuhachi": [
+   55,
+   59,
+   63,
+   67,
+   71,
+   75,
+   79,
+   83,
+   87
+  ],
+  "gm-whistle": [
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88,
+   92,
+   96,
+   100
+  ],
+  "gm-ocarina": [
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88,
+   92,
+   96
+  ],
+  "gm-lead-1-square": [
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88,
+   92,
+   96
+  ],
+  "gm-lead-2-sawtooth": [
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88,
+   92,
+   96
+  ],
+  "gm-lead-3-calliope": [
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88,
+   92,
+   96
+  ],
+  "gm-lead-4-chiff": [
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88,
+   92,
+   96
+  ],
+  "gm-lead-5-charang": [
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88,
+   92,
+   96
+  ],
+  "gm-lead-6-voice": [
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88,
+   92,
+   96
+  ],
+  "gm-lead-7-fifths": [
+   36,
+   40,
+   44,
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84
+  ],
+  "gm-lead-8-bass-lead": [
+   28,
+   32,
+   36,
+   40,
+   44,
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72
+  ],
+  "gm-pad-1-new-age": [
+   36,
+   40,
+   44,
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88
+  ],
+  "gm-pad-2-warm": [
+   36,
+   40,
+   44,
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88
+  ],
+  "gm-pad-3-polysynth": [
+   36,
+   40,
+   44,
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88
+  ],
+  "gm-pad-4-choir": [
+   36,
+   40,
+   44,
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88
+  ],
+  "gm-pad-5-bowed": [
+   36,
+   40,
+   44,
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88
+  ],
+  "gm-pad-6-metallic": [
+   36,
+   40,
+   44,
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88
+  ],
+  "gm-pad-7-halo": [
+   36,
+   40,
+   44,
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88
+  ],
+  "gm-pad-8-sweep": [
+   36,
+   40,
+   44,
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88
+  ],
+  "gm-fx-1-rain": [
+   36,
+   40,
+   44,
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88
+  ],
+  "gm-fx-2-soundtrack": [
+   36,
+   40,
+   44,
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88
+  ],
+  "gm-fx-3-crystal": [
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88,
+   92,
+   96
+  ],
+  "gm-fx-4-atmosphere": [
+   36,
+   40,
+   44,
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88
+  ],
+  "gm-fx-5-brightness": [
+   36,
+   40,
+   44,
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88
+  ],
+  "gm-fx-6-goblins": [
+   36,
+   40,
+   44,
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88
+  ],
+  "gm-fx-7-echoes": [
+   36,
+   40,
+   44,
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88
+  ],
+  "gm-fx-8-scifi": [
+   36,
+   40,
+   44,
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88
+  ],
+  "gm-sitar": [
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84
+  ],
+  "gm-banjo": [
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84
+  ],
+  "gm-shamisen": [
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84
+  ],
+  "gm-koto": [
+   48,
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88
+  ],
+  "gm-bagpipe": [
+   55,
+   59,
+   63,
+   67,
+   71,
+   75,
+   79,
+   83
+  ],
+  "gm-fiddle": [
+   55,
+   59,
+   63,
+   67,
+   71,
+   75,
+   79,
+   83,
+   87,
+   91,
+   95
+  ],
+  "gm-shanai": [
+   55,
+   59,
+   63,
+   67,
+   71,
+   75,
+   79,
+   83,
+   87
+  ],
+  "gm-steel-drums": [
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88
+  ],
+  "gm-tinkle-bell": [
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88,
+   92,
+   96
+  ],
+  "gm-agogo": [
+   52,
+   56,
+   60,
+   64,
+   68,
+   72,
+   76,
+   80,
+   84,
+   88
+  ],
+  "gm-woodblock": [
+   48,
+   60,
+   72,
+   84
+  ],
+  "gm-taiko-drum": [
+   36,
+   48,
+   60,
+   72
+  ],
+  "gm-melodic-tom": [
+   36,
+   48,
+   60,
+   72
+  ],
+  "gm-synth-drum": [
+   36,
+   48,
+   60,
+   72
+  ],
+  "gm-reverse-cymbal": [
+   48,
+   60,
+   72
+  ],
+  "gm-guitar-fret-noise": [
+   48,
+   60,
+   72
+  ],
+  "gm-breath-noise": [
+   48,
+   60,
+   72
+  ],
+  "gm-seashore": [
+   48,
+   60,
+   72
+  ],
+  "gm-bird-tweet": [
+   48,
+   60,
+   72,
+   84
+  ],
+  "gm-telephone-ring": [
+   48,
+   60,
+   72
+  ],
+  "gm-helicopter": [
+   48,
+   60,
+   72
+  ],
+  "gm-applause": [
+   48,
+   60,
+   72
+  ],
+  "gm-gunshot": [
+   48,
+   60,
+   72
   ]
+ },
+ "gm": {
+  "gm-bright-acoustic-piano": {
+   "label": "Bright Piano",
+   "group": "Keys",
+   "fallback": "piano"
+  },
+  "gm-electric-grand-piano": {
+   "label": "Electric Grand (CP-70)",
+   "group": "Keys",
+   "fallback": "piano"
+  },
+  "gm-honkytonk-piano": {
+   "label": "Honky-Tonk Piano",
+   "group": "Keys",
+   "fallback": "piano"
+  },
+  "gm-electric-piano-2": {
+   "label": "FM Electric Piano (DX7)",
+   "group": "Keys",
+   "fallback": "epiano"
+  },
+  "gm-harpsichord": {
+   "label": "Harpsichord",
+   "group": "Keys",
+   "fallback": "pluck"
+  },
+  "gm-clavinet": {
+   "label": "Clavinet",
+   "group": "Keys",
+   "fallback": "pluck"
+  },
+  "gm-celesta": {
+   "label": "Celesta",
+   "group": "Bells & mallets",
+   "fallback": "bell"
+  },
+  "gm-glockenspiel": {
+   "label": "Glockenspiel",
+   "group": "Bells & mallets",
+   "fallback": "bell"
+  },
+  "gm-music-box": {
+   "label": "Music Box",
+   "group": "Bells & mallets",
+   "fallback": "bell"
+  },
+  "gm-xylophone": {
+   "label": "Xylophone",
+   "group": "Bells & mallets",
+   "fallback": "pluck"
+  },
+  "gm-tubular-bells": {
+   "label": "Tubular Bells (chimes)",
+   "group": "Bells & mallets",
+   "fallback": "bell"
+  },
+  "gm-dulcimer": {
+   "label": "Dulcimer",
+   "group": "Bells & mallets",
+   "fallback": "pluck"
+  },
+  "gm-drawbar-organ": {
+   "label": "Drawbar Organ (Hammond)",
+   "group": "Organ & accordion",
+   "fallback": "organ"
+  },
+  "gm-percussive-organ": {
+   "label": "Percussive Organ",
+   "group": "Organ & accordion",
+   "fallback": "organ"
+  },
+  "gm-rock-organ": {
+   "label": "Rock Organ",
+   "group": "Organ & accordion",
+   "fallback": "organ"
+  },
+  "gm-church-organ": {
+   "label": "Church Organ",
+   "group": "Organ & accordion",
+   "fallback": "organ"
+  },
+  "gm-reed-organ": {
+   "label": "Reed Organ (harmonium)",
+   "group": "Organ & accordion",
+   "fallback": "organ"
+  },
+  "gm-accordion": {
+   "label": "Accordion",
+   "group": "Organ & accordion",
+   "fallback": "organ"
+  },
+  "gm-harmonica": {
+   "label": "Harmonica",
+   "group": "Organ & accordion",
+   "fallback": "lead"
+  },
+  "gm-tango-accordion": {
+   "label": "Tango Accordion (bandoneon)",
+   "group": "Organ & accordion",
+   "fallback": "organ"
+  },
+  "gm-electric-guitar-jazz": {
+   "label": "Jazz Guitar",
+   "group": "Guitar",
+   "fallback": "pluck"
+  },
+  "gm-electric-guitar-clean": {
+   "label": "Clean Electric Guitar",
+   "group": "Guitar",
+   "fallback": "pluck"
+  },
+  "gm-electric-guitar-muted": {
+   "label": "Muted Guitar (chuck)",
+   "group": "Guitar",
+   "fallback": "pluck"
+  },
+  "gm-overdriven-guitar": {
+   "label": "Overdriven Guitar",
+   "group": "Guitar",
+   "fallback": "lead"
+  },
+  "gm-distortion-guitar": {
+   "label": "Distortion Guitar",
+   "group": "Guitar",
+   "fallback": "lead"
+  },
+  "gm-guitar-harmonics": {
+   "label": "Guitar Harmonics",
+   "group": "Guitar",
+   "fallback": "bell"
+  },
+  "gm-electric-bass-pick": {
+   "label": "Picked Bass",
+   "group": "Bass",
+   "fallback": "synthbass"
+  },
+  "gm-fretless-bass": {
+   "label": "Fretless Bass",
+   "group": "Bass",
+   "fallback": "synthbass"
+  },
+  "gm-slap-bass-1": {
+   "label": "Slap Bass",
+   "group": "Bass",
+   "fallback": "synthbass"
+  },
+  "gm-slap-bass-2": {
+   "label": "Slap Bass 2",
+   "group": "Bass",
+   "fallback": "synthbass"
+  },
+  "gm-synth-bass-1": {
+   "label": "Synth Bass (Moog)",
+   "group": "Bass",
+   "fallback": "synthbass"
+  },
+  "gm-synth-bass-2": {
+   "label": "Synth Bass 2",
+   "group": "Bass",
+   "fallback": "synthbass"
+  },
+  "gm-viola": {
+   "label": "Viola",
+   "group": "Strings & choir",
+   "fallback": "strings"
+  },
+  "gm-contrabass": {
+   "label": "Contrabass (bowed)",
+   "group": "Strings & choir",
+   "fallback": "strings"
+  },
+  "gm-tremolo-strings": {
+   "label": "Tremolo Strings",
+   "group": "Strings & choir",
+   "fallback": "strings"
+  },
+  "gm-pizzicato-strings": {
+   "label": "Pizzicato Strings",
+   "group": "Strings & choir",
+   "fallback": "pluck"
+  },
+  "gm-timpani": {
+   "label": "Timpani",
+   "group": "Strings & choir",
+   "fallback": "synthbass"
+  },
+  "gm-string-ensemble-2": {
+   "label": "Slow Strings",
+   "group": "Strings & choir",
+   "fallback": "strings"
+  },
+  "gm-synth-strings-1": {
+   "label": "Synth Strings (80s)",
+   "group": "Strings & choir",
+   "fallback": "strings"
+  },
+  "gm-synth-strings-2": {
+   "label": "Synth Strings 2",
+   "group": "Strings & choir",
+   "fallback": "strings"
+  },
+  "gm-choir-aahs": {
+   "label": "Choir \"Aah\"",
+   "group": "Strings & choir",
+   "fallback": "pad"
+  },
+  "gm-voice-oohs": {
+   "label": "Voices \"Ooh\"",
+   "group": "Strings & choir",
+   "fallback": "pad"
+  },
+  "gm-synth-choir": {
+   "label": "Synth Choir",
+   "group": "Strings & choir",
+   "fallback": "pad"
+  },
+  "gm-orchestra-hit": {
+   "label": "Orchestra Hit",
+   "group": "Strings & choir",
+   "fallback": "brass"
+  },
+  "gm-tuba": {
+   "label": "Tuba",
+   "group": "Brass",
+   "fallback": "brass"
+  },
+  "gm-muted-trumpet": {
+   "label": "Muted Trumpet",
+   "group": "Brass",
+   "fallback": "brass"
+  },
+  "gm-brass-section": {
+   "label": "Brass Section",
+   "group": "Brass",
+   "fallback": "brass"
+  },
+  "gm-synth-brass-1": {
+   "label": "Synth Brass",
+   "group": "Brass",
+   "fallback": "brass"
+  },
+  "gm-synth-brass-2": {
+   "label": "Synth Brass 2",
+   "group": "Brass",
+   "fallback": "brass"
+  },
+  "gm-soprano-sax": {
+   "label": "Soprano Sax",
+   "group": "Woodwinds",
+   "fallback": "lead"
+  },
+  "gm-alto-sax": {
+   "label": "Alto Sax",
+   "group": "Woodwinds",
+   "fallback": "lead"
+  },
+  "gm-tenor-sax": {
+   "label": "Tenor Sax",
+   "group": "Woodwinds",
+   "fallback": "lead"
+  },
+  "gm-baritone-sax": {
+   "label": "Baritone Sax",
+   "group": "Woodwinds",
+   "fallback": "lead"
+  },
+  "gm-oboe": {
+   "label": "Oboe",
+   "group": "Woodwinds",
+   "fallback": "flute"
+  },
+  "gm-english-horn": {
+   "label": "English Horn",
+   "group": "Woodwinds",
+   "fallback": "flute"
+  },
+  "gm-bassoon": {
+   "label": "Bassoon",
+   "group": "Woodwinds",
+   "fallback": "brass"
+  },
+  "gm-clarinet": {
+   "label": "Clarinet",
+   "group": "Woodwinds",
+   "fallback": "flute"
+  },
+  "gm-piccolo": {
+   "label": "Piccolo",
+   "group": "Woodwinds",
+   "fallback": "flute"
+  },
+  "gm-recorder": {
+   "label": "Recorder",
+   "group": "Woodwinds",
+   "fallback": "flute"
+  },
+  "gm-pan-flute": {
+   "label": "Pan Flute",
+   "group": "Woodwinds",
+   "fallback": "flute"
+  },
+  "gm-blown-bottle": {
+   "label": "Blown Bottle",
+   "group": "Woodwinds",
+   "fallback": "flute"
+  },
+  "gm-shakuhachi": {
+   "label": "Shakuhachi",
+   "group": "Woodwinds",
+   "fallback": "flute"
+  },
+  "gm-whistle": {
+   "label": "Whistle",
+   "group": "Woodwinds",
+   "fallback": "flute"
+  },
+  "gm-ocarina": {
+   "label": "Ocarina",
+   "group": "Woodwinds",
+   "fallback": "flute"
+  },
+  "gm-lead-1-square": {
+   "label": "Square Lead",
+   "group": "Synth (GM)",
+   "fallback": "lead"
+  },
+  "gm-lead-2-sawtooth": {
+   "label": "Saw Lead",
+   "group": "Synth (GM)",
+   "fallback": "lead"
+  },
+  "gm-lead-3-calliope": {
+   "label": "Calliope Lead",
+   "group": "Synth (GM)",
+   "fallback": "lead"
+  },
+  "gm-lead-4-chiff": {
+   "label": "Chiff Lead",
+   "group": "Synth (GM)",
+   "fallback": "lead"
+  },
+  "gm-lead-5-charang": {
+   "label": "Charang Lead",
+   "group": "Synth (GM)",
+   "fallback": "lead"
+  },
+  "gm-lead-6-voice": {
+   "label": "Voice Lead",
+   "group": "Synth (GM)",
+   "fallback": "lead"
+  },
+  "gm-lead-7-fifths": {
+   "label": "Fifths Lead",
+   "group": "Synth (GM)",
+   "fallback": "lead"
+  },
+  "gm-lead-8-bass-lead": {
+   "label": "Bass + Lead",
+   "group": "Synth (GM)",
+   "fallback": "synthbass"
+  },
+  "gm-pad-1-new-age": {
+   "label": "New Age Pad",
+   "group": "Synth (GM)",
+   "fallback": "pad"
+  },
+  "gm-pad-2-warm": {
+   "label": "Warm Pad (GM)",
+   "group": "Synth (GM)",
+   "fallback": "pad"
+  },
+  "gm-pad-3-polysynth": {
+   "label": "Polysynth Pad",
+   "group": "Synth (GM)",
+   "fallback": "pad"
+  },
+  "gm-pad-4-choir": {
+   "label": "Choir Pad",
+   "group": "Synth (GM)",
+   "fallback": "pad"
+  },
+  "gm-pad-5-bowed": {
+   "label": "Bowed Pad",
+   "group": "Synth (GM)",
+   "fallback": "pad"
+  },
+  "gm-pad-6-metallic": {
+   "label": "Metallic Pad",
+   "group": "Synth (GM)",
+   "fallback": "pad"
+  },
+  "gm-pad-7-halo": {
+   "label": "Halo Pad",
+   "group": "Synth (GM)",
+   "fallback": "pad"
+  },
+  "gm-pad-8-sweep": {
+   "label": "Sweep Pad",
+   "group": "Synth (GM)",
+   "fallback": "pad"
+  },
+  "gm-fx-1-rain": {
+   "label": "Rain (FX)",
+   "group": "Synth (GM)",
+   "fallback": "pad"
+  },
+  "gm-fx-2-soundtrack": {
+   "label": "Soundtrack (FX)",
+   "group": "Synth (GM)",
+   "fallback": "pad"
+  },
+  "gm-fx-3-crystal": {
+   "label": "Crystal (FX)",
+   "group": "Synth (GM)",
+   "fallback": "bell"
+  },
+  "gm-fx-4-atmosphere": {
+   "label": "Atmosphere (FX)",
+   "group": "Synth (GM)",
+   "fallback": "pad"
+  },
+  "gm-fx-5-brightness": {
+   "label": "Brightness (FX)",
+   "group": "Synth (GM)",
+   "fallback": "pad"
+  },
+  "gm-fx-6-goblins": {
+   "label": "Goblins (FX)",
+   "group": "Synth (GM)",
+   "fallback": "pad"
+  },
+  "gm-fx-7-echoes": {
+   "label": "Echoes (FX)",
+   "group": "Synth (GM)",
+   "fallback": "pad"
+  },
+  "gm-fx-8-scifi": {
+   "label": "Sci-Fi (FX)",
+   "group": "Synth (GM)",
+   "fallback": "pad"
+  },
+  "gm-sitar": {
+   "label": "Sitar",
+   "group": "World",
+   "fallback": "pluck"
+  },
+  "gm-banjo": {
+   "label": "Banjo",
+   "group": "World",
+   "fallback": "pluck"
+  },
+  "gm-shamisen": {
+   "label": "Shamisen",
+   "group": "World",
+   "fallback": "pluck"
+  },
+  "gm-koto": {
+   "label": "Koto",
+   "group": "World",
+   "fallback": "pluck"
+  },
+  "gm-bagpipe": {
+   "label": "Bagpipe",
+   "group": "World",
+   "fallback": "lead"
+  },
+  "gm-fiddle": {
+   "label": "Fiddle",
+   "group": "World",
+   "fallback": "strings"
+  },
+  "gm-shanai": {
+   "label": "Shehnai",
+   "group": "World",
+   "fallback": "lead"
+  },
+  "gm-steel-drums": {
+   "label": "Steel Drums",
+   "group": "World",
+   "fallback": "bell"
+  },
+  "gm-tinkle-bell": {
+   "label": "Tinkle Bell",
+   "group": "Percussion on the keys",
+   "fallback": "bell"
+  },
+  "gm-agogo": {
+   "label": "Agogo",
+   "group": "Percussion on the keys",
+   "fallback": "bell"
+  },
+  "gm-woodblock": {
+   "label": "Woodblock",
+   "group": "Percussion on the keys",
+   "fallback": "pluck"
+  },
+  "gm-taiko-drum": {
+   "label": "Taiko Drum",
+   "group": "Percussion on the keys",
+   "fallback": "synthbass"
+  },
+  "gm-melodic-tom": {
+   "label": "Melodic Tom",
+   "group": "Percussion on the keys",
+   "fallback": "synthbass"
+  },
+  "gm-synth-drum": {
+   "label": "Synth Drum (Syndrum)",
+   "group": "Percussion on the keys",
+   "fallback": "synthbass"
+  },
+  "gm-reverse-cymbal": {
+   "label": "Reverse Cymbal",
+   "group": "Sound effects on the keys",
+   "fallback": "pad"
+  },
+  "gm-guitar-fret-noise": {
+   "label": "Guitar Fret Squeak",
+   "group": "Sound effects on the keys",
+   "fallback": "pluck"
+  },
+  "gm-breath-noise": {
+   "label": "Breath",
+   "group": "Sound effects on the keys",
+   "fallback": "pad"
+  },
+  "gm-seashore": {
+   "label": "Ocean Waves",
+   "group": "Sound effects on the keys",
+   "fallback": "pad"
+  },
+  "gm-bird-tweet": {
+   "label": "Bird Tweet",
+   "group": "Sound effects on the keys",
+   "fallback": "bell"
+  },
+  "gm-telephone-ring": {
+   "label": "Telephone Ring",
+   "group": "Sound effects on the keys",
+   "fallback": "bell"
+  },
+  "gm-helicopter": {
+   "label": "Helicopter",
+   "group": "Sound effects on the keys",
+   "fallback": "pad"
+  },
+  "gm-applause": {
+   "label": "Applause",
+   "group": "Sound effects on the keys",
+   "fallback": "pad"
+  },
+  "gm-gunshot": {
+   "label": "Gunshot",
+   "group": "Sound effects on the keys",
+   "fallback": "synthbass"
+  }
  },
  "drums": {
   "kick-acoustic": 0.7,
@@ -290,6 +2303,396 @@ const SAMPLE_MANIFEST = {
   "conga": 0.79,
   "bongo": 0.6
  },
+ "library": {
+  "vinyl-scratch": {
+   "label": "Vinyl scratch",
+   "group": "Sound effects",
+   "len": 0.274
+  },
+  "vinyl-backspin": {
+   "label": "Vinyl backspin",
+   "group": "Sound effects",
+   "len": 1.058
+  },
+  "vinyl-rewind": {
+   "label": "Rewind",
+   "group": "Sound effects",
+   "len": 2.68
+  },
+  "vinyl-hiss": {
+   "label": "Vinyl hiss",
+   "group": "Sound effects",
+   "len": 8
+  },
+  "misc-cineboom": {
+   "label": "Movie boom",
+   "group": "Sound effects",
+   "len": 6
+  },
+  "perc-swoosh": {
+   "label": "Swoosh",
+   "group": "Sound effects",
+   "len": 0.619
+  },
+  "ambi-swoosh": {
+   "label": "Long swoosh",
+   "group": "Sound effects",
+   "len": 1.843
+  },
+  "ambi-dark-woosh": {
+   "label": "Dark woosh",
+   "group": "Sound effects",
+   "len": 3.687
+  },
+  "ambi-lunar-land": {
+   "label": "Lunar landing",
+   "group": "Sound effects",
+   "len": 7.394
+  },
+  "bass-drop-c": {
+   "label": "Bass drop",
+   "group": "Sound effects",
+   "len": 2.359
+  },
+  "misc-crow": {
+   "label": "Crow",
+   "group": "Sound effects",
+   "len": 0.481
+  },
+  "misc-burp": {
+   "label": "Burp",
+   "group": "Sound effects",
+   "len": 0.77
+  },
+  "perc-door": {
+   "label": "Door",
+   "group": "Sound effects",
+   "len": 2.448
+  },
+  "perc-till": {
+   "label": "Cash register",
+   "group": "Sound effects",
+   "len": 2.666
+  },
+  "perc-swash": {
+   "label": "Swash",
+   "group": "Sound effects",
+   "len": 0.311
+  },
+  "elec-blip": {
+   "label": "Blip",
+   "group": "Sound effects",
+   "len": 0.158
+  },
+  "elec-ping": {
+   "label": "Ping",
+   "group": "Sound effects",
+   "len": 0.212
+  },
+  "elec-beep": {
+   "label": "Beep",
+   "group": "Sound effects",
+   "len": 0.106
+  },
+  "elec-twang": {
+   "label": "Twang",
+   "group": "Sound effects",
+   "len": 0.624
+  },
+  "elec-chime": {
+   "label": "Chime",
+   "group": "Sound effects",
+   "len": 2.278
+  },
+  "perc-bell": {
+   "label": "Bell hit",
+   "group": "Sound effects",
+   "len": 3
+  },
+  "elec-triangle": {
+   "label": "Triangle",
+   "group": "Sound effects",
+   "len": 0.223
+  },
+  "guit-e-fifths": {
+   "label": "Guitar fifths riff",
+   "group": "Riffs & textures",
+   "len": 5.972
+  },
+  "guit-e-slide": {
+   "label": "Guitar slide",
+   "group": "Riffs & textures",
+   "len": 4.325
+  },
+  "guit-em9": {
+   "label": "Guitar Em9 chord",
+   "group": "Riffs & textures",
+   "len": 8
+  },
+  "guit-harmonics": {
+   "label": "Guitar harmonics",
+   "group": "Riffs & textures",
+   "len": 3.532
+  },
+  "ambi-choir": {
+   "label": "Choir swell",
+   "group": "Riffs & textures",
+   "len": 1.572
+  },
+  "ambi-piano": {
+   "label": "Ambient piano",
+   "group": "Riffs & textures",
+   "len": 2.811
+  },
+  "ambi-glass-hum": {
+   "label": "Glass hum",
+   "group": "Riffs & textures",
+   "len": 8
+  },
+  "ambi-glass-rub": {
+   "label": "Glass rub",
+   "group": "Riffs & textures",
+   "len": 3.148
+  },
+  "ambi-drone": {
+   "label": "Drone",
+   "group": "Riffs & textures",
+   "len": 4.408
+  },
+  "ambi-haunted-hum": {
+   "label": "Haunted hum",
+   "group": "Riffs & textures",
+   "len": 8
+  },
+  "bass-voxy-hit-c": {
+   "label": "Vox bass hit",
+   "group": "Riffs & textures",
+   "len": 0.457
+  },
+  "bass-hit-c": {
+   "label": "Bass hit",
+   "group": "Riffs & textures",
+   "len": 0.609
+  },
+  "bass-woodsy-c": {
+   "label": "Woody bass",
+   "group": "Riffs & textures",
+   "len": 3
+  },
+  "bass-dnb-f": {
+   "label": "DnB bass",
+   "group": "Riffs & textures",
+   "len": 0.871
+  },
+  "loop-amen": {
+   "label": "Amen break",
+   "group": "Drum loops (fit the tempo)",
+   "len": 1.753,
+   "beats": 4,
+   "bpm": 136.9
+  },
+  "loop-breakbeat": {
+   "label": "Breakbeat",
+   "group": "Drum loops (fit the tempo)",
+   "len": 1.905,
+   "beats": 4,
+   "bpm": 126
+  },
+  "loop-compus": {
+   "label": "Compus beat",
+   "group": "Drum loops (fit the tempo)",
+   "len": 6.486,
+   "beats": 8,
+   "bpm": 74
+  },
+  "loop-garzul": {
+   "label": "Garzul groove",
+   "group": "Drum loops (fit the tempo)",
+   "len": 8,
+   "beats": 16,
+   "bpm": 120
+  },
+  "loop-mika": {
+   "label": "Mika groove",
+   "group": "Drum loops (fit the tempo)",
+   "len": 8,
+   "beats": 16,
+   "bpm": 120
+  },
+  "loop-safari": {
+   "label": "Safari",
+   "group": "Drum loops (fit the tempo)",
+   "len": 8.005,
+   "beats": 16,
+   "bpm": 119.9
+  },
+  "loop-tabla": {
+   "label": "Tabla loop",
+   "group": "Drum loops (fit the tempo)",
+   "len": 10,
+   "beats": 16,
+   "bpm": 96
+  },
+  "loop-industrial": {
+   "label": "Industrial",
+   "group": "Drum loops (fit the tempo)",
+   "len": 0.884,
+   "beats": 2,
+   "bpm": 135.7
+  },
+  "loop-electric": {
+   "label": "Electric loop",
+   "group": "Drum loops (fit the tempo)",
+   "len": 2.474,
+   "beats": 4,
+   "bpm": 97
+  },
+  "bd-zum": {
+   "label": "Kick — zum",
+   "group": "More drums",
+   "len": 0.132
+  },
+  "bd-tek": {
+   "label": "Kick — tek",
+   "group": "More drums",
+   "len": 0.24
+  },
+  "bd-klub": {
+   "label": "Kick — klub",
+   "group": "More drums",
+   "len": 0.369
+  },
+  "bd-jazz": {
+   "label": "Kick — jazz",
+   "group": "More drums",
+   "len": 0.729
+  },
+  "bd-gas": {
+   "label": "Kick — gas",
+   "group": "More drums",
+   "len": 0.447
+  },
+  "bd-pure": {
+   "label": "Kick — pure",
+   "group": "More drums",
+   "len": 0.433
+  },
+  "bd-chip": {
+   "label": "Kick — chip",
+   "group": "More drums",
+   "len": 0.104
+  },
+  "sn-dolf": {
+   "label": "Snare — dolf",
+   "group": "More drums",
+   "len": 0.378
+  },
+  "sn-zome": {
+   "label": "Snare — zome",
+   "group": "More drums",
+   "len": 0.479
+  },
+  "hat-zild": {
+   "label": "Hat — zild",
+   "group": "More drums",
+   "len": 0.229
+  },
+  "hat-metal": {
+   "label": "Hat — metal",
+   "group": "More drums",
+   "len": 0.914
+  },
+  "hat-cab": {
+   "label": "Hat — cab",
+   "group": "More drums",
+   "len": 0.157
+  },
+  "hat-tap": {
+   "label": "Hat — tap",
+   "group": "More drums",
+   "len": 0.172
+  },
+  "hat-star": {
+   "label": "Hat — star",
+   "group": "More drums",
+   "len": 0.11
+  },
+  "ride-tri": {
+   "label": "Ride",
+   "group": "More drums",
+   "len": 3
+  },
+  "ride-via": {
+   "label": "Ride 2",
+   "group": "More drums",
+   "len": 3
+  },
+  "drum-roll": {
+   "label": "Snare roll",
+   "group": "More drums",
+   "len": 4
+  },
+  "elec-pop": {
+   "label": "Pop",
+   "group": "More drums",
+   "len": 0.087
+  },
+  "elec-tick": {
+   "label": "Tick",
+   "group": "More drums",
+   "len": 0.019
+  },
+  "elec-bong": {
+   "label": "Bong",
+   "group": "More drums",
+   "len": 0.346
+  },
+  "tabla-na": {
+   "label": "Tabla na",
+   "group": "Tabla",
+   "len": 0.72
+  },
+  "tabla-tun1": {
+   "label": "Tabla tun",
+   "group": "Tabla",
+   "len": 2.339
+  },
+  "tabla-ke1": {
+   "label": "Tabla ke",
+   "group": "Tabla",
+   "len": 0.043
+  },
+  "tabla-te1": {
+   "label": "Tabla te",
+   "group": "Tabla",
+   "len": 0.178
+  },
+  "tabla-ghe1": {
+   "label": "Tabla ghe (low)",
+   "group": "Tabla",
+   "len": 0.591
+  },
+  "tabla-ghe4": {
+   "label": "Tabla ghe 2",
+   "group": "Tabla",
+   "len": 0.796
+  },
+  "tabla-dhec": {
+   "label": "Tabla dhec",
+   "group": "Tabla",
+   "len": 0.325
+  },
+  "tabla-re": {
+   "label": "Tabla re",
+   "group": "Tabla",
+   "len": 0.282
+  },
+  "tabla-tas1": {
+   "label": "Tabla tas",
+   "group": "Tabla",
+   "len": 1.112
+  }
+ },
  "credits": [
   {
    "what": "Grand Piano",
@@ -319,6 +2722,16 @@ const SAMPLE_MANIFEST = {
   {
    "what": "Kicks, snares, toms, cymbals, snaps",
    "who": "Sonic Pi sample pack (Freesound contributors) via Sample Pi",
+   "license": "CC0 (public domain)"
+  },
+  {
+   "what": "The General MIDI sounds (organs, accordion, saxes, choir, synth leads and pads, sitar, steel drums, sound effects on the keys …)",
+   "who": "FluidR3_GM by Frank Wen, rendered by gleitz/midi-js-soundfonts",
+   "license": "CC BY 3.0"
+  },
+  {
+   "what": "The sound library (effects, riffs, drum loops, tabla, extra kicks and hats)",
+   "who": "Sonic Pi sample pack (Freesound contributors, Arovane)",
    "license": "CC0 (public domain)"
   }
  ]

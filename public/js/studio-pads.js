@@ -25,18 +25,7 @@ const PadRoom = (() => {
     sel.className = 'tb-sel pad-sound';
     sel.title = 'This pad\'s sound — any drum from any kit';
     sel.setAttribute('aria-label', t.name + ' sound');
-    DrumKits.kits().forEach(k => {
-      const og = document.createElement('optgroup');
-      og.label = k.label;
-      DrumKits.ROLES.forEach(r => {
-        const o = document.createElement('option');
-        o.value = k.id + '|' + r.id;
-        o.textContent = `${r.label} · ${k.label}`;
-        if (t.sound.kit === k.id && t.sound.role === r.id) o.selected = true;
-        og.appendChild(o);
-      });
-      sel.appendChild(og);
-    });
+    DrumKits.soundOptions(sel, t.sound);
     sel.addEventListener('change', () => {
       const [kit, role] = sel.value.split('|');
       Project.setSound(t.id, { kit, role });
@@ -148,7 +137,17 @@ const PadRoom = (() => {
       Keys.hitDrum(t.id, 0.9);
       App.msg(`Added a ${r.label} pad. It's a drum lane too — draw where it plays on the timeline, or turn on Write hits and play it in.`);
     } }));
-    App.menu(e.currentTarget, items, 'addMenu');
+    const anchor = e.currentTarget;
+    const lib = DrumKits.library();
+    if (lib.length) {
+      items.push({ heading: 'Sound library — effects, riffs, loops' });
+      lib.forEach(g => items.push({ label: `${g.group}  (${g.items.length})  ▸`, cls: 'submenu', act: () => setTimeout(() => {
+        const sub = [{ heading: g.group }];
+        g.items.forEach(it => sub.push({ label: it.label + (it.loop ? '  ⟲' : ''), act: () => window.__bhsAddLib(it.id) }));
+        App.menu(anchor, sub, 'addMenu');
+      }, 0) }));
+    }
+    App.menu(anchor, items, 'addMenu');
   });
 
   Sequencer.onHit((ids) => ids.forEach(id => {

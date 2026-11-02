@@ -245,6 +245,7 @@ function sineWav(file) {
   });
   ok('all ' + Object.keys(instPeaks).length + ' instruments make sound', Object.values(instPeaks).every(p => p > 0.02), JSON.stringify(instPeaks));
   await page.click('#addTrackBtn');
+  await page.click('#addMenu .menuitem:has-text("Synth orchestra")');
   await page.click('#addMenu .menuitem:has-text("Synth Strings")');
   await page.waitForTimeout(100);
   ok('Strings track added and selected', await page.evaluate(() => { const t = Project.track(App.selected()); return t && t.instrument === 'strings'; }));
@@ -1122,6 +1123,56 @@ function sineWav(file) {
   await page.click('#tipsBtn');
   ok('…ⓘ Tips shows them', await page.evaluate(() => getComputedStyle(document.querySelector('#editor .explain')).display !== 'none'));
   await page.click('#tipsBtn');
+
+  console.log('\n13m4. More sounds — the General MIDI set and the sound library');
+  const gm = await page.evaluate(() => {
+    const list = Instruments.list();
+    const gmIds = list.filter(i => i.id.startsWith('gm-')).map(i => i.id);
+    const groups = [...new Set(list.map(i => i.group))];
+    return { n: gmIds.length, groups, has: ['gm-accordion', 'gm-drawbar-organ', 'gm-choir-aahs', 'gm-steel-drums', 'gm-seashore'].filter(x => gmIds.includes(x)) };
+  });
+  ok(`the General MIDI sounds are in the instrument list (${gm.n})`, gm.n >= 100 && gm.has.length === 5, JSON.stringify(gm.has));
+  ok('…grouped like a keyboard\'s sound list', ['Organ & accordion', 'Woodwinds', 'World', 'Sound effects on the keys'].every(g => gm.groups.includes(g)), gm.groups.join(' | '));
+  const gmPeak = await page.evaluate(async () => {
+    await Samples.loadInstrument('gm-accordion');
+    const ac = new OfflineAudioContext(1, 44100, 44100);
+    const h = Instruments.noteOn(ac, ac.destination, 'gm-accordion', 64, 0.9, 0.01); h.release(0.6);
+    const b = await ac.startRendering(); let pk = 0; b.getChannelData(0).forEach(v => { pk = Math.max(pk, Math.abs(v)); }); return pk;
+  });
+  ok('a General MIDI instrument (accordion) loads and plays', gmPeak > 0.02, String(gmPeak));
+  await page.click('#addTrackBtn');
+  await page.click('#addMenu .menuitem:has-text("Organ & accordion")');
+  await page.click('#addMenu .menuitem:has-text("Church Organ")');
+  await page.waitForTimeout(150);
+  ok('+ Add instrument opens by group, then the instrument', await page.evaluate(() => Project.track(App.selected()).instrument === 'gm-church-organ'));
+
+  const lib = await page.evaluate(() => { const L = Samples.library(); return { n: Object.keys(L).length, groups: [...new Set(Object.values(L).map(x => x.group))], loops: Object.values(L).filter(x => x.beats).length }; });
+  ok(`the sound library is in (${lib.n} effects, riffs, loops and drums)`, lib.n >= 60 && lib.loops >= 8 && lib.groups.includes('Sound effects'), JSON.stringify(lib));
+  await page.click('#addTrackBtn');
+  await page.click('#addMenu .menuitem:has-text("Drum loops")');
+  await page.click('#addMenu .menuitem:has-text("Amen break")');
+  await page.waitForTimeout(300);
+  const amen = await page.evaluate(async () => {
+    const t = Project.track(App.selected());
+    await Samples.loadLib('loop-amen');
+    const info = Samples.library()['loop-amen'];
+    window.__bpmWas = Project.bpm(); window.__kitWas = Project.kit();
+    Project.setBpm(100);
+    let rate = null;
+    const ac = new OfflineAudioContext(1, 4410, 44100);
+    const orig = ac.createBufferSource.bind(ac);
+    ac.createBufferSource = () => { const s = orig(); window.__lastSrc = s; return s; };
+    DrumKits.hit(ac, ac.destination, t.sound, 0, 1);
+    rate = window.__lastSrc && window.__lastSrc.playbackRate.value;
+    const want = info.len / (info.beats * 60 / 100);
+    Project.setKit('house');
+    return { kind: t.kind, sound: t.sound, rate, want, keptLib: Project.track(t.id).sound.kit === 'lib' };
+  });
+  ok('a library loop becomes a lane on the drum machine and pads', amen.kind === 'drum' && amen.sound.kit === 'lib' && amen.sound.role === 'loop-amen', JSON.stringify(amen));
+  ok('…and is stretched to fit the song\'s tempo', amen.rate && Math.abs(amen.rate - amen.want) < 0.01, JSON.stringify(amen));
+  ok('…the Kit box leaves library lanes alone', amen.keptLib);
+  ok('library sounds are in every lane\'s sound box', await page.evaluate(() => !!document.querySelector('#editor .lane-sound option[value="lib|vinyl-scratch"]')));
+  await page.evaluate(() => { Project.setKit(window.__kitWas); Project.setBpm(window.__bpmWas); });
 
   console.log('\n13n. Hear less of it — solo the one you are editing, unmute all, loop one section');
   await page.evaluate(() => App.select(window.__track('Snare').id));
