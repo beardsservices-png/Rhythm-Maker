@@ -290,6 +290,16 @@ const Instruments = (() => {
     REC('real-ebass', 'Electric Bass', 'Guitar & bass (recorded)', 'synthbass', { tone: 0.7, release: 0.15, gain: 0.8 }),
     REC('real-upright', 'Upright Bass', 'Guitar & bass (recorded)', 'synthbass', { tone: 0.7, release: 0.2, gain: 0.85 })
   ];
+  // The General MIDI set (FluidR3): everything a keyboard's sound list has.
+  // Its picker groups and stand-ins come from the manifest the build wrote.
+  const HELD = ['organ', 'strings', 'pad', 'brass', 'lead', 'flute'];
+  const GM = typeof SAMPLE_MANIFEST !== 'undefined' && SAMPLE_MANIFEST.gm ? SAMPLE_MANIFEST.gm : {};
+  Object.entries(GM).forEach(([id, g]) => {
+    const held = HELD.includes(g.fallback);
+    SAMPLED.push(held
+      ? REC(id, g.label, g.group, g.fallback, { tone: 0.75, attack: 0.02, release: 0.3, gain: 0.6 }, [K.tone, K.attack, K.release])
+      : REC(id, g.label, g.group, g.fallback, { tone: 0.8, release: 0.4, gain: 0.7 }));
+  });
   SAMPLED.forEach(p => {
     const notes = typeof SAMPLE_MANIFEST !== 'undefined' && SAMPLE_MANIFEST.instruments[p.id];
     let lo = notes ? Math.max(24, notes[0] - 5) : 36, hi = notes ? Math.min(100, notes[notes.length - 1] + 5) : 84;

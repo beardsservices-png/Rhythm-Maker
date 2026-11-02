@@ -158,7 +158,7 @@ const Project = (() => {
   function setKit(kit) {
     if (!DrumKits.KITS[kit]) return;
     state.kit = kit;
-    state.tracks.forEach(t => { if (t.kind === 'drum') t.sound.kit = kit; });
+    state.tracks.forEach(t => { if (t.kind === 'drum' && t.sound.kit !== 'lib') t.sound.kit = kit; });
     emit('sound', { kit });
   }
 

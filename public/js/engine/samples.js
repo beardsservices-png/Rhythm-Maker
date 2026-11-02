@@ -178,11 +178,37 @@ const Samples = (() => {
     return true;
   }
 
+  // ── the sound library (effects, riffs, drum loops): samples/lib/<id>.mp3 ──
+  const LIB = M.library || {};
+  const libKey = (id) => 'lib/' + id;
+  function hasLib(id) { return !!LIB[id]; }
+  function loadLib(id) {
+    if (!hasLib(id)) return Promise.resolve(false);
+    return fetchOne(libKey(id), BASE + 'lib/' + id + '.mp3').then(b => { if (b) emit(id); return !!b; });
+  }
+  /** One library sound. A loop is sped up or slowed to fill its beats at `bpm`. */
+  function libShot(ac, dest, id, when, vel, opts) {
+    const buf = buffers.get(libKey(id));
+    if (!buf) return false;
+    const o = opts || {};
+    const info = LIB[id] || {};
+    const t = Math.max(ac.currentTime, when == null ? ac.currentTime : when);
+    const src = ac.createBufferSource();
+    src.buffer = buf;
+    if (info.beats && o.bpm) src.playbackRate.value = Math.max(0.25, Math.min(4, buf.duration / (info.beats * 60 / o.bpm)));
+    const g = ac.createGain();
+    g.gain.setValueAtTime((o.gain == null ? 0.8 : o.gain) * Math.max(0.03, vel == null ? 1 : vel), t);
+    src.connect(g).connect(dest);
+    src.start(t);
+    return true;
+  }
+
   /** Fetch everything a song's tracks play. Resolves when all of it is in. */
   function preloadFor(tracks) {
     const jobs = [];
     (tracks || []).forEach(t => {
       if (t.kind === 'synth' && hasInstrument(t.instrument)) jobs.push(loadInstrument(t.instrument));
+      if (t.kind === 'drum' && t.sound && t.sound.kit === 'lib') { jobs.push(loadLib(t.sound.role)); return; }
       if (t.kind === 'drum' && typeof DrumKits !== 'undefined') {
         const s = DrumKits.sampleOf(t.sound);
         if (s) jobs.push(loadDrum(s));
@@ -194,6 +220,7 @@ const Samples = (() => {
   return {
     preloadFor, hasInstrument, instrumentReady, loadInstrument,
     hasDrum, drumReady, loadDrum, noteOn, oneShot, onLoad,
+    hasLib, loadLib, libShot, library: () => Object.assign({}, LIB),
     credits: () => M.credits.slice(),
     instruments: () => Object.keys(M.instruments),
     drums: () => Object.keys(M.drums)

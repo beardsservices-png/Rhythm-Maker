@@ -341,6 +341,17 @@ const DrumKits = (() => {
    */
   function hit(ac, dest, sound, when, velocity) {
     if (!ac || !dest || !sound) return;
+    if (sound.kit === 'lib') {
+      // Sound library: effects, riffs, loops. Silent until the file is in (it's
+      // fetched on first use and when a song loads) — there's no synth stand-in
+      // for a crow or the Amen break.
+      if (typeof Samples === 'undefined') return;
+      const v0 = velocity == null ? 1 : Math.max(0.03, Math.min(1.3, velocity));
+      const t0 = Math.max(ac.currentTime, when == null ? ac.currentTime : when);
+      const bpm = typeof Project !== 'undefined' ? Project.bpm() : 120;
+      if (!Samples.libShot(ac, dest, sound.role, t0, v0, { bpm })) Samples.loadLib(sound.role);
+      return;
+    }
     const kit = KITS[sound.kit] || KITS.trap;
     let p = kit[sound.role];
     const fn = VOICES[sound.role];
@@ -365,11 +376,51 @@ const DrumKits = (() => {
 
   function roleLabel(role) {
     const r = ROLES.find(x => x.id === role);
-    return r ? r.label : role;
+    if (r) return r.label;
+    const lib = typeof Samples !== 'undefined' && Samples.library()[role];
+    return lib ? lib.label : role;
   }
+  /** The sound library, grouped: [{ group, items: [{ id, label, loop }] }]. */
+  function library() {
+    const lib = typeof Samples !== 'undefined' ? Samples.library() : {};
+    const groups = [];
+    Object.entries(lib).forEach(([id, x]) => {
+      let g = groups.find(q => q.group === x.group);
+      if (!g) { g = { group: x.group, items: [] }; groups.push(g); }
+      g.items.push({ id, label: x.label, loop: !!x.beats });
+    });
+    return groups;
+  }
+  /** Options for a lane's sound picker: every kit × drum, then the library. */
+  function soundOptions(sel, current) {
+    kits().forEach(k => {
+      const og = document.createElement('optgroup');
+      og.label = k.label;
+      ROLES.forEach(r => {
+        const o = document.createElement('option');
+        o.value = k.id + '|' + r.id;
+        o.textContent = `${r.label} · ${k.label}`;
+        if (current && current.kit === k.id && current.role === r.id) o.selected = true;
+        og.appendChild(o);
+      });
+      sel.appendChild(og);
+    });
+    library().forEach(g => {
+      const og = document.createElement('optgroup');
+      og.label = 'Library — ' + g.group;
+      g.items.forEach(it => {
+        const o = document.createElement('option');
+        o.value = 'lib|' + it.id;
+        o.textContent = it.label;
+        if (current && current.kit === 'lib' && current.role === it.id) o.selected = true;
+        og.appendChild(o);
+      });
+      sel.appendChild(og);
+    });
+  }
+  function kits() { return KIT_ORDER.map(id => ({ id, label: KITS[id].label })); }
 
   return {
-    ROLES, KITS, KIT_ORDER, hit, roleLabel, sampleOf,
-    kits: () => KIT_ORDER.map(id => ({ id, label: KITS[id].label }))
+    ROLES, KITS, KIT_ORDER, hit, roleLabel, sampleOf, library, soundOptions, kits
   };
 })();
