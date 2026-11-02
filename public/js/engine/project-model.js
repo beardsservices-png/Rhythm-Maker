@@ -170,20 +170,70 @@ const Project = (() => {
 
   function toggleStep(id, v, i) {
     const p = pattern(id, v); if (!p) return false;
+    const t = track(id); if (t && t.kind === 'drum' && stepLocked(t, v, i)) return p[i];
     p[i] = !p[i];
     emit('pattern', { track: id });
     return p[i];
   }
 
+  // ── locks: a locked note, row, step or lane can't be changed by anything —
+  // the editor, Clear, Copy to…, Write notes, MIDI or Ask Claude. They all
+  // write through setNotes / setPatternSteps, so the rule lives there. ──
+  const rowLocked = (t, m) => !!(t.lockRows && t.lockRows.includes(m));
+  const noteLocked = (t, n) => !!n.lk || rowLocked(t, n.m);
+  const stepLocked = (t, v, i) => !!t.lockLane || !!(t.lockSteps && t.lockSteps[v] && t.lockSteps[v].includes(i));
+  /** Old locked notes stay exactly; new notes can't land in a locked row or on a locked note. */
+  function mergeNotes(t, v, fresh) {
+    const kept = (t.patterns[v] || []).filter(n => noteLocked(t, n));
+    const same = (a, b) => a.s === b.s && a.m === b.m;
+    return kept.concat(fresh.filter(n => !rowLocked(t, n.m) && !n.lk && !kept.some(k => same(k, n))));
+  }
+
   function setNotes(id, v, notes) {
     const t = track(id); if (!t || t.kind !== 'synth') return;
     const max = t.bars * STEPS_PER_BAR;
-    t.patterns[v] = notes
+    const fresh = notes
       .filter(n => n && n.s >= 0 && n.s < max)
       .map(n => ({ s: n.s | 0, m: n.m | 0, l: Math.max(1, Math.min(max - n.s, n.l | 0 || 1)), sl: !!n.sl,
                    vel: n.vel == null ? undefined : clamp(n.vel, 0.05, 1), pan: n.pan ? clamp(n.pan, -1, 1) : undefined }));
+    t.patterns[v] = mergeNotes(t, v, fresh);
     emit('pattern', { track: id });
   }
+
+  function lockedSteps(t, v) { return (t.lockSteps && t.lockSteps[v]) || []; }
+  /** Lock or unlock one note (matched by start + pitch). */
+  function toggleNoteLock(id, v, s, m) {
+    const t = track(id); if (!t || t.kind !== 'synth') return;
+    const n = (t.patterns[v] || []).find(x => x.s === s && x.m === m);
+    if (!n) return;
+    if (n.lk) delete n.lk; else n.lk = true;
+    emit('pattern', { track: id, lock: true });
+  }
+  /** Lock or unlock a whole row (one pitch) of a track's piano roll — every pattern. */
+  function toggleRowLock(id, m) {
+    const t = track(id); if (!t || t.kind !== 'synth') return;
+    const rows = new Set(t.lockRows || []);
+    if (rows.has(m)) rows.delete(m); else rows.add(m);
+    t.lockRows = rows.size ? Array.from(rows).sort((a, b) => a - b) : undefined;
+    emit('pattern', { track: id, lock: true });
+  }
+  /** Lock or unlock one step of a drum lane's pattern. */
+  function toggleStepLock(id, v, i) {
+    const t = track(id); if (!t || t.kind !== 'drum') return;
+    const all = t.lockSteps ? t.lockSteps.map(a => (a || []).slice()) : Array.from({ length: COUNT }, () => []);
+    const cur = new Set(all[v] || []);
+    if (cur.has(i)) cur.delete(i); else cur.add(i);
+    all[v] = Array.from(cur).sort((a, b) => a - b);
+    t.lockSteps = all.some(a => a.length) ? all : undefined;
+    emit('pattern', { track: id, lock: true });
+  }
+  /** Lock or unlock a whole drum lane. */
+  function toggleLaneLock(id) {
+    const t = track(id); if (!t || t.kind !== 'drum') return;
+    if (t.lockLane) delete t.lockLane; else t.lockLane = true;
+    emit('pattern', { track: id, lock: true });
+  }
+  function hasLocks(t) { return !!t && !!(t.lockLane || t.lockRows || t.lockSteps || (t.patterns || []).some(p => Array.isArray(p) && p.some(n => n && n.lk))); }
 
   function setPatternSteps(id, v, steps) {
     const t = track(id); if (!t || t.kind !== 'drum') return;
@@ -191,20 +241,25 @@ const Project = (() => {
     const out = new Array(n).fill(false);
     // levels, rolls, and per-hit volume/pan survive
     const keep = (x) => (x && typeof x === 'object' ? (x.c > 0 ? x : false) : typeof x === 'number' ? (x > 0 ? x : false) : !!x);
-    for (let i = 0; i < n; i++) out[i] = keep(steps[i % Math.max(1, steps.length)]);
+    const old = t.patterns[v] || [];
+    for (let i = 0; i < n; i++) out[i] = stepLocked(t, v, i) ? (old[i] || false) : keep(steps[i % Math.max(1, steps.length)]);
     t.patterns[v] = out;
     emit('pattern', { track: id });
   }
 
   function clearPattern(id, v) {
     const t = track(id); if (!t || !t.patterns) return;
-    t.patterns[v] = blankPattern(t.kind, t.bars);
+    const blank = blankPattern(t.kind, t.bars);
+    if (t.kind === 'synth') t.patterns[v] = mergeNotes(t, v, []);
+    else { const old = t.patterns[v] || []; t.patterns[v] = blank.map((x, i) => (stepLocked(t, v, i) ? (old[i] || false) : x)); }
     emit('pattern', { track: id });
   }
 
   function copyPattern(id, from, to) {
     const t = track(id); if (!t || !t.patterns || from === to) return;
-    t.patterns[to] = clone(t.patterns[from]);
+    const src = clone(t.patterns[from]);
+    if (t.kind === 'synth') t.patterns[to] = mergeNotes(t, to, src.map(n => { const c = Object.assign({}, n); delete c.lk; return c; }));
+    else { const old = t.patterns[to] || []; t.patterns[to] = src.map((x, i) => (stepLocked(t, to, i) ? (old[i] || false) : x)); }
     emit('pattern', { track: id });
   }
 
@@ -515,6 +570,7 @@ const Project = (() => {
   /** Set one hit's volume and/or left-right. Steps that are off stay off. */
   function setStepMix(id, v, i, mix) {
     const t = track(id); if (!t || t.kind !== 'drum') return;
+    if (stepLocked(t, v, i)) return;
     const p = t.patterns[v];
     const cur = p && p[i];
     if (!cur) return;
@@ -528,7 +584,7 @@ const Project = (() => {
   function setNoteMix(id, v, s, m, mix) {
     const t = track(id); if (!t || t.kind !== 'synth') return;
     const n = (t.patterns[v] || []).find(x => x.s === s && x.m === m);
-    if (!n) return;
+    if (!n || noteLocked(t, n)) return;
     if (mix.vel !== undefined) { if (mix.vel == null) delete n.vel; else n.vel = +clamp(mix.vel, 0.05, 1).toFixed(3); }
     if (mix.pan !== undefined) { if (!mix.pan) delete n.pan; else n.pan = +clamp(mix.pan, -1, 1).toFixed(3); }
     emit('pattern', { track: id, mixOnly: true });
@@ -738,6 +794,10 @@ const Project = (() => {
     songBars, sectionStart, locate, songStateAt, cellAt, setCells, runs, extendTo,
     setMode, mode, setBpm, bpm, setSwing, swing, setKey, key, setPump, setCharacter,
     stepInfo, stepCode, codeOf, setStepMix, setNoteMix,
+    toggleNoteLock, toggleRowLock, toggleStepLock, toggleLaneLock, hasLocks,
+    noteLocked: (id, n) => { const t = track(id); return !!t && noteLocked(t, n); },
+    rowLocked: (id, m) => { const t = track(id); return !!t && rowLocked(t, m); },
+    stepLocked: (id, v, i) => { const t = track(id); return !!t && stepLocked(t, v, i); },
     setAudio, getAudio, newAudioId, setTune, setProcessed, hasProcessed, playbackAudio,
     serialize, restore, reset
   };

@@ -185,7 +185,8 @@
     kl.appendChild(kit);
     head.appendChild(kl);
     head.appendChild(btn('', 'Copy beat to…', 'Copy every lane\'s current pattern to another letter', (e, b) => copyMenu(sel, b, true)));
-    head.appendChild(btn('', 'Clear lane', `Empty ${sel.name} ${NAMES[sel.edit]}`, () => Project.clearPattern(sel.id, sel.edit)));
+    head.appendChild(btn('', 'Clear lane', `Empty ${sel.name} ${NAMES[sel.edit]} (locked steps stay)`, () => Project.clearPattern(sel.id, sel.edit)));
+    head.appendChild(lockButton('drum'));
     root.appendChild(head);
 
     // What a click places: a normal hit, an accent, a soft ghost note, or a
@@ -212,9 +213,12 @@
 
     const gridEl = el('div', 'drumgrid');
     drums.forEach(t => {
-      const row = el('div', 'drow' + (t.id === sel.id ? ' sel' : ''));
+      const row = el('div', 'drow' + (t.id === sel.id ? ' sel' : '') + (t.lockLane ? ' locked' : ''));
       row.dataset.id = t.id;
-      const name = btn('dname', t.name, 'Select this lane', () => App.select(t.id));
+      const name = btn('dname', (t.lockLane ? '🔒 ' : '') + t.name, lockMode ? 'Lock / unlock this whole lane' : 'Select this lane', () => {
+        if (lockMode) { Project.toggleLaneLock(t.id); return; }
+        App.select(t.id);
+      });
       row.appendChild(name);
       row.appendChild(soundSelect(t));
       row.appendChild(letterPicker(t, () => App.select(t.id)));
@@ -223,7 +227,7 @@
       for (let i = 0; i < t.bars * SPB; i++) {
         const info = Project.stepInfo(pat[i]);
         const c = el('div', 'dcell' + (info ? ' on lv' + info.level : '') + (info && info.roll > 1 ? ' roll' : '') +
-          (i % 4 === 0 ? ' beat' : '') + (i % SPB === 0 && i ? ' bar' : ''), info && info.roll > 1 ? '×' + info.roll : '');
+          (i % 4 === 0 ? ' beat' : '') + (i % SPB === 0 && i ? ' bar' : '') + (Project.stepLocked(t.id, t.edit, i) ? ' locked' : ''), info && info.roll > 1 ? '×' + info.roll : '');
         c.dataset.track = t.id;
         c.dataset.step = String(i);
         c.setAttribute('role', 'button');
@@ -301,6 +305,7 @@
   function targetFor(cur) { return codeOf(cur) === drumBrush ? false : drumBrush; }
 
   function setDrum(t, i, value) {
+    if (Project.stepLocked(t.id, t.edit, i)) return;
     const p = Project.pattern(t.id, t.edit).slice();
     if (codeOf(p[i]) === codeOf(value)) return;
     p[i] = value;
@@ -320,6 +325,8 @@
     e.preventDefault();
     const t = Project.track(c.dataset.track);
     const i = parseInt(c.dataset.step, 10);
+    if (lockMode) { Project.toggleStepLock(t.id, t.edit, i); return; }
+    if (Project.stepLocked(t.id, t.edit, i)) { App.msg('That step is locked. Turn on 🔒 Lock and click it to unlock.'); return; }
     const on = targetFor(Project.pattern(t.id, t.edit)[i]);
     drumPaint = { track: t.id, on, touch: e.pointerType === 'touch' };
     setDrum(t, i, on);
@@ -332,6 +339,24 @@
     setDrum(Project.track(drumPaint.track), parseInt(c.dataset.step, 10), drumPaint.on);
   });
   window.addEventListener('pointerup', () => { drumPaint = null; });
+
+  // ── 🔒 Lock: while it's on, a click locks or unlocks instead of editing ──
+  let lockMode = false;
+  function lockButton(kind) {
+    const b = btn('lockbtn' + (lockMode ? ' on' : ''), lockMode ? '🔒 Locking — done' : '🔒 Lock',
+      kind === 'drum'
+        ? 'Lock steps or whole lanes so nothing can change them. While on: click a step to lock it, click a lane\'s name to lock the lane.'
+        : 'Lock notes or whole rows so nothing can change them. While on: click a note to lock it, click an empty spot or a row\'s key to lock that row.',
+      () => {
+        lockMode = !lockMode;
+        App.msg(lockMode
+          ? (kind === 'drum' ? 'Lock is on: click steps to lock or unlock them, or a lane name for the whole lane. Click 🔒 again when done.'
+                             : 'Lock is on: click notes to lock or unlock them, or a row (an empty spot or its key) for the whole row. Click 🔒 again when done.')
+          : 'Lock is off. Locked things stay locked — Clear, Copy, recording and Claude leave them alone.');
+        render();
+      });
+    return b;
+  }
 
   // ════════════════ piano roll ════════════════
   const RH = 14;   // row height
@@ -373,7 +398,8 @@
     nll.appendChild(nl);
     head.appendChild(nll);
     head.appendChild(btn('', 'Copy to…', 'Copy this pattern to another letter', (e, b) => copyMenu(t, b, false)));
-    head.appendChild(btn('', 'Clear', `Empty ${NAMES[t.edit]}`, () => Project.clearPattern(t.id, t.edit)));
+    head.appendChild(btn('', 'Clear', `Empty ${NAMES[t.edit]} (locked notes stay)`, () => Project.clearPattern(t.id, t.edit)));
+    head.appendChild(lockButton('roll'));
 
     // Key + chord helper: rows in the song's key are lit, and with Chords on a
     // click places the whole chord that fits the key from that note up.
@@ -413,7 +439,8 @@
     const avail = Math.max(320, (root.clientWidth || 800) - 60);
     const cw = Math.max(16, Math.min(44, Math.floor(avail / steps)));
     const slideRow = Instruments.hasSlide(t.instrument);
-    const topH = slideRow ? 36 : 18;
+    const topH = 18;
+    const SLIDE_H = slideRow ? 26 : 0;
     const inner = el('div', 'roll-inner');
     inner.style.width = (48 + steps * cw) + 'px';
     inner.style.height = (topH + rows * RH) + 'px';
@@ -428,19 +455,6 @@
       lab.style.left = (48 + b * SPB * cw) + 'px';
       ruler.appendChild(lab);
     }
-    if (slideRow) {
-      const starts = new Map();
-      notes.forEach(n => starts.set(n.s, (starts.get(n.s) || false) || n.sl));
-      starts.forEach((on, s) => {
-        const b = btn('slidebtn' + (on ? ' on' : ''), 'S', 'Slide into this note from the one before (it must follow straight on)', () => {
-          const ns = Project.pattern(t.id, t.edit).map(n => n.s === s ? Object.assign({}, n, { sl: !on }) : n);
-          Project.setNotes(t.id, t.edit, ns);
-        });
-        b.style.left = (48 + s * cw) + 'px';
-        b.style.width = Math.max(14, cw - 2) + 'px';
-        ruler.appendChild(b);
-      });
-    }
     inner.appendChild(ruler);
 
     const body = el('div', 'roll-body');
@@ -448,12 +462,12 @@
     body.style.height = rows * RH + 'px';
     for (let m = hi; m >= lo; m--) {
       const inKey = keyPcs ? keyPcs.includes(((m % 12) + 12) % 12) : null;
-      const r = el('div', 'rrow' + (isBlack(m) ? ' blk' : '') + (m % 12 === 0 ? ' oct' : '') +
+      const r = el('div', 'rrow' + (isBlack(m) ? ' blk' : '') + (m % 12 === 0 ? ' oct' : '') + (Project.rowLocked(t.id, m) ? ' locked' : '') +
         (inKey === true ? ' inkey' : inKey === false ? ' outkey' : '') + (keyPcs && ((m % 12) + 12) % 12 === keyPcs[0] ? ' keyroot' : ''));
       r.style.top = (hi - m) * RH + 'px';
-      const k = el('div', 'rkey', m % 12 === 0 ? noteName(m) : '');
-      k.title = noteName(m);
-      k.addEventListener('pointerdown', (e) => { e.stopPropagation(); preview(t, m); });
+      const k = el('div', 'rkey', (Project.rowLocked(t.id, m) ? '🔒' : '') + (m % 12 === 0 ? noteName(m) : ''));
+      k.title = noteName(m) + (Project.rowLocked(t.id, m) ? ' — locked row' : '');
+      k.addEventListener('pointerdown', (e) => { e.stopPropagation(); if (lockMode) Project.toggleRowLock(t.id, m); else preview(t, m); });
       r.appendChild(k);
       body.appendChild(r);
     }
@@ -472,6 +486,7 @@
       d.style.top = (hi - n.m) * RH + 1 + 'px';
       d.style.width = Math.max(4, n.l * cw - 2) + 'px';
       d.classList.toggle('slide', !!n.sl);
+      d.classList.toggle('locked', Project.noteLocked(t.id, n));
       d.title = `${noteName(n.m)} · ${n.l} step${n.l === 1 ? '' : 's'}` + (n.sl ? ' · slides in' : '');
     };
     const noteEls = [];
@@ -506,9 +521,30 @@
       stems.set(n.s, c);
     });
     mixWrap.appendChild(mlane);
-    inner.style.height = (topH + rows * RH + 70) + 'px';
+    inner.style.height = (topH + rows * RH + 70 + SLIDE_H) + 'px';
     mixWrap.style.top = (topH + rows * RH + 6) + 'px';
     inner.appendChild(mixWrap);
+    // Slide (the 808 glide): one S per note, at the bottom next to the volume lane.
+    if (slideRow) {
+      const srow = el('div', 'rslide');
+      srow.style.width = (48 + steps * cw) + 'px';
+      srow.style.top = (topH + rows * RH + 6 + 60) + 'px';
+      const slab = el('div', 'rmix-label');
+      slab.appendChild(el('span', null, 'Slide'));
+      srow.appendChild(slab);
+      const starts = new Map();
+      notes.forEach(n => starts.set(n.s, (starts.get(n.s) || false) || n.sl));
+      starts.forEach((on, s) => {
+        const b = btn('slidebtn' + (on ? ' on' : ''), 'S', 'Slide into this note from the one before (it must follow straight on)', () => {
+          const ns = Project.pattern(t.id, t.edit).map(n => n.s === s ? Object.assign({}, n, { sl: !on }) : n);
+          Project.setNotes(t.id, t.edit, ns);
+        });
+        b.style.left = (48 + s * cw) + 'px';
+        b.style.width = Math.max(14, cw - 2) + 'px';
+        srow.appendChild(b);
+      });
+      inner.appendChild(srow);
+    }
     const mdrag = (e) => {
       const r = mlane.getBoundingClientRect();
       const step = Math.floor((e.clientX - r.left) / cw);
@@ -541,7 +577,7 @@
     root.appendChild(mrow);
     root.appendChild(el('p', 'hint',
       'Click to add a note, drag right while adding to make it longer. Drag a note to move it, drag its right edge to resize, click it to delete.' +
-      (slideRow ? ' The S buttons on top make a note slide in from the one before — the 808 glide.' : '')));
+      (slideRow ? ' The S buttons along the bottom make a note slide in from the one before — the 808 glide.' : '')));
 
     // Start scrolled to where the notes are (or the middle of the range).
     // The roll shows its whole range — no scrolling inside it.
@@ -557,6 +593,17 @@
       const live = Project.pattern(t.id, t.edit);
       const p = pos(e);
       const hitEl = e.target.closest('.rnote');
+      if (lockMode) {
+        const pair = hitEl && noteEls.find(x => x[1] === hitEl);
+        if (pair) Project.toggleNoteLock(t.id, t.edit, pair[0].s, pair[0].m);
+        else if (p.m >= lo && p.m <= hi) Project.toggleRowLock(t.id, p.m);
+        return;
+      }
+      const lockedNote = hitEl && noteEls.find(x => x[1] === hitEl && Project.noteLocked(t.id, x[0]));
+      if (lockedNote || (!hitEl && Project.rowLocked(t.id, p.m))) {
+        App.msg((lockedNote ? 'That note is' : 'That row is') + ' locked. Turn on 🔒 Lock and click it to unlock.');
+        return;
+      }
       let mode, note, d, origin = { s: 0, m: 0, l: 0 }, moved = false;
       const mates = [];          // the other notes of a chord being drawn
       if (hitEl) {
@@ -762,8 +809,31 @@
   }
 
   // ════════════════ dispatch ════════════════
+  /** Where every scrolled box in the editor sits, so a re-render can put it back.
+   *  Without this, each click on a step rebuilt the grid scrolled to the far left. */
+  function saveScroll() {
+    const boxes = [];
+    root.querySelectorAll('.drumgrid, .roll, .wavewrap, .wave-scroll').forEach((el2, i) => boxes.push([el2.className.split(' ')[0], i, el2.scrollLeft, el2.scrollTop]));
+    const panel = document.getElementById('editorPanel');
+    return { boxes, px: panel ? panel.scrollLeft : 0, py: panel ? panel.scrollTop : 0, wy: window.scrollY, h: root.offsetHeight };
+  }
+  function restoreScroll(k) {
+    const panel = document.getElementById('editorPanel');
+    if (panel) { panel.scrollLeft = k.px; panel.scrollTop = k.py; }
+    const found = {};
+    root.querySelectorAll('.drumgrid, .roll, .wavewrap, .wave-scroll').forEach((el2) => {
+      const c = el2.className.split(' ')[0]; const n = found[c] = (found[c] || 0);
+      const hit = k.boxes.filter(b => b[0] === c)[n];
+      found[c]++;
+      if (hit) { el2.scrollLeft = hit[2]; el2.scrollTop = hit[3]; }
+    });
+  }
+
   function render() {
     if (dragging) return;
+    const kept = lastRendered && current === App.selected() ? saveScroll() : null;
+    // Hold the height while rebuilding, so the page doesn't jump either.
+    if (kept) root.style.minHeight = kept.h + 'px';
     roll = null; audioView = null;
     root.innerHTML = '';
     const t = Project.track(App.selected());
@@ -775,6 +845,7 @@
     else if (t.kind === 'synth') renderRoll(t);
     else renderAudio(t);
     lastRendered = t.id + ':' + t.edit;
+    if (kept) { restoreScroll(kept); root.style.minHeight = ''; }
   }
 
   /** "Editing [Kick ▾]" — jump straight to any instrument from here. */

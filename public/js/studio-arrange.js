@@ -227,7 +227,7 @@
     bar.innerHTML = '';
     const t = sel && Project.track(sel.track);
     if (!t) {
-      bar.appendChild(el('span', 'dim', 'Click a block to select it · drag to move · drag its ends to stretch · drag on an empty row to draw a new one'));
+      bar.appendChild(el('span', 'dim tip', 'Click a block to select it · drag to move · drag its ends to stretch · drag on an empty row to draw a new one'));
       if (clipboard && cursor) bar.appendChild(btn('mini', 'Paste here', 'Paste the copied block at the marker (Ctrl+V)', paste));
       return;
     }

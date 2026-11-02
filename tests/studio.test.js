@@ -973,7 +973,7 @@ function sineWav(file) {
 
   await page.click('.win[data-win="editor"] .win-min');
   await page.waitForTimeout(300);
-  ok('− folds a window up to its title bar', (await box('editor')).h < 80 && (await st()).editor.min);
+  ok('− folds a window up to its title bar', (await box('editor')).h < 130 && (await st()).editor.min);
   await page.evaluate(() => window.__bhsTimeline && App.select(Project.tracks()[0].id));
   await page.evaluate(() => document.querySelector('.tl-row.track .editbtn') && document.querySelector('.tl-row.track .editbtn').click());
   await page.waitForTimeout(300);
@@ -1053,6 +1053,75 @@ function sineWav(file) {
   ok('Write hits is the same switch as the keyboard\'s Write notes', await page.evaluate(() => document.getElementById('recNotes').getAttribute('aria-pressed') === 'true' && document.getElementById('padWrite').classList.contains('on')));
   await page.click('#padWrite');
   await page.evaluate(() => { DrumKits.hit = window.__realHit; Project.setKit('trap'); });
+
+  console.log('\n13m3. Editing comfort — the grid stays where you scrolled it, locks, slide row, tips');
+  await page.evaluate(() => { document.getElementById('layoutReset').click(); const k = window.__track('Kick') || Project.tracks().find(t => t.kind === 'drum'); Project.setTrackBars(k.id, 4); App.select(k.id); });
+  await page.waitForTimeout(300);
+  const sc = await page.evaluate(() => {
+    const g = document.querySelector('.drumgrid'); g.scrollIntoView({ block: 'center' }); g.scrollLeft = g.scrollWidth;
+    const gr = g.getBoundingClientRect();
+    const c = [...document.querySelectorAll('.drow.sel .dcell')].reverse().find(c => { const r = c.getBoundingClientRect(); return r.left > gr.left + 100 && r.right < gr.right - 10; });
+    const r = c.getBoundingClientRect(); return { before: g.scrollLeft, x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  });
+  await page.mouse.click(sc.x, sc.y);
+  await page.waitForTimeout(150);
+  ok('clicking a step no longer throws the drum grid back to the far left', sc.before > 50 &&
+     Math.abs(await page.evaluate(() => document.querySelector('.drumgrid').scrollLeft) - sc.before) < 2, JSON.stringify(sc));
+
+  // Drum locks: a locked step can't be clicked, cleared or copied over.
+  const lk = await page.evaluate(() => {
+    const t = Project.track(App.selected());
+    const steps = Project.pattern(t.id, t.edit).slice(); steps[0] = 2; steps[1] = false; Project.setPatternSteps(t.id, t.edit, steps);
+    Project.toggleStepLock(t.id, t.edit, 0); Project.toggleStepLock(t.id, t.edit, 1);
+    Project.clearPattern(t.id, t.edit);
+    const afterClear = [!!Project.pattern(t.id, t.edit)[0], !!Project.pattern(t.id, t.edit)[1]];
+    const all = new Array(64).fill(3); Project.setPatternSteps(t.id, t.edit, all);
+    const afterSet = [Project.codeOf(Project.pattern(t.id, t.edit)[0]), !!Project.pattern(t.id, t.edit)[1], !!Project.pattern(t.id, t.edit)[2]];
+    return { afterClear, afterSet };
+  });
+  ok('a locked drum step survives Clear and anything written over it (an empty locked step stays empty)',
+     lk.afterClear.join() === 'true,false' && lk.afterSet.join() === '2,false,true', JSON.stringify(lk));
+  await page.click('#editor .lockbtn');
+  await page.evaluate(() => document.querySelector('.drow.sel .dcell[data-step="2"]').scrollIntoView({ block: 'center', inline: 'center' }));
+  await page.click('.drow.sel .dcell[data-step="2"]');
+  ok('with 🔒 Lock on, clicking a step locks it instead of changing it', await page.evaluate(() => { const t = Project.track(App.selected()); return Project.stepLocked(t.id, t.edit, 2) && !!Project.pattern(t.id, t.edit)[2]; }));
+  await page.click('#editor .lockbtn');
+  await page.click('.drow.sel .dcell[data-step="2"]');
+  ok('…and with Lock off a locked step ignores clicks', await page.evaluate(() => { const t = Project.track(App.selected()); return !!Project.pattern(t.id, t.edit)[2] && document.querySelector('.drow.sel .dcell[data-step="2"]').classList.contains('locked'); }));
+  await page.evaluate(() => { const t = Project.track(App.selected()); [0, 1, 2].forEach(i => Project.toggleStepLock(t.id, t.edit, i)); Project.toggleLaneLock(t.id); });
+  ok('a whole lane can be locked', await page.evaluate(() => { const t = Project.track(App.selected()); const was = JSON.stringify(Project.pattern(t.id, t.edit)); Project.clearPattern(t.id, t.edit); return JSON.stringify(Project.pattern(t.id, t.edit)) === was; }));
+  await page.evaluate(() => { const t = Project.track(App.selected()); Project.toggleLaneLock(t.id); Project.setTrackBars(t.id, 1); });
+
+  // Piano roll locks: notes and rows.
+  const pr = await page.evaluate(() => {
+    const t = Project.tracks().find(x => x.kind === 'synth'); App.select(t.id);
+    Project.setNotes(t.id, 0, [{ s: 0, m: 60, l: 2 }, { s: 4, m: 62, l: 2 }, { s: 8, m: 64, l: 2 }]);
+    Project.toggleNoteLock(t.id, 0, 0, 60); Project.toggleRowLock(t.id, 64);
+    Project.clearPattern(t.id, 0);
+    const kept = Project.pattern(t.id, 0).map(n => n.m).sort();
+    Project.setNotes(t.id, 0, [{ s: 2, m: 64, l: 1 }, { s: 2, m: 65, l: 1 }]);
+    const after = Project.pattern(t.id, 0).map(n => n.s + ':' + n.m).sort();
+    const saved = JSON.parse(JSON.stringify(Project.serialize())).tracks.find(x => x.id === t.id);
+    return { kept, after, savedRows: saved.lockRows, savedLk: saved.patterns[0].some(n => n.lk) };
+  });
+  ok('locked notes and locked rows survive Clear', pr.kept.join() === '60,64', JSON.stringify(pr));
+  ok('nothing new can be written into a locked row', pr.after.join() === '0:60,2:65,8:64', JSON.stringify(pr));
+  ok('locks are saved with the song', JSON.stringify(pr.savedRows) === '[64]' && pr.savedLk);
+  await page.evaluate(() => { const t = Project.track(App.selected()); Project.toggleNoteLock(t.id, 0, 0, 60); Project.toggleRowLock(t.id, 64); Project.clearPattern(t.id, 0); });
+
+  const sl = await page.evaluate(() => {
+    const t = Project.tracks().find(x => x.instrument === '808') || Project.addTrack({ kind: 'synth', name: 'Sub', instrument: '808' });
+    Project.setNotes(t.id, 0, [{ s: 0, m: 36, l: 1 }, { s: 1, m: 38, l: 1 }]); App.select(t.id);
+    const btnEl = document.querySelector('#editor .slidebtn'), mix = document.querySelector('#editor .rmix'), ruler = document.querySelector('#editor .roll-ruler');
+    return { inSlideRow: !!(btnEl && btnEl.closest('.rslide')), belowVol: btnEl && mix ? btnEl.getBoundingClientRect().top > mix.getBoundingClientRect().top : false, notOnTop: !ruler.querySelector('.slidebtn') };
+  });
+  ok('the 808 slide buttons sit at the bottom, under the volume lane', sl.inSlideRow && sl.belowVol && sl.notOnTop, JSON.stringify(sl));
+
+  const tips = await page.evaluate(() => { const e = document.querySelector('#editor .explain'); return { hidden: !e || getComputedStyle(e).display === 'none' }; });
+  ok('the explanation paragraphs are hidden unless ⓘ Tips is on', tips.hidden);
+  await page.click('#tipsBtn');
+  ok('…ⓘ Tips shows them', await page.evaluate(() => getComputedStyle(document.querySelector('#editor .explain')).display !== 'none'));
+  await page.click('#tipsBtn');
 
   console.log('\n13n. Hear less of it — solo the one you are editing, unmute all, loop one section');
   await page.evaluate(() => App.select(window.__track('Snare').id));

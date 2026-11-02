@@ -65,6 +65,14 @@ and **BHS Studio** (`public/studio.html`). See `README.md` for the file map.
 - **Computer keys** (`studio-keys.js`): default is the **home row** — A S D F / J K L ;
   play the 8 notes of `Project.key()` root→octave (C major if no key), or the first 8
   pads. "Keys: full piano" (localStorage `bhs.studio.keysLayout`) is the old Z–M/Q–U map.
+- **Locks** (`project-model.js`): `n.lk` on a note, `t.lockRows` (pitches), `t.lockSteps[v]`
+  (drum step indexes), `t.lockLane`. Enforced in the model — `setNotes`, `setPatternSteps`,
+  `toggleStep`, `clearPattern`, `copyPattern`, `setStepMix`, `setNoteMix` keep locked things —
+  so the editor, Clear, Copy, Write notes, MIDI and Claude all respect them. UI = 🔒 Lock mode
+  in the drum machine / piano roll. **Editor re-render keeps each box's scroll** (`saveScroll`)
+  and holds `root` min-height; do NOT `window.scrollTo` there (it broke the record test).
+  808 slide toggles live in the `.rslide` row under the volume lane. Explanation paragraphs
+  are hidden unless `body.tips` (ⓘ Tips, localStorage `bhs.studio.tips`).
 - **Hearing less:** "Hear only this" on the editor (solo the selected track), ⟲ on a
   section = `Sequencer.loopSection(id)` (not saved with the song), and top-bar chips
   that name whatever is muted / soloed / looping with the button that undoes it.
