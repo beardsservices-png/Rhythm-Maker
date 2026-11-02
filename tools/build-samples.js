@@ -229,7 +229,10 @@ GM.forEach(([file, label, group, fallback, lo, hi, cap, flags]) => {
   // A sound effect is the same noise sped up or slowed: three recordings are plenty.
   const gap = unp ? 12 : 4;
   for (let m = lo; m <= hi; m += gap) src.push({ midi: m, url: FLUID + file + '-mp3/' + gmName(m) + '.mp3' });
-  INSTRUMENTS['gm-' + file.replace(/_+/g, '-')] = { cap, gap, lo, hi, src, unpitched: unp, kbps: 80, gm: { label, group, fallback } };
+  // FluidR3 is rendered note by note from MIDI numbers, so its names are exact.
+  // The pitch check is skipped: organs, timpani, fifths and orchestra hits fool
+  // it into "finding" whole-octave errors that aren't there.
+  INSTRUMENTS['gm-' + file.replace(/_+/g, '-')] = { cap, gap, lo, hi, src, unpitched: true, kbps: 80, gm: { label, group, fallback } };
 });
 
 // ── the sound library: effects, riffs, loops, extra drums (Sonic Pi, CC0) ──
@@ -240,12 +243,11 @@ const SPI = (n) => 'https://raw.githubusercontent.com/sonic-pi-net/sonic-pi/main
 const LIBRARY = {
   'Sound effects': [
     ['vinyl_scratch', 'Vinyl scratch'], ['vinyl_backspin', 'Vinyl backspin'], ['vinyl_rewind', 'Rewind'], ['vinyl_hiss', 'Vinyl hiss', 8],
-    ['misc_cineboom', 'Movie boom', 6], ['perc_impact_1', 'Impact'], ['perc_impact_2', 'Impact 2'], ['perc_swoosh', 'Swoosh'],
+    ['misc_cineboom', 'Movie boom', 6], ['perc_swoosh', 'Swoosh'],
     ['ambi_swoosh', 'Long swoosh'], ['ambi_dark_woosh', 'Dark woosh', 6], ['ambi_lunar_land', 'Lunar landing', 8], ['bass_drop_c', 'Bass drop', 6],
     ['misc_crow', 'Crow'], ['misc_burp', 'Burp'], ['perc_door', 'Door'], ['perc_till', 'Cash register'], ['perc_swash', 'Swash'],
-    ['glitch_robot_1', 'Robot glitch'], ['glitch_robot_2', 'Robot glitch 2'], ['mehackit_robot_1', 'Robot voice'], ['mehackit_robot_3', 'Robot voice 2'],
-    ['mehackit_phone_1', 'Phone beep'], ['mehackit_phone_3', 'Phone beep 2'], ['elec_blip', 'Blip'], ['elec_ping', 'Ping'], ['elec_beep', 'Beep'],
-    ['elec_twang', 'Twang'], ['elec_chime', 'Chime'], ['perc_bell', 'Bell hit'], ['elec_triangle', 'Triangle'], ['glitch_perc_1', 'Glitch'], ['glitch_perc_3', 'Glitch 2']
+    ['elec_blip', 'Blip'], ['elec_ping', 'Ping'], ['elec_beep', 'Beep'],
+    ['elec_twang', 'Twang'], ['elec_chime', 'Chime'], ['perc_bell', 'Bell hit'], ['elec_triangle', 'Triangle']
   ],
   'Riffs & textures': [
     ['guit_e_fifths', 'Guitar fifths riff', 8], ['guit_e_slide', 'Guitar slide', 8], ['guit_em9', 'Guitar Em9 chord', 8], ['guit_harmonics', 'Guitar harmonics', 6],
@@ -256,8 +258,8 @@ const LIBRARY = {
   'Drum loops (fit the tempo)': [
     ['loop_amen', 'Amen break', 10, true], ['loop_breakbeat', 'Breakbeat', 10, true], ['loop_compus', 'Compus beat', 10, true],
     ['loop_garzul', 'Garzul groove', 10, true], ['loop_mika', 'Mika groove', 10, true], ['loop_safari', 'Safari', 10, true],
-    ['loop_tabla', 'Tabla loop', 10, true], ['loop_industrial', 'Industrial', 10, true], ['loop_perc_1', 'Percussion loop', 10, true],
-    ['loop_perc_2', 'Percussion loop 2', 10, true], ['loop_electric', 'Electric loop', 10, true], ['loop_3dprinter', '3D printer', 10, true]
+    ['loop_tabla', 'Tabla loop', 10, true], ['loop_industrial', 'Industrial', 10, true], 
+    ['loop_electric', 'Electric loop', 10, true]
   ],
   'More drums': [
     ['bd_zum', 'Kick — zum'], ['bd_tek', 'Kick — tek'], ['bd_klub', 'Kick — klub'], ['bd_jazz', 'Kick — jazz'], ['bd_gas', 'Kick — gas'],

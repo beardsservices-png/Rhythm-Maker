@@ -504,7 +504,7 @@
     Samples.loadLib(id).then(() => { const ac = App.ensureAudio(); if (ac) DrumKits.hit(ac, Mixer.input(t.id), t.sound, ac.currentTime, 0.9); });
     editTrack(t.id);
     App.msg(info.beats
-      ? `Added "${t.name}" — a ${info.beats}-beat loop that fits your tempo. Put a hit on the first step of a bar and it plays that bar.`
+      ? `Added "${t.name}" — a ${info.beats / 4 >= 1 ? info.beats / 4 + '-bar' : info.beats + '-beat'} loop that fits your tempo. Put a hit on the first step of a bar and it plays from there.`
       : `Added "${t.name}" as a lane — click a step to place it, or hit its pad.`);
   }
   window.__bhsAddLib = addLib;
