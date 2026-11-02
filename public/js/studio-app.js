@@ -149,6 +149,20 @@ const App = (() => {
     }
   });
 
+  // ── ⓘ Tips: the explanation paragraphs are hidden unless asked for (they
+  // took a fifth of the screen). Remembered in this browser. ──
+  const tipsBtn = $('tipsBtn');
+  function setTips(on) {
+    document.body.classList.toggle('tips', on);
+    tipsBtn.classList.toggle('on', on);
+    tipsBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    try { localStorage.setItem('bhs.studio.tips', on ? '1' : '0'); } catch (_) {}
+  }
+  let tipsOn = false;
+  try { tipsOn = localStorage.getItem('bhs.studio.tips') === '1'; } catch (_) {}
+  setTips(tipsOn);
+  tipsBtn.addEventListener('click', () => setTips(!document.body.classList.contains('tips')));
+
   // The editor, mixer and effects used to be tabs; they're windows now. The old
   // names still work for anything that asks for a "tab".
   const TAB_WIN = { edit: 'editor', mix: 'mixer', fx: 'fx' };

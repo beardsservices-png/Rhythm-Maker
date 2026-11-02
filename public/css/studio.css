@@ -706,3 +706,27 @@ body.studio.nodock { padding-bottom: 12px; }
 .key.black .klabel { position: absolute; bottom: 4px; left: 0; right: 0; color: var(--paper); }
 .key.mapped .klabel i { opacity: 1; font-weight: bold; color: #191a17; }
 .key.black.mapped .klabel i { color: var(--amber); }
+
+/* ⓘ Tips off (the default): the explanation paragraphs are hidden */
+body.studio:not(.tips) .explain,
+body.studio:not(.tips) #editor p.hint,
+body.studio:not(.tips) #editor .mixrow .hint,
+body.studio:not(.tips) .win > p.hint,
+body.studio:not(.tips) .tip { display: none; }
+.studio #tipsBtn.on { background: rgba(217,154,58,0.18); border-color: var(--amber); }
+
+/* 🔒 locks */
+.studio .lockbtn.on { background: var(--blue); border-color: var(--blue); color: var(--paper); }
+.dcell.locked { outline: 2px dashed var(--blue); outline-offset: -3px; }
+.dcell.locked::after { content: '🔒'; font-size: 8px; position: absolute; right: 1px; top: 0; opacity: .85; }
+.dcell { position: relative; }
+.drow.locked .dcells { opacity: .75; }
+.rnote.locked { outline: 2px solid var(--blue); outline-offset: -1px; cursor: not-allowed; }
+.rnote.locked::after { content: '🔒'; position: absolute; right: 2px; top: -1px; font-size: 8px; }
+.rrow.locked { background-image: repeating-linear-gradient(135deg, rgba(74,124,177,.16) 0 4px, transparent 4px 9px); }
+.rrow.locked .rkey { color: var(--blue); }
+
+/* slide toggles live at the bottom of the roll, under the volume lane */
+.rslide { position: absolute; left: 0; height: 22px; border-top: 1px solid rgba(233,225,204,.15); }
+.rslide .rmix-label { height: 22px; }
+.rslide .slidebtn { top: 3px; height: 17px; }
