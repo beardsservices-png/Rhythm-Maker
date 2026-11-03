@@ -135,7 +135,7 @@ sound, mixer levels and loops.
 ## Round 2 (same week)
 
 - **Start screen** every time the Studio opens: Continue where you left off,
-  six templates (Trap, Boom Bap, Lo-Fi, House, R&B, Blank) plus the demo beat,
+  eight templates (Trap, Boom Bap, Lo-Fi, House, R&B, two Bach pieces, Blank) plus the demo beat,
   and your saved tracks. Also under Open → "New from a template…".
 - **Undo / redo:** the ↶ ↷ buttons, Ctrl+Z, and Ctrl+Shift+Z. They cover
   patterns, sections, sounds, knobs, swing, key and pump. Mixer faders and
