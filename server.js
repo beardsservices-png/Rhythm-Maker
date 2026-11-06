@@ -3,6 +3,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { handleStudioAssist } = require('./studio-assist');
 
 const PORT = process.env.PORT || 8080;
@@ -16,6 +17,78 @@ const MIME = {
   '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml',
   '.wav': 'audio/wav', '.mp3': 'audio/mpeg', '.webmanifest': 'application/manifest+json'
 };
+
+// ── The password ────────────────────────────────────────────────────────
+// Set APP_PASSWORD on the server and the whole app (pages, saved songs, audio,
+// Ask Claude) needs it; leave it unset and the app is open, as before. One
+// password, one owner: songs he opens from his own sheet music or MIDI files
+// live in his library behind it, not on a public page.
+// The cookie is an HMAC of the password, so changing the password signs every
+// device out. No lockout; a wrong guess just waits a second.
+const APP_PASSWORD = process.env.APP_PASSWORD || '';
+const AUTH_COOKIE = 'rs_auth';
+const AUTH_MAX_AGE = 60 * 60 * 24 * 365;   // a year: it's his phone and his laptop
+// Reachable without the password: the login page and what it needs to draw,
+// the install bits (a phone fetches them on its own), and the health check.
+const OPEN_PATHS = new Set(['/login.html', '/api/login', '/api/logout', '/css/base.css', '/manifest.webmanifest',
+  '/sw.js', '/js/pwa.js', '/favicon.ico']);
+
+function authToken() {
+  return crypto.createHmac('sha256', APP_PASSWORD).update('rhythm-shop-login-v1').digest('hex');
+}
+function readCookies(req) {
+  const out = {};
+  String(req.headers.cookie || '').split(';').forEach(part => {
+    const i = part.indexOf('=');
+    if (i > 0) out[part.slice(0, i).trim()] = decodeURIComponent(part.slice(i + 1).trim());
+  });
+  return out;
+}
+function sameSecret(a, b) {
+  const x = Buffer.from(String(a)), y = Buffer.from(String(b));
+  return x.length === y.length && crypto.timingSafeEqual(x, y);
+}
+function isAuthed(req) {
+  if (!APP_PASSWORD) return true;
+  const c = readCookies(req)[AUTH_COOKIE];
+  return !!c && sameSecret(c, authToken());
+}
+function authCookie(req, value, maxAge) {
+  const secure = req.headers['x-forwarded-proto'] === 'https' ? '; Secure' : '';
+  return `${AUTH_COOKIE}=${value}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${secure}`;
+}
+
+async function handleLogin(req, res) {
+  let pw = '';
+  try {
+    const raw = await readBody(req);
+    pw = (String(req.headers['content-type'] || '').includes('json') ? JSON.parse(raw || '{}').password
+      : new URLSearchParams(raw).get('password')) || '';
+  } catch (_) { /* treated as a wrong password */ }
+  if (!APP_PASSWORD || sameSecret(pw, APP_PASSWORD)) {
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Set-Cookie': authCookie(req, authToken(), AUTH_MAX_AGE) });
+    res.end(JSON.stringify({ ok: true }));
+    return;
+  }
+  setTimeout(() => {
+    res.writeHead(401, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'That password is not right.' }));
+  }, 1000);
+}
+
+function loginRequired(req, res, urlObj) {
+  const p = urlObj.pathname;
+  if (p.startsWith('/api/')) {
+    res.writeHead(401, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Sign in first.', login: true }));
+  } else if (p === '/' || p.endsWith('.html')) {
+    res.writeHead(302, { Location: '/login.html?next=' + encodeURIComponent(p + urlObj.search), 'Cache-Control': 'no-store' });
+    res.end();
+  } else {
+    res.writeHead(401, { 'Content-Type': 'text/plain' });
+    res.end('Sign in first.');
+  }
+}
 
 // Binary-safe. The text reader below concatenates chunks onto a string, which
 // silently mangles PCM — every byte that isn't valid UTF-8 becomes U+FFFD and
@@ -309,6 +382,22 @@ const server = http.createServer((req, res) => {
   if (urlObj.pathname === '/health' || urlObj.pathname === '/healthz') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ status: 'ok', dataDir: DATA_DIR }));
+    return;
+  }
+
+  if (req.method === 'POST' && urlObj.pathname === '/api/login') { handleLogin(req, res); return; }
+  if (urlObj.pathname === '/api/logout') {
+    res.writeHead(302, { Location: '/login.html', 'Set-Cookie': authCookie(req, '', 0), 'Cache-Control': 'no-store' });
+    res.end();
+    return;
+  }
+  if (urlObj.pathname === '/api/auth-status') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ required: !!APP_PASSWORD, signedIn: isAuthed(req) }));
+    return;
+  }
+  if (!OPEN_PATHS.has(urlObj.pathname) && !urlObj.pathname.startsWith('/icons/') && !isAuthed(req)) {
+    loginRequired(req, res, urlObj);
     return;
   }
 

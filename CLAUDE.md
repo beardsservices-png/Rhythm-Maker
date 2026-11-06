@@ -111,6 +111,21 @@ and **BHS Studio** (`public/studio.html`). See `README.md` for the file map.
   lookahead limiter to −1 dBFS. Export has a "Hear it first" preview.
 - **User manual** `public/manual.html`; its pictures and callout boxes come from
   `tools/make-manual.js` (run it after any visible UI change, with the server up).
+- **Password** (`server.js`, Nov 2026 — Brian: copyrighted songs for his own practice, in his library,
+  on every device). `APP_PASSWORD` set = every page, `/api/*`, sample and script needs the `rs_auth`
+  cookie (an HMAC of the password, a year, HttpOnly); unset = open as before. Open without it: `/health`,
+  `/login.html`, `/api/login|logout|auth-status`, `/css/base.css`, the manifest, `sw.js`, `pwa.js`, `/icons/`.
+  Pages redirect to `/login.html?next=`; API answers 401. No lockout, one second's wait on a wrong guess.
+  Changing the password signs every device out. A new route is behind the password automatically.
+  `sw.js` never caches a response that was redirected (the sign-in page under a page's name).
+- **Open a song file** (`engine/song-file.js`, start screen): MusicXML (.musicxml/.xml/.mxl, unzipped with
+  `DecompressionStream`) or MIDI (.mid) -> a template spec -> `Templates.fromSpec()` -> saved to the library
+  under the song's name (never over an existing one). One track per part, one per drum sound; 4-bar
+  patterns, repeats reuse a pattern, more than four spill to "Name 2"; a short first bar is a pickup.
+  Sound from the MIDI program (GM table) or the part name; SATB scores get choir / organ / cello. Sixteenth
+  grid, repeats not expanded, chord symbols ignored. A PDF is refused with an explanation (OMR is the
+  `song-to-studio` skill's job in ai-context). **Copyrighted songs go through this, never into
+  `templates.js`** (this repo is public). Tests: `tests/song-file.test.js` (also covers the password).
 - **Retired:** Freeplay, Round Robin, and the old Studio page (scenes, per-slot
   looper, sample timeline). `audio-engine.js` is gone. Old saved projects still
   load — `Project.restore()` converts them.

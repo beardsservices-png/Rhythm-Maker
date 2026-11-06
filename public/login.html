@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rhythm Shop · Sign in</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#191a17">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="stylesheet" href="/css/base.css">
+<style>
+  body { display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 16px; box-sizing: border-box; }
+  .box { width: 100%; max-width: 340px; border: 1px solid var(--dim); background: rgba(0,0,0,0.15); padding: 28px 22px; }
+  h1 { font-family: Georgia, serif; font-weight: normal; margin: 0 0 6px; font-size: 28px; }
+  p { color: var(--dim); font-size: 13px; margin: 0 0 18px; }
+  .row { display: flex; gap: 8px; }
+  input { flex: 1; min-width: 0; font: inherit; font-size: 16px; padding: 10px; background: #111; color: var(--paper); border: 1px solid var(--dim); }
+  input:focus { outline: none; border-color: var(--amber); }
+  .eye { align-self: stretch; height: auto; margin: 0; background: none; border: 1px solid var(--dim); color: var(--dim); padding: 0 10px; cursor: pointer; font: inherit; }
+  .go { width: 100%; margin-top: 12px; padding: 11px; font: inherit; font-size: 14px; background: var(--amber); color: #191a17; border: 0; cursor: pointer; }
+  .err { color: #e07a5f; font-size: 13px; min-height: 18px; margin-top: 10px; }
+</style>
+</head>
+<body>
+<form class="box" id="f">
+  <h1>Rhythm Shop</h1>
+  <p>Enter your password.</p>
+  <div class="row">
+    <input type="password" id="pw" name="password" autocomplete="current-password" autofocus required>
+    <button type="button" class="eye" id="eye" title="Show what I typed">show</button>
+  </div>
+  <button class="go" id="go">Sign in</button>
+  <div class="err" id="err"></div>
+</form>
+<script>
+  const pw = document.getElementById('pw'), err = document.getElementById('err'), go = document.getElementById('go');
+  document.getElementById('eye').onclick = (e) => {
+    pw.type = pw.type === 'password' ? 'text' : 'password';
+    e.target.textContent = pw.type === 'password' ? 'show' : 'hide';
+  };
+  // Only go back to a page on this site.
+  let next = new URLSearchParams(location.search).get('next') || '/';
+  if (!next.startsWith('/') || next.startsWith('//')) next = '/';
+  document.getElementById('f').onsubmit = async (e) => {
+    e.preventDefault();
+    err.textContent = ''; go.disabled = true; go.textContent = 'Checking…';
+    try {
+      const r = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                           body: JSON.stringify({ password: pw.value }) });
+      if (r.ok) { location.replace(next); return; }
+      err.textContent = (await r.json().catch(() => ({}))).error || 'That did not work.';
+    } catch (_) { err.textContent = 'No connection to the server.'; }
+    go.disabled = false; go.textContent = 'Sign in';
+    pw.select();
+  };
+</script>
+</body>
+</html>

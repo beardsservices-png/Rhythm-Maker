@@ -88,6 +88,34 @@ const StartScreen = (() => {
     grid.appendChild(b);
   });
 
+  // Open a song file: sheet music (MusicXML) or MIDI -> a new song, saved to the library.
+  const fileIn = $('ssFile'), fileMsg = $('ssFileMsg');
+  const say = (t, err) => { fileMsg.hidden = false; fileMsg.textContent = t; fileMsg.classList.toggle('err', !!err); };
+  $('ssOpenFile').addEventListener('click', () => {
+    if (midSession && !confirm('Open a song file as a new track? Anything unsaved here is lost (it\'s still autosaved until you change the new one).')) return;
+    fileIn.value = '';
+    fileIn.click();
+  });
+  fileIn.addEventListener('change', async () => {
+    const f = fileIn.files && fileIn.files[0];
+    if (!f) return;
+    say('Reading ' + f.name + '…');
+    let spec;
+    try { spec = await SongFile.read(f); } catch (e) { say(e.message || 'Could not read that file.', true); return; }
+    // Never overwrite something already in the library with the same name.
+    // The library keeps letters, digits, spaces, - and _ only (server rule): name it that way up front.
+    const base = spec.label.replace(/[^a-z0-9 _-]+/gi, ' ').replace(/\s+/g, ' ').trim().slice(0, 56) || 'Song';
+    let name = base, taken = [];
+    try { taken = ((await (await fetch('/api/projects')).json()).names) || []; } catch (_) { /* offline: save will say so */ }
+    for (let i = 2; taken.includes(name); i++) name = `${base} ${i}`;
+    const sum = spec._summary;
+    await begin(() => { Project.restore(Templates.fromSpec(spec)); $('projName').value = name; });
+    fileMsg.hidden = true;
+    App.msg(`Opened "${name}": ${sum.tracks} tracks, ${sum.bars} bars. Saving it to your library…`);
+    const saveBtn = $('saveBtn');
+    if (saveBtn) saveBtn.click();
+  });
+
   $('ssContinue').addEventListener('click', cont);
   // Closing without choosing never throws work away: it continues the
   // autosave if there is one, otherwise keeps the demo.

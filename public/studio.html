@@ -273,6 +273,12 @@
       <a class="ss-manual" href="manual.html" target="_blank">Or <u>read the manual</u> — pictures, arrows, every button explained.</a>
     </div>
     <button id="ssContinue" class="primary ss-continue" hidden></button>
+    <h3>Open a song file</h3>
+    <div class="ss-open">
+      <button id="ssOpenFile" class="ss-file ss-openbtn"><b>Open sheet music or MIDI&hellip;</b><span>MusicXML (.musicxml, .xml, .mxl) or MIDI (.mid). Every instrument gets its own track, and it's saved to your library.</span></button>
+      <input type="file" id="ssFile" accept=".mid,.midi,.kar,.musicxml,.xml,.mxl" hidden>
+      <p class="ss-filemsg" id="ssFileMsg" hidden></p>
+    </div>
     <h3>Start from a template</h3>
     <div class="ss-grid" id="ssTemplates"></div>
     <h3>Your saved tracks</h3>
@@ -296,6 +302,7 @@
 <script src="js/engine/sequencer.js"></script>
 <script src="js/engine/recorder.js"></script>
 <script src="js/engine/templates.js"></script>
+<script src="js/engine/song-file.js"></script>
 <script src="js/practice/pitch-detector.js"></script>
 <script src="js/engine/tune.js"></script>
 <script src="js/studio-app.js"></script>

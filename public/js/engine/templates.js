@@ -205,7 +205,11 @@ const Templates = (() => {
 
   function build(id) {
     const spec = LIST.find(t => t.id === id);
-    if (!spec) return null;
+    return spec ? fromSpec(spec) : null;
+  }
+
+  /** Build a project from a spec in the LIST shape (also used by song-file.js). */
+  function fromSpec(spec) {
     let next = 1;
     const tracks = [];
     const byName = {};
@@ -249,6 +253,7 @@ const Templates = (() => {
 
   return {
     list: () => LIST.map(t => ({ id: t.id, label: t.label, blurb: t.blurb })),
-    build
+    build,
+    fromSpec
   };
 })();

@@ -9,7 +9,7 @@
 // The /api/ routes (saving, loading, Ask Claude) and other sites (the
 // MediaPipe CDN) are never cached — they go straight to the network.
 
-const CACHE = 'rhythm-shop-v8';
+const CACHE = 'rhythm-shop-v9';
 const SHELL = ['/', '/index.html', '/studio.html', '/practice.html', '/manual.html', '/manifest.webmanifest',
                '/css/base.css', '/css/studio.css', '/css/practice.css', '/icons/icon-192.png'];
 
@@ -38,7 +38,8 @@ self.addEventListener('fetch', (e) => {
   }
   e.respondWith(
     fetch(req).then(res => {
-      if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
+      // A page that bounced to the sign-in screen is not that page: never cache it under its name.
+      if (res.ok && !res.redirected) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
       return res;
     }).catch(() => caches.match(req, { ignoreSearch: true })
       .then(hit => hit || (req.mode === 'navigate' ? caches.match('/index.html') : Response.error())))
