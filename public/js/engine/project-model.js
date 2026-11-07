@@ -263,6 +263,22 @@ const Project = (() => {
     emit('pattern', { track: id });
   }
 
+  /**
+   * Copy one pattern of a track onto a letter of ANOTHER track of the same kind
+   * (piano roll -> piano roll, drum lane -> drum lane). It lands through
+   * setNotes / setPatternSteps, so locks are respected, notes past the end of a
+   * shorter target are dropped, and a shorter drum pattern repeats to fill a longer lane.
+   */
+  function copyPatternTo(fromId, from, toId, to) {
+    const a = track(fromId), b = track(toId);
+    if (!a || !b || a === b || a.kind !== b.kind || !a.patterns || !b.patterns) return false;
+    if (!(to >= 0 && to < COUNT) || !a.patterns[from]) return false;
+    const src = clone(a.patterns[from]);
+    if (a.kind === 'synth') setNotes(toId, to, src.map(n => { const c = Object.assign({}, n); delete c.lk; return c; }));
+    else setPatternSteps(toId, to, src);
+    return true;
+  }
+
   // ── live (pattern mode) and edit selection ─────────────────────────
   /**
    * In pattern mode this is "switch what this track plays" — queued to the
@@ -787,7 +803,7 @@ const Project = (() => {
     STEPS_PER_BAR, NAMES, COUNT, OFF, on,
     tracks, track, addTrack, removeTrack, renameTrack, moveTrack, setTrackBars,
     setSound, setInstrument, setParam, setKit, kit: () => state.kit,
-    pattern, toggleStep, setNotes, setPatternSteps, clearPattern, copyPattern,
+    pattern, toggleStep, setNotes, setPatternSteps, clearPattern, copyPattern, copyPatternTo,
     setLive, setEdit, setAllLive, applyPending,
     sections, section, addSection, duplicateSection, removeSection, moveSection, renameSection,
     setSectionBars, setCell, setSectionTrack, replaceSections, toggleBarMute, toggleSolo, mainLetter,

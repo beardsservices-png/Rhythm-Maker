@@ -200,6 +200,10 @@ const Samples = (() => {
     g.gain.setValueAtTime((o.gain == null ? 0.8 : o.gain) * Math.max(0.03, vel == null ? 1 : vel), t);
     src.connect(g).connect(dest);
     src.start(t);
+    if (o.maxSeconds) {                       // a preview of a long loop: fade out and stop
+      g.gain.setTargetAtTime(0, t + o.maxSeconds - 0.15, 0.05);
+      src.stop(t + o.maxSeconds + 0.3);
+    }
     return true;
   }
 

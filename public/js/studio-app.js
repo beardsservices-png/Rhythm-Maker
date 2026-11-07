@@ -88,7 +88,14 @@ const App = (() => {
       b.textContent = it.label;
       if (it.title) b.title = it.title;
       b.addEventListener('click', () => { pop.hidden = true; it.act(); });
-      pop.appendChild(b);
+      if (it.preview && typeof Preview !== 'undefined') {
+        // A ▶ at the end of the row: hear it without choosing it (the menu stays open).
+        const row = document.createElement('div');
+        row.className = 'menurow';
+        row.appendChild(b);
+        row.appendChild(Preview.button(it.preview));
+        pop.appendChild(row);
+      } else pop.appendChild(b);
     });
     openPop(pop, anchor);
   }

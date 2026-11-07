@@ -75,7 +75,9 @@ const PadRoom = (() => {
       cell.appendChild(face);
       const under = document.createElement('div');
       under.className = 'padunder';
-      under.appendChild(soundSelect(t));
+      const ssel = soundSelect(t);
+      under.appendChild(ssel);
+      under.appendChild(Preview.button(() => { const [kit, role] = ssel.value.split('|'); return { sound: { kit, role } }; }));
       const m = document.createElement('button');
       m.type = 'button';
       m.className = 'ms m pad-m';

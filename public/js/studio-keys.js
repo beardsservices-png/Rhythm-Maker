@@ -333,6 +333,8 @@ const Keys = (() => {
 
   // ── controls ──
   targetSel.addEventListener('change', () => setTarget(targetSel.value));
+  // ▶ beside the Sound box: hear the one showing now.
+  soundSel.parentNode.appendChild(Preview.button(() => ({ instrument: soundSel.value })));
   soundSel.addEventListener('change', () => {
     const t = cur(); if (!t) return;
     Project.setInstrument(t.id, soundSel.value);

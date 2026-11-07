@@ -61,6 +61,39 @@
         App.msg(`Copied to ${L}. Pick ${L} to change it — a chorus is usually the verse with something added.`);
       } });
     });
+    if (!allDrums) {
+      items.push({ heading: 'Or to another one' });
+      items.push({ label: t.kind === 'drum' ? 'To another drum lane  \u25B8' : 'To another instrument  \u25B8', cls: 'submenu',
+                   act: () => setTimeout(() => copyToOther(t, anchor), 0) });
+    }
+    App.menu(anchor, items);
+  }
+
+  // Copy this pattern onto a letter of a DIFFERENT instrument / drum lane of the same kind.
+  function copyToOther(t, anchor) {
+    const others = Project.tracks().filter(x => x.id !== t.id && x.kind === t.kind);
+    if (!others.length) {
+      App.msg(t.kind === 'drum' ? 'There is no other drum lane to copy to — add one first.' : 'There is no other instrument to copy to — add one first (+ Add instrument).');
+      return;
+    }
+    const from = t.edit;
+    const items = [{ heading: `Copy ${t.name} ${NAMES[from]} to which ${t.kind === 'drum' ? 'lane' : 'instrument'}?` }];
+    others.forEach(o => items.push({
+      label: o.name + '  \u25B8', cls: 'submenu',
+      act: () => setTimeout(() => {
+        const lets = [{ heading: `${t.name} ${NAMES[from]} \u2192 ${o.name}, which letter?` }];
+        NAMES.forEach((L, v) => {
+          const pat = o.patterns[v] || [];
+          const has = o.kind === 'drum' ? pat.some(x => Project.stepInfo(x)) : pat.length > 0;
+          lets.push({ label: `${L}${has ? '   (has something \u2014 replaced)' : '   (empty)'}`, act: () => {
+            if (Project.copyPatternTo(t.id, from, o.id, v)) {
+              App.msg(`Copied ${t.name} ${NAMES[from]} to ${o.name} ${L}. Pick ${o.name} and its ${L} to hear and change it.`);
+            } else App.msg('Could not copy that.', true);
+          } });
+        });
+        App.menu(anchor, lets);
+      }, 0)
+    }));
     App.menu(anchor, items);
   }
 
@@ -159,7 +192,11 @@
       const ac = App.ensureAudio();
       if (ac) DrumKits.hit(ac, Mixer.input(t.id), { kit, role }, ac.currentTime, 0.9);
     });
-    return sel;
+    // The ▶ hears whatever the box says now, without changing the lane.
+    const wrap = el('div', 'lane-wrap');
+    wrap.appendChild(sel);
+    wrap.appendChild(Preview.button(() => { const [kit, role] = sel.value.split('|'); return { sound: { kit, role } }; }));
+    return wrap;
   }
 
   let drumPaint = null;
@@ -175,6 +212,7 @@
     kl.appendChild(kit);
     head.appendChild(kl);
     head.appendChild(btn('', 'Copy beat to…', 'Copy every lane\'s current pattern to another letter', (e, b) => copyMenu(sel, b, true)));
+    head.appendChild(btn('', 'Copy lane to…', 'Copy this lane\'s pattern to another letter, or to another drum lane', (e, b) => copyMenu(sel, b, false)));
     head.appendChild(btn('', 'Clear lane', `Empty ${sel.name} ${NAMES[sel.edit]} (locked steps stay)`, () => Project.clearPattern(sel.id, sel.edit)));
     head.appendChild(lockButton('drum'));
     root.appendChild(head);
@@ -366,6 +404,7 @@
     sound.addEventListener('change', () => { Project.setInstrument(t.id, sound.value); preview(Project.track(t.id), 60); });
     const sl = el('label', 'field inline', 'Sound ');
     sl.appendChild(sound);
+    sl.appendChild(Preview.button(() => ({ instrument: sound.value })));
     head.appendChild(sl);
     head.appendChild(letterPicker(t));
 
@@ -387,7 +426,7 @@
     const nll = el('label', 'field inline', 'New note ');
     nll.appendChild(nl);
     head.appendChild(nll);
-    head.appendChild(btn('', 'Copy to…', 'Copy this pattern to another letter', (e, b) => copyMenu(t, b, false)));
+    head.appendChild(btn('', 'Copy to…', 'Copy this pattern to another letter, or to another instrument', (e, b) => copyMenu(t, b, false)));
     head.appendChild(btn('', 'Clear', `Empty ${NAMES[t.edit]} (locked notes stay)`, () => Project.clearPattern(t.id, t.edit)));
     head.appendChild(lockButton('roll'));
 

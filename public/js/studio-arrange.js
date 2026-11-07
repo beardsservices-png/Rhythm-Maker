@@ -511,13 +511,13 @@
   /** Second-level menus: 130+ instruments in one list is a wall. */
   function instrumentMenu(anchor, group) {
     const items = [{ heading: group }];
-    Instruments.list().filter(i => i.group === group).forEach(i => items.push({ label: i.label, act: () => addInstrument(i.id) }));
+    Instruments.list().filter(i => i.group === group).forEach(i => items.push({ label: i.label, act: () => addInstrument(i.id), preview: () => ({ instrument: i.id }) }));
     App.menu(anchor, items, 'addMenu');
   }
   function libraryMenu(anchor, group) {
     const g = DrumKits.library().find(x => x.group === group);
     const items = [{ heading: group }];
-    (g ? g.items : []).forEach(it => items.push({ label: it.label + (it.loop ? '  ⟲' : ''), act: () => addLib(it.id) }));
+    (g ? g.items : []).forEach(it => items.push({ label: it.label + (it.loop ? '  ⟲' : ''), act: () => addLib(it.id), preview: () => ({ sound: { kit: 'lib', role: it.id } }) }));
     App.menu(anchor, items, 'addMenu');
   }
   document.getElementById('addTrackBtn').addEventListener('click', (e) => {
@@ -530,7 +530,7 @@
       items.push({ label: `${g}  (${n})  ▸`, cls: 'submenu', act: () => setTimeout(() => instrumentMenu(anchor, g), 0) });
     });
     items.push({ heading: 'Drum lane' });
-    DrumKits.ROLES.forEach(r => items.push({ label: r.label, act: () => addDrum(r.id) }));
+    DrumKits.ROLES.forEach(r => items.push({ label: r.label, act: () => addDrum(r.id), preview: () => ({ sound: { kit: Project.kit(), role: r.id } }) }));
     const lib = DrumKits.library();
     if (lib.length) {
       items.push({ heading: 'Sound library — effects, riffs, loops' });
