@@ -1,5 +1,5 @@
 // preview-copy.test.js — the ▶ "hear it first" buttons, copying a pattern to another instrument,
-// and transposing the notes of one bar (or all of them).
+// transposing the notes of one bar (or all of them), and picking notes with a drag box.
 //
 //   npm install --no-save playwright
 //   node tests/preview-copy.test.js        (starts its own server)
@@ -221,6 +221,95 @@ const ok = (n, c, extra = '') => {
     const a1 = await grab(0, 16), a2 = await grab(16, 32);
     ok('The menu path works (Transpose… > Bar 1 only > Down an octave)',
       JSON.stringify(a1) === JSON.stringify(b1.map(m => m - 12)) && JSON.stringify(a2) === JSON.stringify(b2), JSON.stringify([b1, a1, b2, a2]));
+
+    // ── pick notes with a drag box ──
+    console.log('Select notes');
+    await page.evaluate(() => {
+      const id = window.__trId;
+      Project.setNotes(id, 1, [{ s: 0, m: 60, l: 4 }, { s: 8, m: 64, l: 4 }, { s: 16, m: 67, l: 4 }, { s: 40, m: 72, l: 4 }]);
+      Project.setLive(id, 1); App.select(id);
+    });
+    await page.waitForTimeout(300);
+    const notesNow = () => page.evaluate((id) => Project.track(id).patterns[1].map(n => n.s + ':' + n.m).sort().join(' '), id);
+    const rectOf = (idx) => page.evaluate((i) => { const r = document.querySelectorAll('#editor .rnote')[i].getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom }; }, idx);
+    const order = await page.evaluate(() => Array.from(document.querySelectorAll('#editor .rnote')).map(d => d.style.left));
+    ok('Four notes drawn', order.length === 4, JSON.stringify(order));
+    const start0 = await notesNow();
+
+    // Select is off: a plain drag still draws/stretches, nothing is picked
+    ok('Nothing picked to begin with', (await page.locator('#editor .rnote.picked').count()) === 0);
+
+    await page.locator('#editor .ed-head .selbtn').click();
+    // scroll the notes clear of the pinned keyboard, as a person would
+    const scrollNotes = () => page.evaluate(() => { const r = document.querySelector('#editor .rnote').getBoundingClientRect(); window.scrollBy(0, r.top - 330); });
+    await scrollNotes(); await page.waitForTimeout(150);
+    const r0 = await rectOf(0), r1 = await rectOf(1);
+    const L = Math.min(r0.l, r1.l) - 6, T = Math.min(r0.t, r1.t) - 6, R = Math.max(r0.r, r1.r) + 6, B = Math.max(r0.b, r1.b) + 6;
+    await page.mouse.move(R, B); await page.mouse.down(); await page.mouse.move((L + R) / 2, (T + B) / 2, { steps: 4 }); await page.mouse.move(L, T, { steps: 4 }); await page.mouse.up();   // start in the empty grid, end past the left edge
+    await page.waitForTimeout(150);
+    ok('A box picks the notes it touches', (await page.locator('#editor .rnote.picked').count()) === 2 && (await notesNow()) === start0);
+    ok('The move bar shows how many', /2 notes picked/.test(await page.locator('#editor .selbar').textContent()));
+
+    await page.locator('#editor .selbar button', { hasText: '\u25BC Octave' }).click();
+    await page.waitForTimeout(150);
+    ok('Octave down moves only the picked notes', (await notesNow()) === '0:48 16:67 40:72 8:52', await notesNow());
+    ok('...and they stay picked, following the move', (await page.locator('#editor .rnote.picked').count()) === 2);
+
+    // keyboard
+    await page.keyboard.press('Shift+ArrowUp');
+    await page.waitForTimeout(150);
+    ok('Shift+Up = an octave up', (await notesNow()) === '0:60 16:67 40:72 8:64', await notesNow());
+    await page.keyboard.press('ArrowDown');
+    await page.waitForTimeout(150);
+    ok('Down = a half step', (await notesNow()) === '0:59 16:67 40:72 8:63', await notesNow());
+    await page.keyboard.press('ArrowUp');
+    await page.waitForTimeout(150);
+
+    // drag a picked note: the whole group moves (2 steps later, 2 rows up)
+    const cw = await page.evaluate(() => parseFloat(document.querySelector('#editor .roll-inner').style.getPropertyValue('--cw')));
+    await scrollNotes(); await page.waitForTimeout(100);
+    const g0 = await rectOf(0);
+    const rowH = await page.evaluate(() => document.querySelector('#editor .rrow').getBoundingClientRect().height);
+    await page.mouse.move(g0.l + 6, g0.t + 5); await page.mouse.down();
+    await page.mouse.move(g0.l + 6 + cw * 1.1, g0.t + 5 - rowH * 1.1, { steps: 4 });
+    await page.mouse.move(g0.l + 6 + cw * 2.1, g0.t + 5 - rowH * 2.1, { steps: 4 });
+    await page.mouse.up();
+    await page.waitForTimeout(200);
+    ok('Dragging a picked note moves every picked note together', (await notesNow()) === '10:66 16:67 2:62 40:72', await notesNow());
+
+    // click on empty space lets go; locked notes are not picked
+    await scrollNotes(); await page.waitForTimeout(100);
+    const e0 = await rectOf(0), e1 = await rectOf(1);
+    await page.mouse.click(Math.max(e0.r, e1.r) + 30, Math.min(e0.t, e1.t) - 30);
+    await page.waitForTimeout(150);
+    ok('A click on empty space lets go of the picks', (await page.locator('#editor .rnote.picked').count()) === 0);
+
+    await page.evaluate(([id]) => Project.toggleNoteLock(id, 1, 16, 67), [id]);
+    await page.waitForTimeout(200);
+    await scrollNotes();
+    const all = await page.evaluate(() => { const r = document.querySelector('#editor .roll-lane').getBoundingClientRect(); const n = [...document.querySelectorAll('#editor .rnote')].map(d => d.getBoundingClientRect()); return { l: r.left + 2, t: Math.min(...n.map(x => x.top)) - 20, r: r.right - 2, b: Math.max(...n.map(x => x.bottom)) + 20 }; });
+    await page.mouse.move(all.l, all.t); await page.mouse.down(); await page.mouse.move(all.r, all.b, { steps: 6 }); await page.mouse.up();
+    await page.waitForTimeout(150);
+    ok('A box around everything skips the locked note', (await page.locator('#editor .rnote.picked').count()) === 3);
+
+    await page.locator('#editor .selbar button', { hasText: 'Delete' }).click();
+    await page.waitForTimeout(150);
+    ok('Delete removes the picked notes, not the locked one', (await notesNow()) === '16:67');
+    await page.evaluate(([id]) => Project.toggleNoteLock(id, 1, 16, 67), [id]);
+
+    // Shift-drag picks even with Select off
+    await page.locator('#editor .ed-head .selbtn').click();
+    await page.evaluate(([id]) => Project.setNotes(id, 1, [{ s: 0, m: 60, l: 4 }, { s: 8, m: 64, l: 4 }]), [id]);
+    await page.waitForTimeout(250);
+    const beforeShift = await notesNow();
+    await scrollNotes(); await page.waitForTimeout(100);
+    const q0 = await rectOf(0), q1 = await rectOf(1);
+    await page.keyboard.down('Shift');
+    await page.mouse.move(Math.max(q0.r, q1.r) + 6, Math.max(q0.b, q1.b) + 6); await page.mouse.down();
+    await page.mouse.move(Math.min(q0.l, q1.l) - 6, Math.min(q0.t, q1.t) - 6, { steps: 6 }); await page.mouse.up();
+    await page.keyboard.up('Shift');
+    await page.waitForTimeout(150);
+    ok('Shift-drag picks notes with Select off (and adds no note)', (await page.locator('#editor .rnote.picked').count()) === 2 && (await notesNow()) === beforeShift);
 
     ok('No page errors', errors.length === 0, errors.join(' | '));
   } catch (e) {

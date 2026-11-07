@@ -280,29 +280,52 @@ const Project = (() => {
   }
 
   /**
-   * Move the notes that START in steps [from, to) of a pattern up or down by
-   * `semis` semitones (12 = an octave). Locked notes, and notes that would land in a
-   * locked row or outside the keyboard, stay where they are. Returns what happened.
+   * Move chosen notes of a pattern: `picks` is [{s, m}] (start step + pitch), `ds` steps
+   * later (negative = earlier), `dm` semitones up (negative = down; 12 = an octave).
+   * Locked notes and notes that would land in a locked row, before the start, past the
+   * end or off the keyboard stay where they are. A moved note that lands exactly on a
+   * note that stayed becomes one note (the longer). Returns {moved, skippedLocked,
+   * skippedRange, keys} where keys are the "s:m" of the notes that were picked, after the move.
    */
+  function moveNotesBy(id, v, picks, ds, dm) {
+    const t = track(id);
+    const res = { moved: 0, skippedLocked: 0, skippedRange: 0, keys: [] };
+    if (!t || t.kind !== 'synth') return res;
+    ds = ds | 0; dm = dm | 0;
+    const max = t.bars * STEPS_PER_BAR;
+    const want = new Set((picks || []).map(p => p.s + ':' + p.m));
+    const old = t.patterns[v] || [];
+    const out = [];
+    old.forEach(n => {
+      const key = n.s + ':' + n.m;
+      if (!want.has(key)) { out.push(n); return; }
+      if (noteLocked(t, n)) { res.skippedLocked++; res.keys.push(key); out.push(n); return; }
+      const s = n.s + ds, m = n.m + dm;
+      if (m < 0 || m > 127 || s < 0 || s >= max) { res.skippedRange++; res.keys.push(key); out.push(n); return; }
+      if (rowLocked(t, m)) { res.skippedLocked++; res.keys.push(key); out.push(n); return; }
+      const c = Object.assign({}, n, { s, m, l: Math.min(n.l, max - s) });
+      if (ds || dm) res.moved++;
+      res.keys.push(s + ':' + m);
+      out.push(c);
+    });
+    if (!res.moved) return res;
+    // Same step and pitch twice: keep one, the longer.
+    const seen = new Map();
+    out.forEach(n => {
+      const k = n.s + ':' + n.m, o = seen.get(k);
+      if (!o) seen.set(k, n); else if (n.l > o.l) seen.set(k, n);
+    });
+    t.patterns[v] = Array.from(seen.values());
+    emit('pattern', { track: id });
+    return res;
+  }
+
+  /** Move the notes that START in steps [from, to) up or down `semis` semitones. */
   function transposeNotes(id, v, from, to, semis) {
     const t = track(id);
-    const res = { moved: 0, skippedLocked: 0, skippedRange: 0 };
-    if (!t || t.kind !== 'synth' || !semis) return res;
-    const old = t.patterns[v] || [];
-    const next = old.map(n => {
-      if (!(n.s >= from && n.s < to)) return n;
-      if (noteLocked(t, n)) { res.skippedLocked++; return n; }
-      const m = n.m + semis;
-      if (m < 0 || m > 127) { res.skippedRange++; return n; }
-      if (rowLocked(t, m)) { res.skippedLocked++; return n; }
-      res.moved++;
-      return Object.assign({}, n, { m });
-    });
-    if (res.moved) {
-      t.patterns[v] = next;
-      emit('pattern', { track: id });
-    }
-    return res;
+    if (!t || t.kind !== 'synth' || !semis) return { moved: 0, skippedLocked: 0, skippedRange: 0 };
+    const picks = (t.patterns[v] || []).filter(n => n.s >= from && n.s < to).map(n => ({ s: n.s, m: n.m }));
+    return moveNotesBy(id, v, picks, 0, semis);
   }
 
   // ── live (pattern mode) and edit selection ─────────────────────────
@@ -829,7 +852,7 @@ const Project = (() => {
     STEPS_PER_BAR, NAMES, COUNT, OFF, on,
     tracks, track, addTrack, removeTrack, renameTrack, moveTrack, setTrackBars,
     setSound, setInstrument, setParam, setKit, kit: () => state.kit,
-    pattern, toggleStep, setNotes, setPatternSteps, clearPattern, copyPattern, copyPatternTo, transposeNotes,
+    pattern, toggleStep, setNotes, setPatternSteps, clearPattern, copyPattern, copyPatternTo, transposeNotes, moveNotesBy,
     setLive, setEdit, setAllLive, applyPending,
     sections, section, addSection, duplicateSection, removeSection, moveSection, renameSection,
     setSectionBars, setCell, setSectionTrack, replaceSections, toggleBarMute, toggleSolo, mainLetter,

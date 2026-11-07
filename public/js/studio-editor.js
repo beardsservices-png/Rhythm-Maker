@@ -399,6 +399,14 @@
 
   // ── 🔒 Lock: while it's on, a click locks or unlocks instead of editing ──
   let lockMode = false;
+  // ⬚ Select: drag a box around notes (or Shift-drag in any mode), then move them together.
+  let selectMode = false;
+  let selection = { key: '', keys: new Set() };     // notes picked in one pattern, as "step:pitch"
+  const selFor = (t) => {
+    const key = t.id + ':' + t.edit;
+    if (selection.key !== key) selection = { key, keys: new Set() };
+    return selection;
+  };
   function lockButton(kind) {
     const b = btn('lockbtn' + (lockMode ? ' on' : ''), lockMode ? '🔒 Locking — done' : '🔒 Lock',
       kind === 'drum'
@@ -459,6 +467,14 @@
     head.appendChild(btn('', 'Transpose…', 'Move the notes of one bar, or all of them, up or down — an octave, a whole step, a half step', (e, b) => transposeMenu(t, b)));
     head.appendChild(btn('', 'Clear', `Empty ${NAMES[t.edit]} (locked notes stay)`, () => Project.clearPattern(t.id, t.edit)));
     head.appendChild(lockButton('roll'));
+    head.appendChild(btn('selbtn' + (selectMode ? ' on' : ''), selectMode ? '\u2B1A Selecting \u2014 done' : '\u2B1A Select',
+      'Pick several notes to move together. While on: drag a box around notes, or click one. (Shift-drag does the same any time.)', () => {
+        selectMode = !selectMode;
+        App.msg(selectMode
+          ? 'Select is on: drag a box around some notes (Shift adds to what you picked), then use the buttons that appear — or drag the picked notes. Click \u2B1A again when done.'
+          : 'Select is off: clicking places and deletes notes again.');
+        render();
+      }));
 
     // Key + chord helper: rows in the song's key are lit, and with Chords on a
     // click places the whole chord that fits the key from that note up.
@@ -494,7 +510,7 @@
     notes.forEach(n => { lo = Math.min(lo, n.m - 2); hi = Math.max(hi, n.m + 2); });
     const rows = hi - lo + 1;
 
-    const scroll = el('div', 'roll');
+    const scroll = el('div', 'roll' + (selectMode ? ' selecting' : ''));
     const avail = Math.max(320, (root.clientWidth || 800) - 60);
     const cw = Math.max(16, Math.min(44, Math.floor(avail / steps)));
     const slideRow = Instruments.hasSlide(t.instrument);
@@ -546,6 +562,7 @@
       d.style.width = Math.max(4, n.l * cw - 2) + 'px';
       d.classList.toggle('slide', !!n.sl);
       d.classList.toggle('locked', Project.noteLocked(t.id, n));
+      d.classList.toggle('picked', selFor(t).keys.has(n.s + ':' + n.m));
       d.title = `${noteName(n.m)} · ${n.l} step${n.l === 1 ? '' : 's'}` + (n.sl ? ' · slides in' : '');
     };
     const noteEls = [];
@@ -626,6 +643,34 @@
       window.addEventListener('pointermove', mdrag);
       window.addEventListener('pointerup', up);
     });
+    // The picked notes: highlighted, and a bar of ways to move them.
+    const sel = selFor(t);
+    const present = new Set(notes.map(n => n.s + ':' + n.m));
+    sel.keys.forEach(k => { if (!present.has(k)) sel.keys.delete(k); });      // notes that no longer exist
+    const picks = () => Array.from(sel.keys).map(k => { const [s0, m0] = k.split(':'); return { s: +s0, m: +m0 }; });
+    const moveSel = (ds, dm, said) => {
+      const r = Project.moveNotesBy(t.id, t.edit, picks(), ds, dm);
+      if (r.moved) { sel.keys = new Set(r.keys); render(); }     // the move redrew with the old picks; draw again with the new
+      const extra = (r.skippedLocked ? ` ${r.skippedLocked} locked stayed put.` : '') + (r.skippedRange ? ` ${r.skippedRange} would have gone off the edge, so stayed.` : '');
+      App.msg(r.moved ? `Moved ${r.moved} note${r.moved === 1 ? '' : 's'} ${said}.${extra} Undo (Ctrl+Z) puts them back.` : `Nothing moved.${extra}`, !r.moved);
+      if (!r.moved) render();
+    };
+    if (sel.keys.size) {
+      const bar = el('div', 'ed-head selbar');
+      bar.appendChild(el('b', null, `${sel.keys.size} note${sel.keys.size === 1 ? '' : 's'} picked`));
+      [['\u25B2 Octave', 0, 12, 'up an octave'], ['\u25BC Octave', 0, -12, 'down an octave'],
+       ['\u25B2 \u00BD', 0, 1, 'up a half step'], ['\u25BC \u00BD', 0, -1, 'down a half step'],
+       ['\u25C0 Step', -1, 0, 'one step earlier'], ['Step \u25B6', 1, 0, 'one step later']].forEach(([label, ds, dm, said]) =>
+        bar.appendChild(btn('mini', label, 'Move the picked notes ' + said, () => moveSel(ds, dm, said))));
+      bar.appendChild(btn('mini danger', 'Delete', 'Remove the picked notes', () => {
+        const gone = new Set(sel.keys);
+        Project.setNotes(t.id, t.edit, Project.pattern(t.id, t.edit).filter(n => !gone.has(n.s + ':' + n.m)));
+        sel.keys = new Set();
+        App.msg(`Removed ${gone.size} note${gone.size === 1 ? '' : 's'}. Undo (Ctrl+Z) puts them back.`);
+      }));
+      bar.appendChild(btn('mini', 'Pick none', 'Let go of the selection', () => { sel.keys = new Set(); render(); }));
+      root.appendChild(bar);
+    }
     root.appendChild(scroll);
     const mrow = el('div', 'ed-head mixrow');
     mrow.appendChild(el('span', 'dim', 'Lane under the notes:'));
@@ -646,6 +691,86 @@
       return { step: Math.floor((e.clientX - r.left) / cw), m: hi - Math.floor((e.clientY - r.top) / RH), x: e.clientX - r.left };
     };
 
+    // ── ⬚ select: a box picks notes; dragging a picked note moves all the picked ones ──
+    function selectGesture(e, hitEl, p) {
+      const keyOf = (n) => n.s + ':' + n.m;
+      const add = e.shiftKey || e.ctrlKey || e.metaKey;
+      const pair = hitEl && noteEls.find(x => x[1] === hitEl);
+      if (pair && Project.noteLocked(t.id, pair[0])) { App.msg('That note is locked, so it can\'t be picked or moved.'); return; }
+      const paint = () => noteEls.forEach(([n, d]) => d.classList.toggle('picked', sel.keys.has(keyOf(n))));
+      const lr = lane.getBoundingClientRect();
+      const x0 = e.clientX - lr.left, y0 = e.clientY - lr.top;
+      dragging = true;
+
+      if (pair) {
+        // Click a note to pick it; drag a picked note to move every picked note.
+        const n0 = pair[0];
+        const wasPicked = sel.keys.has(keyOf(n0));
+        if (!wasPicked) { if (!add) sel.keys = new Set(); sel.keys.add(keyOf(n0)); paint(); }
+        const group = noteEls.filter(([n]) => sel.keys.has(keyOf(n)));
+        const minS = Math.min(...group.map(([n]) => n.s)), maxEnd = Math.max(...group.map(([n]) => n.s + n.l));
+        const minM = Math.min(...group.map(([n]) => n.m)), maxM = Math.max(...group.map(([n]) => n.m));
+        let ds = 0, dm = 0, moved = false;
+        const move = (ev) => {
+          if (Math.abs(ev.clientX - e.clientX) > 3 || Math.abs(ev.clientY - e.clientY) > 3) moved = true;
+          if (!moved) return;
+          const q = pos(ev);
+          ds = Math.max(-minS, Math.min(steps - maxEnd, q.step - p.step));
+          dm = Math.max(lo - minM, Math.min(hi - maxM, q.m - p.m));
+          group.forEach(([n, d]) => place({ s: n.s + ds, m: n.m + dm, l: n.l, sl: n.sl }, d));
+        };
+        const up = () => {
+          window.removeEventListener('pointermove', move);
+          window.removeEventListener('pointerup', up);
+          dragging = false;
+          if (moved && (ds || dm)) {
+            const r = Project.moveNotesBy(t.id, t.edit, group.map(([n]) => ({ s: n.s, m: n.m })), ds, dm);
+            if (r.moved) { sel.keys = new Set(r.keys); render(); preview(t, n0.m + dm); }
+            else render();
+          } else if (moved) render();
+          else if (wasPicked && add) { sel.keys.delete(keyOf(n0)); render(); }      // shift-click a picked note: let it go
+          else if (wasPicked && !add) { sel.keys = new Set([keyOf(n0)]); render(); } // click: just this one
+          else render();
+        };
+        window.addEventListener('pointermove', move);
+        window.addEventListener('pointerup', up);
+        return;
+      }
+
+      // Empty space: draw a box.
+      const base = add ? new Set(sel.keys) : new Set();
+      const box = el('div', 'marquee');
+      lane.appendChild(box);
+      let drew = false;
+      const inside = (n, bx) => {
+        const left = n.s * cw, right = (n.s + n.l) * cw, top = (hi - n.m) * RH, bottom = top + RH;
+        return right > bx.l && left < bx.r && bottom > bx.t && top < bx.b;
+      };
+      const move = (ev) => {
+        const r = lane.getBoundingClientRect();
+        const x1 = Math.max(0, Math.min(r.width, ev.clientX - r.left)), y1 = Math.max(0, Math.min(r.height, ev.clientY - r.top));
+        const bx = { l: Math.min(x0, x1), r: Math.max(x0, x1), t: Math.min(y0, y1), b: Math.max(y0, y1) };
+        if (bx.r - bx.l > 3 || bx.b - bx.t > 3) drew = true;
+        box.style.left = bx.l + 'px'; box.style.top = bx.t + 'px';
+        box.style.width = (bx.r - bx.l) + 'px'; box.style.height = (bx.b - bx.t) + 'px';
+        const now = new Set(base);
+        noteEls.forEach(([n]) => { if (!Project.noteLocked(t.id, n) && inside(n, bx)) now.add(keyOf(n)); });
+        sel.keys = now;
+        paint();
+      };
+      const up = () => {
+        window.removeEventListener('pointermove', move);
+        window.removeEventListener('pointerup', up);
+        box.remove();
+        dragging = false;
+        if (!drew && !add) sel.keys = new Set();      // a plain click on empty space lets go
+        render();
+        if (sel.keys.size) App.msg(`${sel.keys.size} note${sel.keys.size === 1 ? '' : 's'} picked. Use the buttons above the grid, press \u2191 / \u2193 (Shift = octave), drag one of them, or Delete.`);
+      };
+      window.addEventListener('pointermove', move);
+      window.addEventListener('pointerup', up);
+    }
+
     lane.addEventListener('pointerdown', (e) => {
       if (e.button !== 0) return;
       e.preventDefault();
@@ -658,6 +783,7 @@
         else if (p.m >= lo && p.m <= hi) Project.toggleRowLock(t.id, p.m);
         return;
       }
+      if (selectMode || e.shiftKey) { selectGesture(e, hitEl, p); return; }
       const lockedNote = hitEl && noteEls.find(x => x[1] === hitEl && Project.noteLocked(t.id, x[0]));
       if (lockedNote || (!hitEl && Project.rowLocked(t.id, p.m))) {
         App.msg((lockedNote ? 'That note is' : 'That row is') + ' locked. Turn on 🔒 Lock and click it to unlock.');
@@ -986,6 +1112,28 @@
     root.querySelectorAll('.dcell.playing').forEach(c => c.classList.remove('playing'));
     if (roll) roll.ph.hidden = true;
     if (audioView) audioView.ph.hidden = true;
+  });
+
+  window.addEventListener('keydown', (e) => {
+    if (!selection.keys.size || !roll) return;
+    const tag = (e.target.tagName || '').toLowerCase();
+    if (['input', 'textarea', 'select'].includes(tag) || e.target.isContentEditable || e.ctrlKey || e.metaKey || e.altKey) return;
+    const t = roll.t && Project.track(roll.t.id);
+    if (!t || selection.key !== t.id + ':' + t.edit) return;
+    const picks = () => Array.from(selection.keys).map(k => { const [s0, m0] = k.split(':'); return { s: +s0, m: +m0 }; });
+    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      const dm = (e.key === 'ArrowUp' ? 1 : -1) * (e.shiftKey ? 12 : 1);
+      const r = Project.moveNotesBy(t.id, t.edit, picks(), 0, dm);
+      if (r.moved) { selection.keys = new Set(r.keys); render(); }
+    } else if (e.key === 'Delete' || e.key === 'Backspace') {
+      e.preventDefault();
+      const gone = new Set(selection.keys);
+      Project.setNotes(t.id, t.edit, Project.pattern(t.id, t.edit).filter(n => !gone.has(n.s + ':' + n.m)));
+      selection.keys = new Set();
+    } else if (e.key === 'Escape') {
+      selection.keys = new Set(); render();
+    }
   });
 
   Project.on((reason, d) => {
