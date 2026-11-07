@@ -97,6 +97,35 @@
     App.menu(anchor, items);
   }
 
+  // Move some bars' notes (or all of them) up or down: an octave, a whole step, a half step.
+  const MOVES = [
+    ['Down an octave', -12, 'down an octave'], ['Up an octave', 12, 'up an octave'],
+    ['Down a whole step (2 semitones)', -2, 'down a whole step'], ['Up a whole step (2 semitones)', 2, 'up a whole step'],
+    ['Down a half step (1 semitone)', -1, 'down a half step'], ['Up a half step (1 semitone)', 1, 'up a half step']
+  ];
+  function transposeMenu(t, anchor) {
+    const L = NAMES[t.edit], total = t.bars * SPB;
+    const spans = [{ label: `Whole pattern (all ${t.bars} bar${t.bars === 1 ? '' : 's'})`, from: 0, to: total, what: 'the whole pattern' }];
+    for (let b = 0; b < t.bars; b++) spans.push({ label: `Bar ${b + 1} only`, from: b * SPB, to: (b + 1) * SPB, what: `bar ${b + 1}` });
+    if (t.bars >= 4) {
+      spans.push({ label: 'Bars 1\u20132', from: 0, to: 2 * SPB, what: 'bars 1\u20132' });
+      spans.push({ label: 'Bars 3\u20134', from: 2 * SPB, to: 4 * SPB, what: 'bars 3\u20134' });
+    }
+    const items = [{ heading: `Move which notes of ${t.name} ${L}?` }];
+    spans.forEach(sp => items.push({ label: sp.label + '  \u25B8', cls: 'submenu', act: () => setTimeout(() => {
+      const moves = [{ heading: `Move ${sp.what} of ${t.name} ${L}\u2026` }];
+      MOVES.forEach(([label, semis, said]) => moves.push({ label, act: () => {
+        const r = Project.transposeNotes(t.id, t.edit, sp.from, sp.to, semis);
+        const extra = (r.skippedLocked ? ` ${r.skippedLocked} locked note${r.skippedLocked === 1 ? ' stayed' : 's stayed'} put.` : '') +
+                      (r.skippedRange ? ` ${r.skippedRange} would have gone off the keyboard, so stayed.` : '');
+        App.msg(r.moved ? `Moved ${r.moved} note${r.moved === 1 ? '' : 's'} in ${sp.what} ${said}.${extra} Undo (Ctrl+Z) puts them back.`
+                        : `No notes to move in ${sp.what}.${extra}`, !r.moved);
+      } }));
+      App.menu(anchor, moves);
+    }, 0) }));
+    App.menu(anchor, items);
+  }
+
   function preview(t, midi) {
     const ac = App.ensureAudio(); if (!ac) return;
     const h = Instruments.noteOn(ac, Sequencer.liveInput(t.id), t.instrument, midi, 0.8, ac.currentTime, t.params);
@@ -427,6 +456,7 @@
     nll.appendChild(nl);
     head.appendChild(nll);
     head.appendChild(btn('', 'Copy to…', 'Copy this pattern to another letter, or to another instrument', (e, b) => copyMenu(t, b, false)));
+    head.appendChild(btn('', 'Transpose…', 'Move the notes of one bar, or all of them, up or down — an octave, a whole step, a half step', (e, b) => transposeMenu(t, b)));
     head.appendChild(btn('', 'Clear', `Empty ${NAMES[t.edit]} (locked notes stay)`, () => Project.clearPattern(t.id, t.edit)));
     head.appendChild(lockButton('roll'));
 

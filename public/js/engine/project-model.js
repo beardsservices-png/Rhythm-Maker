@@ -279,6 +279,32 @@ const Project = (() => {
     return true;
   }
 
+  /**
+   * Move the notes that START in steps [from, to) of a pattern up or down by
+   * `semis` semitones (12 = an octave). Locked notes, and notes that would land in a
+   * locked row or outside the keyboard, stay where they are. Returns what happened.
+   */
+  function transposeNotes(id, v, from, to, semis) {
+    const t = track(id);
+    const res = { moved: 0, skippedLocked: 0, skippedRange: 0 };
+    if (!t || t.kind !== 'synth' || !semis) return res;
+    const old = t.patterns[v] || [];
+    const next = old.map(n => {
+      if (!(n.s >= from && n.s < to)) return n;
+      if (noteLocked(t, n)) { res.skippedLocked++; return n; }
+      const m = n.m + semis;
+      if (m < 0 || m > 127) { res.skippedRange++; return n; }
+      if (rowLocked(t, m)) { res.skippedLocked++; return n; }
+      res.moved++;
+      return Object.assign({}, n, { m });
+    });
+    if (res.moved) {
+      t.patterns[v] = next;
+      emit('pattern', { track: id });
+    }
+    return res;
+  }
+
   // ── live (pattern mode) and edit selection ─────────────────────────
   /**
    * In pattern mode this is "switch what this track plays" — queued to the
@@ -803,7 +829,7 @@ const Project = (() => {
     STEPS_PER_BAR, NAMES, COUNT, OFF, on,
     tracks, track, addTrack, removeTrack, renameTrack, moveTrack, setTrackBars,
     setSound, setInstrument, setParam, setKit, kit: () => state.kit,
-    pattern, toggleStep, setNotes, setPatternSteps, clearPattern, copyPattern, copyPatternTo,
+    pattern, toggleStep, setNotes, setPatternSteps, clearPattern, copyPattern, copyPatternTo, transposeNotes,
     setLive, setEdit, setAllLive, applyPending,
     sections, section, addSection, duplicateSection, removeSection, moveSection, renameSection,
     setSectionBars, setCell, setSectionTrack, replaceSections, toggleBarMute, toggleSolo, mainLetter,

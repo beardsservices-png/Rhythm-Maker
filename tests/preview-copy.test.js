@@ -1,4 +1,5 @@
-// preview-copy.test.js — the ▶ "hear it first" buttons, and copying a pattern to another instrument.
+// preview-copy.test.js — the ▶ "hear it first" buttons, copying a pattern to another instrument,
+// and transposing the notes of one bar (or all of them).
 //
 //   npm install --no-save playwright
 //   node tests/preview-copy.test.js        (starts its own server)
@@ -175,6 +176,51 @@ const ok = (n, c, extra = '') => {
     await page.locator('#editor .ed-head button', { hasText: 'Copy lane to…' }).click();
     ok('Drum machine has Copy lane to… with another-lane option', await page.locator('#trackMenu .submenu', { hasText: 'another drum lane' }).count() === 1);
     await page.keyboard.press('Escape');
+
+    // ── transpose ──
+    console.log('Transpose');
+    const tr = await page.evaluate(() => {
+      const a = Project.addTrack({ kind: 'synth', name: 'Tr', instrument: 'piano', bars: 4 });
+      window.__trId = a.id;
+      Project.setNotes(a.id, 0, [{ s: 2, m: 60, l: 2 }, { s: 6, m: 64, l: 4, vel: 0.5 }, { s: 20, m: 67, l: 2 }, { s: 40, m: 72, l: 2 }]);
+      const mine = (v = 0) => Project.track(a.id).patterns[v].map(n => n.s + ':' + n.m).sort().join(' ');
+      const start = mine();
+      const bar1 = Project.transposeNotes(a.id, 0, 0, 16, -12);
+      const afterBar1 = mine();
+      const vel = Project.track(a.id).patterns[0].find(n => n.s === 6).vel;
+      Project.transposeNotes(a.id, 0, 0, 16, 12);
+      const roundTrip = mine() === start;
+      const all = Project.transposeNotes(a.id, 0, 0, a.bars * 16, 2);
+      const afterAll = mine();
+      Project.transposeNotes(a.id, 0, 0, a.bars * 16, -2);
+      Project.toggleNoteLock(a.id, 0, 2, 60);
+      const lockedRun = Project.transposeNotes(a.id, 0, 0, 16, -12);
+      const lockedState = mine();
+      Project.toggleNoteLock(a.id, 0, 2, 60);
+      Project.transposeNotes(a.id, 0, 0, 16, 12);          // put bar 1 back (the 64 note moved down above)
+      Project.setNotes(a.id, 1, [{ s: 0, m: 126, l: 2 }]);
+      const off = Project.transposeNotes(a.id, 1, 0, 16, 12);
+      return { start, bar1, afterBar1, vel, roundTrip, all, afterAll, lockedRun, lockedState, off };
+    });
+    ok('One bar moves down an octave, the others stay', tr.bar1.moved === 2 && tr.afterBar1 === '20:67 2:48 40:72 6:52', tr.afterBar1);
+    ok('A moved note keeps its volume', tr.vel === 0.5);
+    ok('Down then up is a round trip', tr.roundTrip === true);
+    ok('Whole pattern, up a whole step', tr.all.moved === 4 && tr.afterAll === '20:69 2:62 40:74 6:66', tr.afterAll);
+    ok('A locked note stays put', tr.lockedRun.skippedLocked === 1 && /2:60/.test(tr.lockedState), tr.lockedState);
+    ok('Notes that would leave the keyboard stay', tr.off.moved === 0 && tr.off.skippedRange === 1);
+
+    await page.evaluate(() => { Project.setLive(window.__trId, 0); App.select(window.__trId); });
+    await page.waitForTimeout(250);
+    const notesIn = (lo, hi) => page.evaluate(([id, lo, hi]) => Project.track(id).patterns[0].filter(n => n.s >= lo && n.s < hi).map(n => n.m).sort((x, y) => x - y), [window.__trId || null, lo, hi]);
+    const id = await page.evaluate(() => window.__trId);
+    const grab = (lo, hi) => page.evaluate(([id, lo, hi]) => Project.track(id).patterns[0].filter(n => n.s >= lo && n.s < hi).map(n => n.m).sort((x, y) => x - y), [id, lo, hi]);
+    const b1 = await grab(0, 16), b2 = await grab(16, 32);
+    await page.locator('#editor .ed-head button', { hasText: 'Transpose…' }).click();
+    await page.locator('#trackMenu .submenu', { hasText: 'Bar 1 only' }).click();
+    await page.locator('#trackMenu .menuitem', { hasText: 'Down an octave' }).click();
+    const a1 = await grab(0, 16), a2 = await grab(16, 32);
+    ok('The menu path works (Transpose… > Bar 1 only > Down an octave)',
+      JSON.stringify(a1) === JSON.stringify(b1.map(m => m - 12)) && JSON.stringify(a2) === JSON.stringify(b2), JSON.stringify([b1, a1, b2, a2]));
 
     ok('No page errors', errors.length === 0, errors.join(' | '));
   } catch (e) {
