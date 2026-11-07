@@ -60,7 +60,7 @@ fs.mkdirSync(OUT, { recursive: true });
   await page.waitForTimeout(500);
 
   // ── start screen
-  await shot('start', '.ss-card', [['.ss-tpl[data-id="trap"]', 1], ['.ss-tpl[data-id="blank"]', 2], ['.ss-saved', 3], ['.ss-close', 4]]);
+  await shot('start', '.ss-card', [['.ss-tpl[data-id="trap"]', 1], ['.ss-tpl[data-id="blank"]', 2], ['.ss-saved', 3], ['.ss-close', 4], ['#ssOpenFile', 5]]);
 
   await page.evaluate(() => StartScreen.choose('trap'));
   await page.waitForTimeout(300);
